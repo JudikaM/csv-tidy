@@ -6,28 +6,32 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-11
+
+Initial early-alpha release.
+
 ### Added
 
-- First implementation, planned as release 0.1.0:
-  - `csv-tidy check` and `csv-tidy clean` (dry run by default, `--apply` to write), also
-    available as `python -m csv_tidy`.
-  - Strict CSV reading (comma/semicolon, UTF-8 with or without BOM, explicit encodings, quoted
-    multiline fields) with record indexes and physical line ranges.
-  - TOML profiles (`schema_version = 1`) with required columns, `text`/`decimal`/`date`
-    types, number grammars `id`, `us`, `canonical`, numeric date formats, duplicate-row policy,
-    and uniqueness keys.
-  - Explicit transformations: trim, normalize, deduplicate (keep first), applied in that order,
-    followed by output validation.
-  - Safe export with input/alias protection, overwrite refusal, and per-file atomic writes.
-  - Generated output profiles (`--output-schema`) for validating and re-cleaning output.
-  - English text and JSON reports (report `schema_version` 1) and exit codes 0/1/2.
-  - Python API: `check_file`, `clean_file`, `export_clean`, `load_profile`.
-  - Synthetic examples, benchmark script, distribution smoke test, and CI for Linux and
-    Windows on Python 3.11 and 3.15.
+- `csv-tidy check` and `csv-tidy clean` (dry run by default, `--apply` to write), also
+  available as `python -m csv_tidy`.
+- Strict CSV reading (comma/semicolon, UTF-8 with or without BOM, explicit encodings, quoted
+  multiline fields) with record indexes and physical line ranges.
+- TOML profiles (`schema_version = 1`) with required columns, `text`/`decimal`/`date` types,
+  number grammars `id`, `us`, `canonical`, numeric date formats, duplicate-row policy, and
+  uniqueness keys.
+- Explicit transformations: trim, normalize, deduplicate (keep first), applied in that order,
+  followed by output validation.
+- Safe export with input/alias protection, overwrite refusal, and per-file atomic writes.
+- Generated output profiles (`--output-schema`) for validating and re-cleaning output.
+- English text and JSON reports (report `schema_version` 1) and exit codes 0/1/2.
+- Python API: `check_file`, `clean_file`, `export_clean`, `load_profile`, `profile_to_toml`.
+- Synthetic examples, benchmark script, distribution smoke test, and CI for Linux and
+  Windows on Python 3.11 and 3.15.
 
 ### Fixed
 
-Defects found by an audit of the first published commit (e1e4a63), before any release:
+Defects found by audits of earlier development commits (e1e4a63, 4e5b12a, 8389d1d) and fixed
+before this release:
 
 - A value selected for normalization that could not be parsed in its source format was
   reported as resolved, and exported, when it happened to look valid in the output format
@@ -39,20 +43,17 @@ Defects found by an audit of the first published commit (e1e4a63), before any re
   errors and block the export.
 - Writing without `--overwrite` could replace a file created by another process during the
   write; the final step now refuses an existing destination atomically.
-- Binary and text-to-text codecs (`base64_codec`, `hex_codec`, `rot_13`) were accepted as
-  encodings and caused tracebacks; they are now configuration errors (exit code 2).
+- Binary and text-to-text codecs (`base64_codec`, `hex_codec`, `rot_13`) and the `undefined`
+  codec were accepted as encodings and caused tracebacks; they are now configuration errors
+  (exit code 2).
 - `Profile`/`ColumnSpec` objects built directly through the API bypassed validation; they are
   now validated like TOML profiles.
 - When saving `--report` failed, stdout still showed `exit_code` 0. Reports now list the report
   artifact (`written`/`failed`) and `summary.exit_code` matches the command's exit code.
-
-- Follow-up audit of 4e5b12a: list-valued API settings (for example `Profile(trim=["a"])`)
-  broke output-profile generation; settings now hold tuple copies. The `undefined` codec
-  raised a raw `UnicodeError`; it is now a configuration error. Outside Windows, a file system
-  without hard links made no-clobber writes fall back to a non-atomic copy that could leave a
-  partial file; such writes now fail safely instead.
-- `profile_to_toml` raised an internal round-trip error for `Profile` objects with list-valued
-  collections; it now validates and canonicalizes them like `clean_file` does.
+- List-valued API settings (for example `Profile(trim=["a"])`) broke output-profile generation
+  and `profile_to_toml`; profiles and settings are now validated and held as tuple copies.
+- Outside Windows, a file system without hard links made no-clobber writes fall back to a
+  non-atomic copy that could leave a partial file; such writes now fail safely instead.
 
 ### Documentation
 

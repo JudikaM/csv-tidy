@@ -10,10 +10,10 @@ and numeric dates such as `DD/MM/YYYY`. It never guesses: it repairs only what y
 reports everything else with record and line locations, and refuses to export a result that
 still has errors.
 
-**Status:** early development. Version 0.1.0 is prepared but not yet released. It works
-locally and offline, with no network access,
-telemetry, or AI services. It has not yet been validated with external users. Feedback is
-welcome (see [Feedback](#feedback-and-bug-reports)).
+**Status:** early alpha (0.1.x); interfaces may still change between minor versions, and
+changes are listed in [CHANGELOG.md](CHANGELOG.md). It works locally and offline, with no
+network access, telemetry, or AI services. It has not yet been validated with external users.
+Feedback is welcome (see [Feedback](#feedback-and-bug-reports)).
 
 Intended for developers building import pipelines, administrators preparing spreadsheet
 exports, small organizations, and anyone handling mixed number and date conventions.
@@ -39,8 +39,11 @@ exports, small organizations, and anyone handling mixed number and date conventi
 
 ## Installation
 
-Requires Python 3.11 or newer. CSV Tidy is **not published on PyPI**; install it from a
-source checkout (or from a wheel attached to a GitHub release, once one is published).
+Requires Python 3.11 or newer. CSV Tidy is **not published on PyPI**. Published versions and
+installation files (a wheel and a source distribution) are listed on the
+[GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); a downloaded wheel
+installs with `python -m pip install <path-to-wheel>` inside a virtual environment. You can
+also install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's interpreter directly, so the
 ExecutionPolicy does not need to change):

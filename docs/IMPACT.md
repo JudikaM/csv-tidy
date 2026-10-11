@@ -32,7 +32,9 @@ summarized here with dates, consent status, and links to resulting issues and fi
 
 ## Releases and maintenance
 
-- Releases: none yet (0.1.0 is prepared; see [CHANGELOG.md](../CHANGELOG.md)).
+- Releases: published versions are listed on the
+  [GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); each version's changes
+  are in [CHANGELOG.md](../CHANGELOG.md). 0.1.0 is the first version.
 - Maintainer: JudikaM (repository owner). Responsibilities: triage, reviews, releases, and
   security reports, as described in [MAINTENANCE.md](MAINTENANCE.md).
 
