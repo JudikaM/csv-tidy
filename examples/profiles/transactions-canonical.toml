@@ -1,0 +1,26 @@
+# Canonical transactions: ',' delimiter, 1250.50 numbers, ISO dates. Validation only.
+schema_version = 1
+
+[source]
+delimiter = ","
+number_format = "canonical"
+date_format = "YYYY-MM-DD"
+
+[columns.transaction_id]
+type = "text"
+required = true
+
+[columns.customer_id]
+type = "text"
+required = true
+
+[columns.amount]
+type = "decimal"
+required = true
+
+[columns.date]
+type = "date"
+required = true
+
+[duplicates]
+keys = [["transaction_id"]]

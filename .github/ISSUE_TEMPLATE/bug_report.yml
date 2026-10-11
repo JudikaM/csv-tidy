@@ -1,0 +1,61 @@
+name: Bug report
+description: Something did not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Do not attach real personal, customer, or company data.**
+        Please reduce the problem to a small synthetic CSV (invented names, example.com addresses).
+  - type: input
+    id: version
+    attributes:
+      label: CSV Tidy version
+      description: Output of `csv-tidy --version`
+      placeholder: csv-tidy 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and Python version
+      placeholder: Windows 11, Python 3.13
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and profile
+      description: The exact command and the relevant part of your TOML profile.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Synthetic CSV that reproduces the problem
+      description: A few lines are usually enough. Anonymize or invent all values.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the report output and exit code. Remove any real data from it.
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Data check
+      options:
+        - label: The files and output in this issue contain no real personal or customer data.
+          required: true

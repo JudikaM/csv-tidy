@@ -1,0 +1,4 @@
+transaction_id,customer_id,amount,date,note
+TX-001,00123,1250.50,2026-02-01,First payment
+TX-002,00456,980.00,2026-02-15,"Paid in  two parts"
+TX-003,00789,12000,2026-02-28,"Note with , comma"

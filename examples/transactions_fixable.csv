@@ -1,0 +1,5 @@
+transaction_id;customer_id;amount;date;note
+TX-001;00123;1.250,50;01/02/2026;First payment
+TX-002;00456; 980,00 ;15/02/2026;Paid in  two parts
+TX-003; 00789;12.000;28/02/2026 ;"Note with ; semicolon"
+TX-004;00123;-75,25;29/02/2024;Refund

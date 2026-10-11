@@ -1,0 +1,39 @@
+# US-format customers: ',' delimiter, 1,250.50 numbers, MM/DD/YYYY dates.
+# Identifiers (customer_id, phone_number) are text and keep their leading zeros.
+schema_version = 1
+
+[source]
+delimiter = ","
+number_format = "us"
+date_format = "MM/DD/YYYY"
+
+[output]
+number_format = "canonical"
+date_format = "YYYY-MM-DD"
+
+[columns.customer_id]
+type = "text"
+required = true
+
+[columns.name]
+type = "text"
+required = true
+
+[columns.phone_number]
+type = "text"
+
+[columns.credit_limit]
+type = "decimal"
+
+[columns.signup_date]
+type = "date"
+required = true
+
+[duplicates]
+rows = "warn"
+keys = [["customer_id"]]
+
+[transform]
+trim = ["customer_id", "name", "credit_limit", "signup_date"]
+normalize = ["credit_limit", "signup_date"]
+deduplicate = "off"

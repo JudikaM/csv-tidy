@@ -1,0 +1,4 @@
+customer_id,name,phone_number,credit_limit,signup_date
+00123, Ada Lovelace ,081234567890," 1,250.50",02/01/2026
+00456,Grace Hopper,+62 812 3456 7890,980.00, 02/15/2026
+00789,"Hopper, Grace Jr.",,"12,000",02/28/2026

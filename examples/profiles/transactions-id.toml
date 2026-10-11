@@ -1,0 +1,38 @@
+# Indonesian-format transactions: ';' delimiter, 1.250,50 numbers, DD/MM/YYYY dates.
+# Cleaning trims selected columns and normalizes amount/date to canonical/ISO output.
+schema_version = 1
+
+[source]
+delimiter = ";"
+encoding = "utf-8"
+number_format = "id"
+date_format = "DD/MM/YYYY"
+
+[output]
+number_format = "canonical"
+date_format = "YYYY-MM-DD"
+
+[columns.transaction_id]
+type = "text"
+required = true
+
+[columns.customer_id]
+type = "text"
+required = true
+
+[columns.amount]
+type = "decimal"
+required = true
+
+[columns.date]
+type = "date"
+required = true
+
+[duplicates]
+rows = "warn"
+keys = [["transaction_id"]]
+
+[transform]
+trim = ["customer_id", "amount", "date"]
+normalize = ["amount", "date"]
+deduplicate = "off"

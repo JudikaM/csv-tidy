@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a change based on a real problem you have with CSV data.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: usage
+    attributes:
+      label: Realistic usage
+      description: |
+        A typical file shape (synthetic example), how often you hit this, and the command or
+        profile you would like to use. Do not include real personal or customer data.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Current workaround or alternatives
+  - type: dropdown
+    id: help
+    attributes:
+      label: Would you be willing to help?
+      options:
+        - Test a pre-release
+        - Contribute a pull request
+        - Not at the moment

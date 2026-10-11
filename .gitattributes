@@ -1,0 +1,3 @@
+* text=auto
+# CSV fixtures are byte-exact test data (CRLF vs LF matters): never convert line endings.
+*.csv -text

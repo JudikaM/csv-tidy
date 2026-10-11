@@ -1,0 +1,5 @@
+transaction_id;customer_id;amount;date;note
+TX-101;00123;1.250,50;31/02/2026;Invalid calendar date
+TX-102;;300,00;01/03/2026;Missing customer
+TX-103;00456;abc;02/03/2026;Not a number
+TX-104;00789;2.500,00;05/03/2026;Valid record

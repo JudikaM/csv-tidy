@@ -1,0 +1,76 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "csv-tidy"
+dynamic = ["version"]
+description = "A Python CLI and library for validating and cleaning CSV files with explicit number and date formats."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Judika Marpaung" }]
+keywords = ["csv", "validation", "data-cleaning", "cli", "decimal", "dates"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+dependencies = ["tomli-w>=1.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.15", "build>=1.2"]
+
+[project.scripts]
+csv-tidy = "csv_tidy.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/JudikaM/csv-tidy"
+Issues = "https://github.com/JudikaM/csv-tidy/issues"
+Changelog = "https://github.com/JudikaM/csv-tidy/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/csv_tidy/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/csv_tidy"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/examples",
+    "/docs",
+    "/scripts",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+    "/CONTRIBUTING.md",
+    "/SECURITY.md",
+    "/TEST_CASES.md",
+    "/constraints-dev.txt",
+]
+exclude = ["__pycache__", "*.py[cod]"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]

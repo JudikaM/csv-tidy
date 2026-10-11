@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# CSV Tidy: local outputs, private data and local tool settings
+/output/
+/data/
+/.local/
+.claude/settings.local.json
