@@ -63,7 +63,10 @@ def test_dry_run_may_save_a_report_but_no_csv_or_profile(tmp_path):
     assert result.code == 0
     assert [p.name for p in tmp_path.iterdir()] == ["r.json"]
     data = json.loads(report.read_text(encoding="utf-8"))
-    assert data["mode"] == "dry-run" and data["export"]["artifacts"] == []
+    assert data["mode"] == "dry-run"
+    assert data["export"]["artifacts"] == [
+        {"kind": "report", "path": str(report), "status": "written", "error": None}
+    ]
 
 
 def test_configuration_errors_exit_2_without_traceback(tmp_path, write):

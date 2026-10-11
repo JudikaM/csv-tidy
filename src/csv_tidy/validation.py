@@ -54,9 +54,17 @@ def _quote(value: str, limit: int = 60) -> str:
 
 
 def validate_table(
-    table: Table, settings: Settings, stage: str, include_blank_lines: bool = True
+    table: Table,
+    settings: Settings,
+    stage: str,
+    include_blank_lines: bool = True,
+    unconverted: frozenset[tuple[int, str]] = frozenset(),
 ) -> list[Issue]:
-    """Return all issues for ``table`` in deterministic order."""
+    """Return all issues for ``table`` in deterministic order.
+
+    ``unconverted`` lists (record, column) values selected for normalization that could not
+    be parsed in their source format; at the output stage they are always reported.
+    """
     issues: list[Issue] = []
     if include_blank_lines:
         for line in table.blank_lines:
@@ -94,7 +102,7 @@ def validate_table(
                 stage,
             )
         )
-    issues.extend(_record_issues(table.header, table.records, settings, stage))
+    issues.extend(_record_issues(table.header, table.records, settings, stage, unconverted))
     return _sorted(issues, table.header)
 
 
@@ -188,7 +196,11 @@ def _header_issues(table: Table, settings: Settings, stage: str) -> list[Issue]:
 
 
 def _record_issues(
-    header: Sequence[str], records: Sequence[Record], settings: Settings, stage: str
+    header: Sequence[str],
+    records: Sequence[Record],
+    settings: Settings,
+    stage: str,
+    unconverted: frozenset[tuple[int, str]],
 ) -> list[Issue]:
     index = {}
     for position, name in enumerate(header):
@@ -234,6 +246,8 @@ def _record_issues(
                 )
             )
             continue
+        if stage == "output":
+            issues.extend(_oversized_fields(header, rec, settings, where))
         for column, position, fmt in rules:
             value = rec.fields[position]
             if not value.strip():
@@ -250,13 +264,15 @@ def _record_issues(
                         )
                     )
                 continue
-            # A normalized output value that is still invalid was left unchanged because it
-            # was not valid in the source format; explain it in source terms.
-            unconverted = stage == "output" and column.name in settings.normalize
-            if column.type == "decimal" and parse_number(value, fmt) is None:
-                why_fmt = settings.source_format(column) if unconverted else fmt
+            # A value selected for normalization that could not be parsed in its source
+            # format was left unchanged. It stays invalid even if it happens to match the
+            # output format, and it is explained in source terms.
+            failed = (rec.index, column.name) in unconverted
+            normalized = stage == "output" and column.name in settings.normalize
+            if column.type == "decimal" and (failed or parse_number(value, fmt) is None):
+                why_fmt = settings.source_format(column) if normalized else fmt
                 why = explain_invalid_number(value, why_fmt)
-                if unconverted:
+                if normalized:
                     why = f"it could not be normalized because {why} (source format '{why_fmt}')"
                 issues.append(
                     Issue(
@@ -269,12 +285,10 @@ def _record_issues(
                         **where,
                     )
                 )
-            elif column.type == "date" and fmt.parse(value) is None:
-                why_fmt = (
-                    compile_date_format(settings.source_format(column)) if unconverted else fmt
-                )
+            elif column.type == "date" and (failed or fmt.parse(value) is None):
+                why_fmt = compile_date_format(settings.source_format(column)) if normalized else fmt
                 why = explain_invalid_date(value, why_fmt)
-                if unconverted:
+                if normalized:
                     why = f"it could not be normalized because {why}"
                 issues.append(
                     Issue(
@@ -329,6 +343,28 @@ def _record_issues(
                     )
                 )
     return issues
+
+
+def _oversized_fields(
+    header: Sequence[str], rec: Record, settings: Settings, where: dict
+) -> list[Issue]:
+    """Output fields must stay readable with the same ``max_field_chars`` limit, which the
+    generated output profile keeps; normalization can make values longer."""
+    limit = settings.source.max_field_chars
+    return [
+        Issue(
+            "field_too_large",
+            ERROR,
+            f"The cleaned value has {len(value)} characters, more than max_field_chars "
+            f"({limit}); the output could not be read back with its output profile.",
+            "Raise [source] max_field_chars in the profile, or do not normalize this column.",
+            column=name,
+            value=value,
+            **where,
+        )
+        for name, value in zip(header, rec.fields, strict=True)
+        if len(value) > limit
+    ]
 
 
 def _number_suggestion(value: str, fmt: str, column: str, settings: Settings, stage: str) -> str:

@@ -55,6 +55,10 @@ if result.export_ready:
 - `Issue`: `code`, `severity` (`error`, `warning`, `fatal`), `stage`, `record`,
   `line_start`, `line_end`, `column`, `value`, `message`, `suggestion`, `related_record`,
   `related_line`.
+- `Profile` and `ColumnSpec` objects built directly are validated with the same rules as
+  TOML profiles (`schema.validate_profile`) before any data is read.
+- Results keep `source_file`/`profile_file`: absolute paths captured when the inputs were read.
+  `export_clean` protects them even if the working directory changes afterwards.
 - Exceptions (all subclasses of `CsvTidyError`, CLI exit code 2): `ProfileError` (invalid
   profile/option), `InputError` (input cannot be opened), `OutputError` (unsafe path, existing
   file without `overwrite`, blocked export, or write failure; `outcomes` lists artifacts
@@ -64,13 +68,15 @@ if result.export_ready:
 ## Invariants (covered by tests)
 
 1. Source bytes are never modified (hash checked before and after `check`/`clean`).
-2. Fields of unselected columns are byte-for-byte unchanged in the output.
-3. Records keep source order; records disappear only through explicit deduplication.
-4. Records with a wrong field count are never transformed or removed and always block export.
-5. An exported CSV passes `check` with its generated output profile.
-6. A second `clean` with the output profile makes no changes (idempotence).
-7. Report totals are complete even when details are truncated; incomplete scans are never valid.
-8. Issue order and report content are deterministic for the same input and settings.
+2. A value selected for normalization counts as repaired only if it was parsed in its source
+   format and converted; otherwise it stays an output error.
+3. Fields of unselected columns are byte-for-byte unchanged in the output.
+4. Records keep source order; records disappear only through explicit deduplication.
+5. Records with a wrong field count are never transformed or removed and always block export.
+6. An exported CSV passes `check` with its generated output profile.
+7. A second `clean` with the output profile makes no changes (idempotence).
+8. Report totals are complete even when details are truncated; incomplete scans are never valid.
+9. Issue order and report content are deterministic for the same input and settings.
 
 ## Important decisions
 

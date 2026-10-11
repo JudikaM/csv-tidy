@@ -42,6 +42,10 @@ class TransformResult:
     records: list[Record]
     changes: list[FieldChange]
     removed: list[RemovedRecord]
+    # (record index, column) of non-empty values selected for normalization that could not
+    # be parsed in their source format. They stay errors even if they happen to look valid
+    # in the output format.
+    unconverted: frozenset[tuple[int, str]] = frozenset()
 
 
 def transform(
@@ -64,6 +68,7 @@ def transform(
             normalizers.append((name, index[name], _date_converter(source_fmt, output_fmt)))
 
     transformed: list[Record] = []
+    unconverted: set[tuple[int, str]] = set()
     steps_by_record: dict[int, dict[int, list[str]]] = {}
     for rec in records:
         if len(rec.fields) != width:
@@ -76,12 +81,14 @@ def transform(
             if trimmed != fields[pos]:
                 fields[pos] = trimmed
                 steps.setdefault(pos, []).append("trim")
-        for _name, pos, convert in normalizers:
+        for name, pos, convert in normalizers:
             value = fields[pos]
             if not value.strip():
                 continue
             converted = convert(value)
-            if converted is not None and converted != value:
+            if converted is None:
+                unconverted.add((rec.index, name))
+            elif converted != value:
                 fields[pos] = converted
                 steps.setdefault(pos, []).append("normalize")
         transformed.append(Record(rec.index, rec.line_start, rec.line_end, tuple(fields)))
@@ -105,7 +112,9 @@ def transform(
                         tuple(steps),
                     )
                 )
-    return TransformResult(kept, changes, removed)
+    kept_ids = {rec.index for rec in kept}
+    failed = frozenset(key for key in unconverted if key[0] in kept_ids)
+    return TransformResult(kept, changes, removed, failed)
 
 
 def _deduplicate(records: list[Record], settings: Settings, index: dict[str, int], width: int):

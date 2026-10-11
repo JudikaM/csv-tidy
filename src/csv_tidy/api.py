@@ -53,6 +53,10 @@ class CheckResult:
     settings: Settings
     scan: ScanInfo
     issues: tuple[Issue, ...]
+    # Absolute paths captured when the files were read; used to protect them on export
+    # even if the working directory changes later.
+    source_file: Path | None = None
+    profile_file: Path | None = None
 
     @property
     def errors(self) -> int:
@@ -89,6 +93,8 @@ class CleanResult:
     changes: tuple[FieldChange, ...]
     removed: tuple[RemovedRecord, ...]
     output_profile: Profile
+    source_file: Path | None = None
+    profile_file: Path | None = None
 
     @property
     def output_errors(self) -> int:
@@ -125,6 +131,12 @@ def _profile(profile: Profile | str | Path | None) -> Profile | None:
     if profile is None or isinstance(profile, Profile):
         return profile
     return load_profile(profile)
+
+
+def _profile_file(profile: Profile | None) -> Path | None:
+    if profile is None or profile.resolved_path is None:
+        return None
+    return Path(profile.resolved_path)
 
 
 def _read(path: str | Path, settings: Settings) -> Table:
@@ -170,7 +182,13 @@ def check_file(
     if table.fatal:
         issues.append(_fatal_issue(table.fatal, "source"))
     return CheckResult(
-        str(path), loaded.path if loaded else None, settings, _scan(table), tuple(issues)
+        str(path),
+        loaded.path if loaded else None,
+        settings,
+        _scan(table),
+        tuple(issues),
+        source_file=Path(path).resolve(),
+        profile_file=_profile_file(loaded),
     )
 
 
@@ -207,7 +225,13 @@ def clean_file(
             physical_lines=table.physical_lines,
             bom=table.bom,
         )
-        output_issues = validate_table(cleaned, settings, "output", include_blank_lines=False)
+        output_issues = validate_table(
+            cleaned,
+            settings,
+            "output",
+            include_blank_lines=False,
+            unconverted=result.unconverted,
+        )
 
     removed_ids = {r.record for r in removed}
     output_keys = {(i.code, i.record, i.column) for i in output_issues}
@@ -239,13 +263,17 @@ def clean_file(
         changes=tuple(changes),
         removed=tuple(removed),
         output_profile=output_profile(settings),
+        source_file=Path(path).resolve(),
+        profile_file=_profile_file(loaded),
     )
 
 
 def protected_inputs(result: CheckResult | CleanResult) -> dict[str, Path]:
-    protected = {"input CSV": Path(result.source_path)}
-    if result.profile_path:
-        protected["input profile"] = Path(result.profile_path)
+    protected = {"input CSV": result.source_file or Path(result.source_path).resolve()}
+    if result.profile_file is not None:
+        protected["input profile"] = result.profile_file
+    elif result.profile_path:
+        protected["input profile"] = Path(result.profile_path).resolve()
     return protected
 
 

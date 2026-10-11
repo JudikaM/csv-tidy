@@ -78,6 +78,8 @@ class Profile:
     normalize: tuple[str, ...] | None = None
     deduplicate: str | None = None
     path: str | None = field(default=None, compare=False)
+    # Absolute path captured when the profile file was read (used to protect it from writes).
+    resolved_path: str | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -169,7 +171,7 @@ def load_profile(path: str | Path) -> Profile:
         raise ProfileError(f"cannot read profile {path}: {exc.strerror or exc}") from None
     except tomllib.TOMLDecodeError as exc:
         raise ProfileError(f"profile {path} is not valid TOML: {exc}") from None
-    return profile_from_dict(data, source=label)
+    return replace(profile_from_dict(data, source=label), resolved_path=str(path.resolve()))
 
 
 def profile_from_dict(data: Mapping[str, Any], source: str = "profile") -> Profile:
@@ -257,6 +259,8 @@ def resolve_settings(
     profile: Profile | None = None, overrides: Overrides | None = None
 ) -> Settings:
     """Apply override > profile > default precedence and validate cross-references."""
+    if profile is not None:
+        validate_profile(profile)
     p = profile or Profile()
     o = overrides or Overrides()
     _validate_overrides(o)
@@ -295,6 +299,72 @@ def resolve_settings(
     return settings
 
 
+def validate_profile(profile: Profile) -> None:
+    """Apply the TOML profile rules to a ``Profile`` object, including one built directly
+    through the API, so that every entry point enforces the same constraints."""
+    if not isinstance(profile, Profile):
+        raise ProfileError("profile must be a Profile object, a path to a TOML file, or None")
+    where = profile.path or "profile"
+    for label, value, choices in (
+        ("[source] delimiter", profile.source_delimiter, DELIMITERS),
+        ("[output] delimiter", profile.output_delimiter, DELIMITERS),
+        ("[source] number_format", profile.source_number_format, NUMBER_FORMATS),
+        ("[output] number_format", profile.output_number_format, NUMBER_FORMATS),
+        ("[output] line_ending", profile.line_ending, LINE_ENDINGS),
+        ("[duplicates] rows", profile.duplicate_rows, DUPLICATE_ROW_POLICIES),
+        ("[transform] deduplicate", profile.deduplicate, DEDUPLICATE_MODES),
+    ):
+        if value is not None:
+            _choice(value, choices, f"{where} {label}")
+    for label, value in (
+        ("[source] encoding", profile.source_encoding),
+        ("[output] encoding", profile.output_encoding),
+    ):
+        if value is not None:
+            check_encoding(value, f"{where} {label}")
+    for label, value in (
+        ("[source] date_format", profile.source_date_format),
+        ("[output] date_format", profile.output_date_format),
+    ):
+        if value is not None:
+            check_date_format(value, f"{where} {label}")
+    if profile.max_field_chars is not None:
+        _opt_max_field({"max_field_chars": profile.max_field_chars}, f"{where} [source]")
+    if not isinstance(profile.columns, (list, tuple)):
+        raise ProfileError(f"{where}: columns must be a sequence of ColumnSpec objects")
+    names: set[str] = set()
+    for column in profile.columns:
+        if not isinstance(column, ColumnSpec):
+            raise ProfileError(f"{where}: columns must be ColumnSpec objects")
+        cwhere = f"{where} [columns.{column.name}]"
+        if not isinstance(column.name, str) or not column.name.strip():
+            raise ProfileError(f"{where}: column names must be non-empty strings")
+        if column.name in names:
+            raise ProfileError(f"{where}: column {column.name!r} is declared more than once")
+        names.add(column.name)
+        _choice(column.type, COLUMN_TYPES, f"{cwhere} type")
+        if not isinstance(column.required, bool):
+            raise ProfileError(f"{cwhere}: 'required' must be true or false")
+        if column.number_format is not None:
+            if column.type != "decimal":
+                raise ProfileError(f"{cwhere}: 'number_format' is only valid for decimal columns")
+            _choice(column.number_format, NUMBER_FORMATS, f"{cwhere} number_format")
+        if column.date_format is not None:
+            if column.type != "date":
+                raise ProfileError(f"{cwhere}: 'date_format' is only valid for date columns")
+            check_date_format(column.date_format, f"{cwhere} date_format")
+    keys = profile.duplicate_keys
+    if not isinstance(keys, (list, tuple)) or not all(isinstance(k, (list, tuple)) for k in keys):
+        raise ProfileError(f"{where} [duplicates] keys: must be a sequence of column lists")
+    _keys([list(k) for k in keys], f"{where} [duplicates] keys")
+    for label, value in (("trim", profile.trim), ("normalize", profile.normalize)):
+        if value is None:
+            continue
+        if not isinstance(value, (list, tuple)):
+            raise ProfileError(f"{where} [transform] {label}: must be a list of column names")
+        _names(list(value), f"{where} [transform] {label}")
+
+
 def _validate_overrides(o: Overrides) -> None:
     where = "option"
     for name, value, choices in (
@@ -317,8 +387,11 @@ def _validate_overrides(o: Overrides) -> None:
         if value is not None:
             check_date_format(value, f"{where} {name}")
     for name, value in (("--trim", o.trim), ("--normalize", o.normalize)):
-        if value is not None:
-            _names(list(value), f"{where} {name}")
+        if value is None:
+            continue
+        if not isinstance(value, (list, tuple)):
+            raise ProfileError(f"{where} {name}: must be a list of column names")
+        _names(list(value), f"{where} {name}")
 
 
 # --------------------------------------------------------------------------- output profile
@@ -433,7 +506,7 @@ def profile_to_dict(profile: Profile) -> dict[str, Any]:
 def profile_to_toml(profile: Profile, header: str = "") -> str:
     """Serialize a profile with ``tomli_w``; the result is verified by parsing it back."""
     text = tomli_w.dumps(profile_to_dict(profile))
-    if profile_from_dict(tomllib.loads(text)) != replace(profile, path=None):
+    if profile_from_dict(tomllib.loads(text)) != profile:
         raise ProfileError("internal error: generated profile does not round-trip")
     prefix = "".join(f"# {line}\n" for line in header.splitlines())
     return prefix + text
@@ -449,6 +522,13 @@ def check_encoding(value: Any, where: str) -> str:
         codecs.lookup(value)
     except LookupError:
         raise ProfileError(f"{where}: unknown encoding '{value}'") from None
+    try:
+        # Binary (base64_codec, hex_codec) and text-to-text (rot_13) codecs exist but cannot
+        # convert between text and bytes; str.encode/bytes.decode reject them.
+        "".encode(value)
+        b"".decode(value)
+    except LookupError:
+        raise ProfileError(f"{where}: '{value}' is not a text encoding") from None
     return value
 
 

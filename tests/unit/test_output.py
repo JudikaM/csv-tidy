@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from csv_tidy import OutputError, clean_file, export_clean
+from csv_tidy import output as output_module
 from csv_tidy.output import render_csv, validate_artifact_paths, write_atomic
 
 
@@ -97,16 +98,16 @@ def test_export_writes_csv_and_profile_and_refuses_blocked_results(write, tmp_pa
 
 def test_profile_write_failure_after_csv_is_reported(write, tmp_path, monkeypatch):
     result = clean_file(write("g.csv", "a\n1\n"))
-    real = os.replace
+    real = output_module._finalize
     calls = []
 
-    def replace_once(src, dst):
-        calls.append(dst)
+    def finalize_once(temp_name, path, overwrite):
+        calls.append(path)
         if len(calls) == 2:
             raise OSError("permission denied")
-        return real(src, dst)
+        return real(temp_name, path, overwrite)
 
-    monkeypatch.setattr(os, "replace", replace_once)
+    monkeypatch.setattr(output_module, "_finalize", finalize_once)
     with pytest.raises(OutputError) as excinfo:
         export_clean(result, tmp_path / "c.csv", output_schema=tmp_path / "c.toml")
     assert [(o.kind, o.status) for o in excinfo.value.outcomes] == [

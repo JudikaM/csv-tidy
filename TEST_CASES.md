@@ -36,6 +36,22 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | AC-26 | Built wheel installs and works in a fresh environment | `scripts/smoke_dist.py` (run locally and in CI after `python -m build`) |
 | AC-27 | Source files are never modified | `integration/test_examples.py`: `test_transactions_fixable_full_chain`, `test_unfixable_transactions_block_export`; `scripts/smoke_dist.py` |
 
+## Regression tests
+
+`tests/integration/test_regressions.py` covers defects found by the audit of commit
+`e1e4a63`. Each test failed on that commit and passes now.
+
+| ID | Defect | Related criteria | Tests |
+|----|--------|------------------|-------|
+| R1 | A value that fails its source format but looks valid in the output format was marked resolved | AC-09, AC-11, AC-12 | `test_r1_*` (numbers, dates, trim-then-parse, unchanged valid values, removed records) |
+| R2 | Export after a working-directory change could overwrite the input CSV/profile | AC-17, AC-27 | `test_r2_export_after_cwd_change_cannot_overwrite_inputs` |
+| R3 | Normalized values longer than `max_field_chars` produced an unreadable export | AC-22, AC-23, AC-24 | `test_r3_expanded_output_beyond_field_limit_blocks_export`, `test_r3_chain_stays_valid_when_the_limit_allows_expansion` |
+| R4 | A destination created during the write was replaced without `--overwrite` | AC-19, AC-20 | `test_r4_destination_created_during_finalization_is_not_clobbered` |
+| R5 | Binary/text-to-text codecs were accepted and crashed | AC-16 | `test_r5_non_text_codecs_are_configuration_errors`, `test_r5_text_encodings_still_work` |
+| R6 | Directly constructed `Profile`/`ColumnSpec` objects skipped validation | AC-16, AC-25 | `test_r6_direct_profile_objects_are_validated`, `test_r6_valid_direct_profile_is_supported`, `test_r6_override_lists_must_be_sequences` |
+| R7 | A failed `--report` write was not reflected in the printed report | AC-21 | `test_r7_*` |
+| — | Parsing contract: a quote inside an unquoted field is kept literally | AC-05 | `test_quote_inside_unquoted_field_follows_python_csv_and_is_kept_literally` |
+
 ## Fixture expectations
 
 All fixtures in `examples/` are synthetic. Source file hashes are compared before and after

@@ -13,7 +13,7 @@ schema_version = 1            # required; only 1 is supported
 
 [source]                      # how to read the input
 delimiter = ";"               # "," or ";"                         default ","
-encoding = "utf-8"            # any Python codec name               default "utf-8"
+encoding = "utf-8"            # a Python text encoding              default "utf-8"
 number_format = "id"          # "id", "us" or "canonical"           default "canonical"
 date_format = "DD/MM/YYYY"    # see "Date formats"                  default "YYYY-MM-DD"
 max_field_chars = 131072      # 1 .. 100000000                       default 131072
@@ -101,7 +101,13 @@ supported in 0.1.
 - Comma and semicolon delimiters, LF and CRLF line endings, UTF-8 with or without BOM.
   With `encoding = "utf-8"` a UTF-8 BOM is accepted and removed from the header.
 - Decoding is strict: undecodable bytes stop the scan with a fatal `decode_error`; nothing is
-  replaced or skipped.
+  replaced or skipped. Encodings must be text encodings (for example `utf-8`, `utf-16`,
+  `cp1252`, `latin-1`); binary or text-to-text codecs such as `base64_codec`, `hex_codec`, or
+  `rot_13` are rejected as configuration errors.
+- Parsing follows Python's `csv` module in strict mode. It stops on malformed quoting such as
+  an unterminated quoted field or text after a closing quote (`"bad"x`). A quote character
+  inside an *unquoted* field (`a"b`) is accepted and kept literally; CSV Tidy does not enforce
+  every RFC 4180 rule beyond what Python's parser checks.
 - `record` numbers count data records (header excluded); `line` numbers are physical lines.
 - Header names are matched exactly (case and whitespace).
 
@@ -115,7 +121,7 @@ supported in 0.1.
 | Header with surrounding spaces | `header_whitespace` warning |
 | Single-column header containing the other delimiter | `possible_wrong_delimiter` warning |
 | Too few / too many fields | `inconsistent_columns` error; the record is not checked further, never transformed or removed |
-| Malformed quoting, unterminated quote | fatal `malformed_csv`; scan incomplete |
+| Malformed quoting (unterminated quoted field, text after a closing quote) | fatal `malformed_csv`; scan incomplete |
 | Field longer than `max_field_chars` | fatal `field_too_large`; scan incomplete |
 | Undecodable bytes | fatal `decode_error`; scan incomplete |
 
@@ -129,6 +135,7 @@ supported in 0.1.
 | `duplicate_record` | warning | whole row identical to an earlier row (`rows = "warn"`) |
 | `duplicate_key` | error | key values equal to an earlier record's; the earlier record is reported |
 | `missing_column` | error | referenced column not in the header |
+| `field_too_large` | error (output only) | a cleaned value is longer than `max_field_chars` (see below) |
 
 Duplicate comparison uses exact text (case-sensitive). A key with any empty part never forms
 an identity, so records with empty identifiers are not grouped together.
@@ -139,15 +146,21 @@ Applied in this fixed order, only to selected columns of records with the correc
 
 1. **trim** — remove leading/trailing whitespace; internal whitespace is kept.
 2. **normalize** — rewrite valid `decimal`/`date` values from the source format to the output
-   format. Invalid values are left unchanged and reported.
+   format. A value that cannot be parsed in its source format is left unchanged and stays an
+   error, **even if it happens to look valid in the output format** (for example `1.25` with
+   source `id` and output `canonical`, or `12/31/2026` with source `DD/MM/YYYY` and output
+   `MM/DD/YYYY`). Only a successful conversion repairs a value.
 3. **deduplicate** — `rows` removes later exact duplicate rows; `keys` also removes later
    records whose configured key matches a kept record. The first record is always kept.
    Comparison uses the transformed values.
 4. **output validation** — the result is validated with output rules: normalized columns use
-   the output format; other columns keep their source format.
+   the output format; other columns keep their source format. Every cleaned value must also
+   fit `max_field_chars`; normalization can make values longer (`1000000` → `1,000,000`), and
+   a longer value is reported as `field_too_large` and blocks the export, so an exported file
+   can always be read back with its generated output profile. Raise `max_field_chars` if needed.
 
-Source issues are marked `resolved`, `unresolved`, or `removed` (record removed by
-deduplication). Output issues created by transformations are marked `introduced` (for example,
+Source issues are marked `resolved` (a selected transformation actually repaired the value),
+`unresolved`, or `removed` (record removed by deduplication). Output issues created by transformations are marked `introduced` (for example,
 duplicate keys that appear after trimming).
 
 ## Commands and exit codes
@@ -156,7 +169,7 @@ duplicate keys that appear after trimming).
 |------|---------|-------------------------------|
 | 0 | no source errors (warnings allowed) | no remaining output errors |
 | 1 | source data errors | output errors remain; nothing is exported |
-| 2 | usage, profile/option, read, decoding/parsing, or write failure | same |
+| 2 | usage, profile/option, read, decoding/parsing, or write failure (including a failed `--report` write) | same |
 
 - `check` validates source rules and never modifies files. Profile transformations are ignored.
 - `clean` is a dry run unless `--apply` is given. `--apply` requires `--output`; `--output` and
@@ -172,12 +185,16 @@ duplicate keys that appear after trimming).
   rejected.
 - Two artifacts may not refer to the same file.
 - Existing files are refused unless `--overwrite` is given (which still never allows writing
-  an input).
+  an input). Without `--overwrite` the final rename itself refuses an existing destination,
+  so a file created by another process while CSV Tidy is writing is never replaced.
+- Library results remember the absolute paths of the input CSV and profile when they are
+  read, so a later `export_clean` call is protected even if the working directory changed.
 - Each file is written to a temporary file in the same directory and moved into place. On
   failure the temporary file is removed and an existing file keeps its previous content.
   Writes are atomic per file, not across files: the CSV is written first, then the output
   profile, then the report. If a later write fails, the report and stderr state which files
-  were written, and the exit code is 2.
+  were written, and the exit code is 2. (On file systems without hard links, no-clobber
+  writes fall back to exclusive creation, which still never replaces an existing file.)
 - Missing parent directories of output paths are created.
 - Output quoting is minimal (`"` doubled); fields containing the delimiter, quotes, or line
   breaks are quoted. Serialization may differ from the source bytes; field values do not.
@@ -197,7 +214,11 @@ makes no changes. The profile reflects CLI overrides, not just the original TOML
 `data_records`, `physical_lines`, `blank_lines`, `fatal_error`), `summary`, issue lists, and
 `details` (`limit`, totals, `shown`, `truncated`). `clean` adds `mode`, `output`,
 `transformations`, `changes` (counts and limited before/after examples), `source_issues`,
-`output_issues`, and `export.artifacts`. `--max-details` limits listed issues and
+`output_issues`, and `export.artifacts`; `check` lists `artifacts`. Artifact lists include the
+report itself (`written` or `failed`). `summary.exit_code` is the command's exit code: it is 2
+if saving the report (or another artifact) failed, even when the data are valid
+(`summary.status` still describes the data). The report file is written before stdout, so
+stdout always shows the final outcome. `--max-details` limits listed issues and
 `--max-examples` limits examples; totals are always complete. Issue values longer than 200
 characters are truncated in JSON (`value_truncated: true`). Reports contain no timestamps, so
 the same input and settings produce the same report. Status messages go to stderr.

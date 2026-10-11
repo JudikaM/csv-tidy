@@ -24,3 +24,29 @@ All notable changes are documented here. The format follows
   - Python API: `check_file`, `clean_file`, `export_clean`, `load_profile`.
   - Synthetic examples, benchmark script, distribution smoke test, and CI for Linux and
     Windows on Python 3.11 and 3.15.
+
+### Fixed
+
+Defects found by an audit of the first published commit (e1e4a63), before any release:
+
+- A value selected for normalization that could not be parsed in its source format was
+  reported as resolved, and exported, when it happened to look valid in the output format
+  (for example `1.25` with `id` source and `canonical` output). It now stays an error.
+- `export_clean` protected input paths relative to the current working directory at export
+  time; results now keep absolute input paths captured when the files were read.
+- Normalization could make a value longer than `max_field_chars`, producing an export that its
+  own output profile could not read. Such values are now reported as `field_too_large` output
+  errors and block the export.
+- Writing without `--overwrite` could replace a file created by another process during the
+  write; the final step now refuses an existing destination atomically.
+- Binary and text-to-text codecs (`base64_codec`, `hex_codec`, `rot_13`) were accepted as
+  encodings and caused tracebacks; they are now configuration errors (exit code 2).
+- `Profile`/`ColumnSpec` objects built directly through the API bypassed validation; they are
+  now validated like TOML profiles.
+- When saving `--report` failed, stdout still showed `exit_code` 0. Reports now list the report
+  artifact (`written`/`failed`) and `summary.exit_code` matches the command's exit code.
+
+### Documentation
+
+- Clarified that parsing follows Python's `csv` module in strict mode: a quote inside an
+  unquoted field is kept literally.

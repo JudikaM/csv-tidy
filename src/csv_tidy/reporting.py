@@ -72,7 +72,20 @@ def _count(issues: Sequence[Issue], severity: str) -> int:
     return sum(i.severity == severity for i in issues)
 
 
-def check_report(result: CheckResult, max_details: int) -> dict[str, Any]:
+def _artifact_list(artifacts: Sequence[ArtifactOutcome]) -> list[dict[str, Any]]:
+    return [
+        {"kind": a.kind, "path": a.path, "status": a.status, "error": a.error} for a in artifacts
+    ]
+
+
+def check_report(
+    result: CheckResult,
+    max_details: int,
+    artifacts: Sequence[ArtifactOutcome] = (),
+    exit_code: int | None = None,
+) -> dict[str, Any]:
+    """``summary.exit_code`` is the command's exit code, which is 2 if writing an artifact
+    (the report) failed even when validation passed; ``summary.status`` is the validation result."""
     shown = list(result.issues[:max_details])
     status = "incomplete" if not result.scan.complete else ("invalid" if result.errors else "valid")
     return {
@@ -88,7 +101,7 @@ def check_report(result: CheckResult, max_details: int) -> dict[str, Any]:
             "errors": result.errors,
             "warnings": result.warnings,
             "fatal": _count(result.issues, FATAL),
-            "exit_code": result.exit_code,
+            "exit_code": result.exit_code if exit_code is None else exit_code,
         },
         "issues": [_issue_dict(i) for i in shown],
         "details": {
@@ -97,6 +110,7 @@ def check_report(result: CheckResult, max_details: int) -> dict[str, Any]:
             "shown": len(shown),
             "truncated": len(shown) < len(result.issues),
         },
+        "artifacts": _artifact_list(artifacts),
     }
 
 
@@ -211,12 +225,7 @@ def clean_report(
             "output_errors": result.output_errors,
             "exit_code": result.exit_code if exit_code is None else exit_code,
         },
-        "export": {
-            "artifacts": [
-                {"kind": a.kind, "path": a.path, "status": a.status, "error": a.error}
-                for a in artifacts
-            ]
-        },
+        "export": {"artifacts": _artifact_list(artifacts)},
     }
 
 
@@ -303,6 +312,7 @@ def render_check_text(report: dict[str, Any]) -> str:
                 f"  ... {d['total'] - d['shown']} more issues not shown "
                 "(totals above are complete)."
             )
+    lines += _artifact_lines(report["artifacts"])
     lines.append("")
     verdict = {
         "valid": "source validation passed",
@@ -311,6 +321,13 @@ def render_check_text(report: dict[str, Any]) -> str:
     }[s["status"]]
     lines.append(f"Status: {verdict} (exit code {s['exit_code']})")
     return "\n".join(lines) + "\n"
+
+
+def _artifact_lines(artifacts: list[dict[str, Any]]) -> list[str]:
+    return [
+        f"  {a['kind']}: {a['path']} - {a['status']}" + (f" ({a['error']})" if a["error"] else "")
+        for a in artifacts
+    ]
 
 
 def render_clean_text(report: dict[str, Any]) -> str:
@@ -387,10 +404,6 @@ def render_clean_text(report: dict[str, Any]) -> str:
             f"Export: blocked by {_n(s['output_errors'], 'remaining output error')}; "
             "no CSV is written."
         )
-    for a in report["export"]["artifacts"]:
-        lines.append(
-            f"  {a['kind']}: {a['path']} - {a['status']}"
-            + (f" ({a['error']})" if a["error"] else "")
-        )
+    lines += _artifact_lines(report["export"]["artifacts"])
     lines.append(f"Status: exit code {s['exit_code']}")
     return "\n".join(lines) + "\n"

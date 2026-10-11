@@ -14,18 +14,19 @@ with `examples/profiles/transactions-id.toml`. About 2% of rows contain problems
 ## Recorded results
 
 Measured on 2026-10-11 on one developer machine: Windows 11 (10.0.26300), CPython 3.13.3,
-12 logical CPUs, CSV Tidy 0.1.0, seed 20260211, issue rate 0.02. Single runs; expect
-variation between runs and machines. These numbers are not performance guarantees.
+12 logical CPUs, CSV Tidy 0.1.0 including the audit fixes, seed 20260211, issue rate 0.02.
+Single runs; expect variation between runs and machines. These numbers are not performance
+guarantees.
 
 | Rows | File size | Step | Time | Rows/second |
 |-----:|----------:|------|-----:|------------:|
-| 1,000 | 0.06 MiB | check | 0.014 s | ~71,000 |
-| 1,000 | 0.06 MiB | clean (dry run) | 0.014 s | ~71,000 |
-| 100,000 | 5.98 MiB | check | 0.485 s | ~206,000 |
-| 100,000 | 5.98 MiB | clean (dry run) | 1.612 s | ~62,000 |
+| 1,000 | 0.06 MiB | check | 0.013 s | ~77,000 |
+| 1,000 | 0.06 MiB | clean (dry run) | 0.015 s | ~67,000 |
+| 100,000 | 5.98 MiB | check | 0.513 s | ~195,000 |
+| 100,000 | 5.98 MiB | clean (dry run) | 1.677 s | ~60,000 |
 
 Peak Python memory traced with `tracemalloc` (`--memory`, which also slows execution) for
-100,000 rows: about 69 MiB for `check` and 162 MiB for `clean`. This counts Python
+100,000 rows: about 69 MiB for `check` and 168 MiB for `clean`. This counts Python
 allocations only, not total process memory.
 
 ## Memory growth

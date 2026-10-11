@@ -10,7 +10,8 @@ and numeric dates such as `DD/MM/YYYY`. It never guesses: it repairs only what y
 reports everything else with record and line locations, and refuses to export a result that
 still has errors.
 
-**Status:** 0.1.0, an early release. It works locally and offline, with no network access,
+**Status:** early development. Version 0.1.0 is prepared but not yet released. It works
+locally and offline, with no network access,
 telemetry, or AI services. It has not yet been validated with external users. Feedback is
 welcome (see [Feedback](#feedback-and-bug-reports)).
 

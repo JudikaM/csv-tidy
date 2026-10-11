@@ -212,23 +212,36 @@ def _protected(args: argparse.Namespace) -> dict[str, Path]:
     return protected
 
 
-def _emit(report: dict, args: argparse.Namespace, render) -> str:
-    text = to_json(report) if args.format == "json" else render(report)
+def _publish(build, render, args: argparse.Namespace, outcomes: list, exit_code: int) -> int:
+    """Save the requested report first, then print the final report to stdout.
+
+    The printed (and saved) report lists every artifact outcome and the final exit code, so a
+    failed report write is never hidden behind a successful-looking summary.
+    """
+
+    def text_for(items: list, code: int) -> str:
+        report = build(items, code)
+        return to_json(report) if args.format == "json" else render(report)
+
+    if args.report:
+        planned = [*outcomes, ArtifactOutcome("report", args.report, "written")]
+        text = text_for(planned, exit_code)
+        try:
+            write_artifact(
+                Path(args.report), encode_text(text, "utf-8", "report"), args.overwrite, "report"
+            )
+        except OutputError as exc:
+            exit_code = 2
+            failed = [*outcomes, ArtifactOutcome("report", args.report, "failed", str(exc))]
+            text = text_for(failed, exit_code)
+            print(f"csv-tidy: error: {exc}", file=sys.stderr)
+        else:
+            print(f"csv-tidy: report written to {args.report}", file=sys.stderr)
+    else:
+        text = text_for(outcomes, exit_code)
     sys.stdout.write(text)
     sys.stdout.flush()
-    return text
-
-
-def _save_report(text: str, args: argparse.Namespace) -> int:
-    try:
-        write_artifact(
-            Path(args.report), encode_text(text, "utf-8", "report"), args.overwrite, "report"
-        )
-    except OutputError as exc:
-        print(f"csv-tidy: error: {exc}", file=sys.stderr)
-        return 2
-    print(f"csv-tidy: report written to {args.report}", file=sys.stderr)
-    return 0
+    return exit_code
 
 
 def run_check(args: argparse.Namespace) -> int:
@@ -236,10 +249,11 @@ def run_check(args: argparse.Namespace) -> int:
         validate_artifact_paths(_protected(args), {"report": Path(args.report)}, args.overwrite)
     profile = load_profile(args.schema) if args.schema else None
     result = check_file(args.input, profile, overrides=_overrides(args))
-    text = _emit(check_report(result, args.max_details), args, render_check_text)
-    if args.report and _save_report(text, args):
-        return 2
-    return result.exit_code
+
+    def build(items: list, code: int) -> dict:
+        return check_report(result, args.max_details, items, code)
+
+    return _publish(build, render_check_text, args, [], result.exit_code)
 
 
 def run_clean(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
@@ -293,13 +307,13 @@ def run_clean(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
                     )
                 )
     mode = "apply" if args.apply else "dry-run"
-    report = clean_report(result, mode, args.max_details, args.max_examples, outcomes, exit_code)
-    text = _emit(report, args, render_clean_text)
     if failure is not None:
         print(f"csv-tidy: error: {failure}", file=sys.stderr)
-    if args.report and _save_report(text, args):
-        return 2
-    return exit_code
+
+    def build(items: list, code: int) -> dict:
+        return clean_report(result, mode, args.max_details, args.max_examples, items, code)
+
+    return _publish(build, render_clean_text, args, outcomes, exit_code)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
