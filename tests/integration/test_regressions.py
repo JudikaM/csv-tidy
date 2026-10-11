@@ -22,6 +22,8 @@ from csv_tidy import (
     check_file,
     clean_file,
     export_clean,
+    load_profile,
+    profile_to_toml,
 )
 from csv_tidy import output as output_module
 from csv_tidy.output import write_atomic
@@ -480,3 +482,98 @@ def test_rd_other_link_errors_are_not_reported_as_missing_support(tmp_path, monk
     with pytest.raises(PermissionError):
         write_atomic(tmp_path / "out.csv", b"x", overwrite=False)
     assert list(tmp_path.iterdir()) == []
+
+
+# ---------------------------------------------------- RE: direct profile_to_toml calls
+# profile_to_toml is public; list-valued Profile collections must serialize like tuples.
+
+
+def _rich_profile(seq) -> Profile:
+    return Profile(
+        source_delimiter=";",
+        source_number_format="id",
+        output_number_format="canonical",
+        columns=seq(
+            [
+                ColumnSpec("id", required=True),
+                ColumnSpec("amount", type="decimal", number_format="us"),
+                ColumnSpec("day", type="date", date_format="DD/MM/YYYY"),
+            ]
+        ),
+        duplicate_keys=seq([seq(["id"]), seq(["day", "amount"])]),
+        trim=seq(["id", "amount"]),
+        normalize=seq(["amount", "day"]),
+    )
+
+
+def test_re_list_and_tuple_profiles_serialize_identically_and_reload(tmp_path):
+    as_lists, as_tuples = _rich_profile(list), _rich_profile(tuple)
+    text = profile_to_toml(as_lists)
+    assert text == profile_to_toml(as_tuples)
+    path = tmp_path / "p.toml"
+    path.write_text(text, encoding="utf-8")
+    assert load_profile(path) == as_tuples
+    assert profile_from_dict(tomllib.loads(text)) == as_tuples
+
+
+def test_re_each_collection_kind_alone():
+    for profile in (
+        Profile(trim=["a"]),
+        Profile(columns=[ColumnSpec("a")]),
+        Profile(duplicate_keys=[["a"], ["a", "b"]]),
+        Profile(columns=[ColumnSpec("a", type="decimal")], normalize=["a"]),
+        Profile(trim=[], normalize=[]),
+    ):
+        text = profile_to_toml(profile)
+        reloaded = profile_from_dict(tomllib.loads(text))
+        assert profile_to_toml(reloaded) == text
+
+
+def test_re_unset_values_stay_unset():
+    assert profile_to_toml(Profile()) == "schema_version = 1\n"
+    assert profile_from_dict(tomllib.loads(profile_to_toml(Profile()))) == Profile()
+    partial = Profile(line_ending="lf", trim=["a"])
+    doc = tomllib.loads(profile_to_toml(partial))
+    assert doc == {
+        "schema_version": 1,
+        "output": {"line_ending": "lf"},
+        "transform": {"trim": ["a"]},
+    }
+    reloaded = profile_from_dict(doc)
+    assert reloaded.source_delimiter is None and reloaded.output_delimiter is None
+    assert reloaded.normalize is None and reloaded.deduplicate is None
+
+
+def test_re_path_is_metadata_and_not_serialized():
+    with_path = Profile(trim=["a"], path="somewhere.toml")
+    text = profile_to_toml(with_path)
+    assert "somewhere" not in text
+    assert text == profile_to_toml(Profile(trim=("a",)))
+
+
+def test_re_callers_containers_and_profile_are_not_mutated():
+    trim, keys, columns = ["a"], [["a"]], [ColumnSpec("a")]
+    profile = Profile(columns=columns, duplicate_keys=keys, trim=trim)
+    profile_to_toml(profile)
+    assert profile.trim is trim and profile.duplicate_keys is keys and profile.columns is columns
+    assert trim == ["a"] and keys == [["a"]] and columns == [ColumnSpec("a")]
+
+
+@pytest.mark.parametrize(
+    ("profile", "fragment"),
+    [
+        (Profile(trim="a"), "trim"),
+        (Profile(trim=["a", "a"]), "must not repeat"),
+        (Profile(duplicate_keys=[["a", 1]]), "list of column names"),
+        (Profile(duplicate_keys=["a"]), "keys"),
+        (Profile(columns=[ColumnSpec("a", type="bogus")]), "type"),
+        (Profile(columns=["a"]), "ColumnSpec"),
+        (Profile(source_date_format="%Y"), "unsupported directive"),
+        (Profile(normalize=["a"]), "cannot normalize column 'a'"),
+    ],
+)
+def test_re_invalid_profiles_are_rejected_clearly(profile, fragment):
+    with pytest.raises(ProfileError) as excinfo:
+        profile_to_toml(profile)
+    assert fragment in str(excinfo.value)
+    assert "internal error" not in str(excinfo.value)

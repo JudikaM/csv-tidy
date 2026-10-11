@@ -53,6 +53,7 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | RA | List-valued `Profile`/`Overrides` settings broke output-profile generation (follow-up audit of `4e5b12a`) | AC-22, AC-24, AC-25 | `test_ra_*` |
 | RB | The `undefined` codec escaped as a raw `UnicodeError` (follow-up audit) | AC-16 | `test_rb_undefined_codec_is_a_configuration_error` |
 | RD | Without hard-link support, no-clobber writes fell back to a non-atomic copy (follow-up audit) | AC-19, AC-20 | `test_rd_*` (the hard-link strategy is exercised on every platform) |
+| RE | `profile_to_toml` rejected valid list-valued `Profile` collections (follow-up review of `8389d1d`) | AC-22, AC-25 | `test_re_*` |
 | — | Parsing contract: a quote inside an unquoted field is kept literally | AC-05 | `test_quote_inside_unquoted_field_follows_python_csv_and_is_kept_literally` |
 
 ## Fixture expectations

@@ -51,6 +51,8 @@ Defects found by an audit of the first published commit (e1e4a63), before any re
   raised a raw `UnicodeError`; it is now a configuration error. Outside Windows, a file system
   without hard links made no-clobber writes fall back to a non-atomic copy that could leave a
   partial file; such writes now fail safely instead.
+- `profile_to_toml` raised an internal round-trip error for `Profile` objects with list-valued
+  collections; it now validates and canonicalizes them like `clean_file` does.
 
 ### Documentation
 

@@ -259,9 +259,7 @@ def resolve_settings(
     profile: Profile | None = None, overrides: Overrides | None = None
 ) -> Settings:
     """Apply override > profile > default precedence and validate cross-references."""
-    if profile is not None:
-        validate_profile(profile)
-    p = profile or Profile()
+    p = canonical_profile(profile) if profile is not None else Profile()
     o = overrides or Overrides()
     _validate_overrides(o)
     source = SourceSettings(
@@ -278,15 +276,15 @@ def resolve_settings(
         date_format=_first(o.output_date_format, p.output_date_format, source.date_format),
         line_ending=_first(o.line_ending, p.line_ending, "crlf"),
     )
-    # Lists are accepted from API callers; settings hold immutable tuple copies so that
-    # later changes to the caller's containers cannot alter them, and so that generated
-    # output profiles compare equal after a TOML round trip.
+    # ``p`` is already canonical (tuples). Override lists are copied to tuples here, so later
+    # changes to the caller's containers cannot alter the settings, and generated output
+    # profiles compare equal after a TOML round trip.
     settings = Settings(
         source=source,
         output=output,
-        columns=tuple(p.columns),
+        columns=p.columns,
         duplicate_rows=_first(p.duplicate_rows, "warn"),
-        duplicate_keys=tuple(tuple(key) for key in p.duplicate_keys),
+        duplicate_keys=p.duplicate_keys,
         trim=tuple(_first(o.trim, p.trim, ())),
         normalize=tuple(_first(o.normalize, p.normalize, ())),
         deduplicate=_first(o.deduplicate, p.deduplicate, "off"),
@@ -300,6 +298,23 @@ def resolve_settings(
     if settings.deduplicate == "keys" and not settings.duplicate_keys:
         raise ProfileError('deduplicate = "keys" requires at least one key in [duplicates] keys')
     return settings
+
+
+def canonical_profile(profile: Profile) -> Profile:
+    """Validate ``profile`` and return a copy whose collections are tuples.
+
+    API callers may pass lists wherever tuples are accepted. The copy is independent of the
+    caller's containers. Unset values (``None``) and every other field are kept as given;
+    no defaults are filled in.
+    """
+    validate_profile(profile)
+    return replace(
+        profile,
+        columns=tuple(profile.columns),
+        duplicate_keys=tuple(tuple(key) for key in profile.duplicate_keys),
+        trim=None if profile.trim is None else tuple(profile.trim),
+        normalize=None if profile.normalize is None else tuple(profile.normalize),
+    )
 
 
 def validate_profile(profile: Profile) -> None:
@@ -507,7 +522,12 @@ def profile_to_dict(profile: Profile) -> dict[str, Any]:
 
 
 def profile_to_toml(profile: Profile, header: str = "") -> str:
-    """Serialize a profile with ``tomli_w``; the result is verified by parsing it back."""
+    """Serialize a profile with ``tomli_w``; the result is verified by parsing it back.
+
+    The profile is validated and its collections canonicalized first, so list and tuple
+    inputs produce the same TOML. Unset values stay unset.
+    """
+    profile = canonical_profile(profile)
     text = tomli_w.dumps(profile_to_dict(profile))
     if profile_from_dict(tomllib.loads(text)) != profile:
         raise ProfileError("internal error: generated profile does not round-trip")
