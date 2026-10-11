@@ -5,6 +5,7 @@ R3 output fields longer than max_field_chars, R4 no-clobber race, R5 non-text co
 R6 unvalidated direct Profile objects, R7 report-write failures hidden in reports.
 """
 
+import errno
 import json
 import os
 import tomllib
@@ -22,6 +23,7 @@ from csv_tidy import (
     clean_file,
     export_clean,
 )
+from csv_tidy import output as output_module
 from csv_tidy.output import write_atomic
 from csv_tidy.schema import profile_from_dict
 
@@ -344,3 +346,137 @@ def test_r7_successful_report_lists_itself_and_matches_stdout(write, tmp_path):
 def test_quote_inside_unquoted_field_follows_python_csv_and_is_kept_literally(write):
     result = clean_file(write("q.csv", 'a,b\n1,a"b\n'))
     assert result.scan.complete and result.rows == (("1", 'a"b'),)
+
+
+# --------------------------------------------------------------- re-audit of 4e5b12a
+# RA list-valued API settings, RB the "undefined" codec, RD hard-link fallback.
+
+
+def _list_profile() -> Profile:
+    return Profile(
+        source_number_format="id",
+        output_number_format="canonical",
+        columns=[ColumnSpec("id"), ColumnSpec("amount", type="decimal")],
+        duplicate_keys=[["id"]],
+        trim=["amount"],
+        normalize=["amount"],
+    )
+
+
+def test_ra_list_settings_round_trip_and_chain(write, tmp_path):
+    path = write("l.csv", 'id,amount\n1," 1.250,5"\n')
+    for kwargs in (
+        {"profile": _list_profile()},
+        {"profile": _list_profile(), "overrides": Overrides(trim=["amount"], normalize=["amount"])},
+    ):
+        result = clean_file(path, **kwargs)
+        assert result.export_ready and result.rows == (("1", "1250.5"),)
+        assert isinstance(result.settings.trim, tuple)
+        assert all(isinstance(key, tuple) for key in result.settings.duplicate_keys)
+        out, schema = tmp_path / "l_out.csv", tmp_path / "l_out.toml"
+        export_clean(result, out, output_schema=schema, overwrite=True)
+        assert check_file(out, schema).exit_code == 0
+        again = clean_file(out, schema)
+        assert again.changes == () and again.export_ready
+
+
+def test_ra_tuple_inputs_are_equivalent_to_lists(write):
+    path = write("t.csv", 'id,amount\n1,"2,5"\n')
+    as_tuples = Profile(
+        source_number_format="id",
+        output_number_format="canonical",
+        columns=(ColumnSpec("id"), ColumnSpec("amount", type="decimal")),
+        duplicate_keys=(("id",),),
+        trim=("amount",),
+        normalize=("amount",),
+    )
+    lists, tuples = clean_file(path, _list_profile()), clean_file(path, as_tuples)
+    assert lists.settings == tuples.settings
+    assert lists.output_profile_toml() == tuples.output_profile_toml()
+
+
+def test_ra_caller_containers_cannot_change_resolved_settings(write):
+    trim, keys = ["amount"], [["id"]]
+    profile = Profile(columns=[ColumnSpec("id"), ColumnSpec("amount", type="decimal")],
+                      duplicate_keys=keys, trim=trim)  # fmt: skip
+    result = clean_file(write("m.csv", "id,amount\n1,2\n"), profile)
+    before = result.output_profile_toml()
+    trim.append("id")
+    keys[0].append("amount")
+    assert result.settings.trim == ("amount",) and result.settings.duplicate_keys == (("id",),)
+    assert result.output_profile_toml() == before
+
+
+@pytest.mark.parametrize(
+    ("profile", "fragment"),
+    [
+        (Profile(duplicate_keys=[["a", 1]]), "list of column names"),
+        (Profile(duplicate_keys=[[]]), "non-empty"),
+        (Profile(trim=["a", ""]), "list of column names"),
+        (Profile(normalize=[["a"]]), "list of column names"),
+    ],
+)
+def test_ra_invalid_list_shapes_are_rejected(write, profile, fragment):
+    with pytest.raises(ProfileError) as excinfo:
+        check_file(write("a.csv", "a\n1\n"), profile)
+    assert fragment in str(excinfo.value)
+
+
+def test_rb_undefined_codec_is_a_configuration_error(write):
+    path = write("a.csv", "a\n1\n")
+    for kwargs in (
+        {"overrides": Overrides(encoding="undefined")},
+        {"overrides": Overrides(output_encoding="undefined")},
+        {"profile": Profile(source_encoding="undefined")},
+        {"profile": Profile(output_encoding="undefined")},
+    ):
+        with pytest.raises(ProfileError, match="cannot be used as a text encoding"):
+            check_file(path, **kwargs)
+    for table in ("source", "output"):
+        with pytest.raises(ProfileError, match="cannot be used as a text encoding"):
+            prof(f'[{table}]\nencoding = "undefined"')
+    cli = run_cli("check", str(path), "--encoding", "undefined")
+    assert cli.code == 2 and "Traceback" not in cli.err
+    schema = write("p.toml", 'schema_version = 1\n[output]\nencoding = "undefined"\n')
+    assert run_cli("clean", str(path), "--schema", str(schema)).code == 2
+
+
+def test_rd_hard_link_strategy_is_no_clobber(tmp_path, monkeypatch):
+    monkeypatch.setattr(output_module, "_RENAME_IS_NO_CLOBBER", False)
+    target = tmp_path / "out.csv"
+    write_atomic(target, b"first", overwrite=False)
+    assert target.read_bytes() == b"first"
+    assert [p.name for p in tmp_path.iterdir()] == ["out.csv"]
+    with pytest.raises(OutputError, match="created by another process"):
+        write_atomic(target, b"second", overwrite=False)
+    assert target.read_bytes() == b"first"
+    write_atomic(target, b"replaced", overwrite=True)
+    assert target.read_bytes() == b"replaced"
+    assert [p.name for p in tmp_path.iterdir()] == ["out.csv"]
+
+
+def test_rd_missing_hard_link_support_fails_without_partial_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(output_module, "_RENAME_IS_NO_CLOBBER", False)
+
+    def no_hard_links(src, dst):
+        raise OSError(errno.ENOTSUP, "Operation not supported")
+
+    monkeypatch.setattr(os, "link", no_hard_links)
+    target = tmp_path / "out.csv"
+    with pytest.raises(OutputError, match="does not support hard links"):
+        write_atomic(target, b"header,value\n1,2\n", overwrite=False)
+    assert list(tmp_path.iterdir()) == []
+    write_atomic(target, b"header,value\n1,2\n", overwrite=True)
+    assert target.read_bytes() == b"header,value\n1,2\n"
+
+
+def test_rd_other_link_errors_are_not_reported_as_missing_support(tmp_path, monkeypatch):
+    monkeypatch.setattr(output_module, "_RENAME_IS_NO_CLOBBER", False)
+
+    def denied(src, dst):
+        raise PermissionError(errno.EACCES, "Permission denied")
+
+    monkeypatch.setattr(os, "link", denied)
+    with pytest.raises(PermissionError):
+        write_atomic(tmp_path / "out.csv", b"x", overwrite=False)
+    assert list(tmp_path.iterdir()) == []

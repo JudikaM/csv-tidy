@@ -46,6 +46,12 @@ Defects found by an audit of the first published commit (e1e4a63), before any re
 - When saving `--report` failed, stdout still showed `exit_code` 0. Reports now list the report
   artifact (`written`/`failed`) and `summary.exit_code` matches the command's exit code.
 
+- Follow-up audit of 4e5b12a: list-valued API settings (for example `Profile(trim=["a"])`)
+  broke output-profile generation; settings now hold tuple copies. The `undefined` codec
+  raised a raw `UnicodeError`; it is now a configuration error. Outside Windows, a file system
+  without hard links made no-clobber writes fall back to a non-atomic copy that could leave a
+  partial file; such writes now fail safely instead.
+
 ### Documentation
 
 - Clarified that parsing follows Python's `csv` module in strict mode: a quote inside an

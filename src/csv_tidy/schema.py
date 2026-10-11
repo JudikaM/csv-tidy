@@ -278,14 +278,17 @@ def resolve_settings(
         date_format=_first(o.output_date_format, p.output_date_format, source.date_format),
         line_ending=_first(o.line_ending, p.line_ending, "crlf"),
     )
+    # Lists are accepted from API callers; settings hold immutable tuple copies so that
+    # later changes to the caller's containers cannot alter them, and so that generated
+    # output profiles compare equal after a TOML round trip.
     settings = Settings(
         source=source,
         output=output,
-        columns=p.columns,
+        columns=tuple(p.columns),
         duplicate_rows=_first(p.duplicate_rows, "warn"),
-        duplicate_keys=p.duplicate_keys,
-        trim=_first(o.trim, p.trim, ()),
-        normalize=_first(o.normalize, p.normalize, ()),
+        duplicate_keys=tuple(tuple(key) for key in p.duplicate_keys),
+        trim=tuple(_first(o.trim, p.trim, ())),
+        normalize=tuple(_first(o.normalize, p.normalize, ())),
         deduplicate=_first(o.deduplicate, p.deduplicate, "off"),
     )
     for name in settings.normalize:
@@ -524,11 +527,16 @@ def check_encoding(value: Any, where: str) -> str:
         raise ProfileError(f"{where}: unknown encoding '{value}'") from None
     try:
         # Binary (base64_codec, hex_codec) and text-to-text (rot_13) codecs exist but cannot
-        # convert between text and bytes; str.encode/bytes.decode reject them.
+        # convert between text and bytes; str.encode/bytes.decode reject them with
+        # LookupError. The registered "undefined" codec raises UnicodeError for any input.
         "".encode(value)
         b"".decode(value)
     except LookupError:
         raise ProfileError(f"{where}: '{value}' is not a text encoding") from None
+    except UnicodeError as exc:
+        raise ProfileError(
+            f"{where}: '{value}' cannot be used as a text encoding ({exc})"
+        ) from None
     return value
 
 

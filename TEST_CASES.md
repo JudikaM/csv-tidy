@@ -39,7 +39,7 @@ counts, statuses, exit codes, and file contents, not internal calls.
 ## Regression tests
 
 `tests/integration/test_regressions.py` covers defects found by the audit of commit
-`e1e4a63`. Each test failed on that commit and passes now.
+`e1e4a63` (R1-R7) and the follow-up audit of `4e5b12a` (RA, RB, RD).
 
 | ID | Defect | Related criteria | Tests |
 |----|--------|------------------|-------|
@@ -50,6 +50,9 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | R5 | Binary/text-to-text codecs were accepted and crashed | AC-16 | `test_r5_non_text_codecs_are_configuration_errors`, `test_r5_text_encodings_still_work` |
 | R6 | Directly constructed `Profile`/`ColumnSpec` objects skipped validation | AC-16, AC-25 | `test_r6_direct_profile_objects_are_validated`, `test_r6_valid_direct_profile_is_supported`, `test_r6_override_lists_must_be_sequences` |
 | R7 | A failed `--report` write was not reflected in the printed report | AC-21 | `test_r7_*` |
+| RA | List-valued `Profile`/`Overrides` settings broke output-profile generation (follow-up audit of `4e5b12a`) | AC-22, AC-24, AC-25 | `test_ra_*` |
+| RB | The `undefined` codec escaped as a raw `UnicodeError` (follow-up audit) | AC-16 | `test_rb_undefined_codec_is_a_configuration_error` |
+| RD | Without hard-link support, no-clobber writes fell back to a non-atomic copy (follow-up audit) | AC-19, AC-20 | `test_rd_*` (the hard-link strategy is exercised on every platform) |
 | — | Parsing contract: a quote inside an unquoted field is kept literally | AC-05 | `test_quote_inside_unquoted_field_follows_python_csv_and_is_kept_literally` |
 
 ## Fixture expectations

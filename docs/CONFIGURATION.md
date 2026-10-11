@@ -103,7 +103,7 @@ supported in 0.1.
 - Decoding is strict: undecodable bytes stop the scan with a fatal `decode_error`; nothing is
   replaced or skipped. Encodings must be text encodings (for example `utf-8`, `utf-16`,
   `cp1252`, `latin-1`); binary or text-to-text codecs such as `base64_codec`, `hex_codec`, or
-  `rot_13` are rejected as configuration errors.
+  `rot_13`, and the placeholder `undefined` codec, are rejected as configuration errors.
 - Parsing follows Python's `csv` module in strict mode. It stops on malformed quoting such as
   an unterminated quoted field or text after a closing quote (`"bad"x`). A quote character
   inside an *unquoted* field (`a"b`) is accepted and kept literally; CSV Tidy does not enforce
@@ -193,8 +193,10 @@ duplicate keys that appear after trimming).
   failure the temporary file is removed and an existing file keeps its previous content.
   Writes are atomic per file, not across files: the CSV is written first, then the output
   profile, then the report. If a later write fails, the report and stderr state which files
-  were written, and the exit code is 2. (On file systems without hard links, no-clobber
-  writes fall back to exclusive creation, which still never replaces an existing file.)
+  were written, and the exit code is 2. A partially written file is never left at the final
+  path. Outside Windows, writing without `--overwrite` relies on hard links; on a file system
+  without hard-link support it fails with an error (exit code 2) instead of risking a partial
+  or overwritten file. Write elsewhere, or use `--overwrite` if replacing is acceptable.
 - Missing parent directories of output paths are created.
 - Output quoting is minimal (`"` doubled); fields containing the delimiter, quotes, or line
   breaks are quoted. Serialization may differ from the source bytes; field values do not.

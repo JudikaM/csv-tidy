@@ -56,7 +56,8 @@ if result.export_ready:
   `line_start`, `line_end`, `column`, `value`, `message`, `suggestion`, `related_record`,
   `related_line`.
 - `Profile` and `ColumnSpec` objects built directly are validated with the same rules as
-  TOML profiles (`schema.validate_profile`) before any data is read.
+  TOML profiles (`schema.validate_profile`) before any data is read. Lists are accepted
+  wherever tuples are; resolved `Settings` hold immutable tuple copies.
 - Results keep `source_file`/`profile_file`: absolute paths captured when the inputs were read.
   `export_clean` protects them even if the working directory changes afterwards.
 - Exceptions (all subclasses of `CsvTidyError`, CLI exit code 2): `ProfileError` (invalid

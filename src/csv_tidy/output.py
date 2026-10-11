@@ -7,7 +7,6 @@ import csv
 import errno
 import io
 import os
-import shutil
 import tempfile
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -92,52 +91,42 @@ def write_atomic(path: Path, data: bytes, overwrite: bool) -> None:
         raise
 
 
+# Windows: os.rename refuses an existing destination. Elsewhere os.rename would replace it,
+# so a hard link is used instead. Module-level so tests can exercise both strategies.
+_RENAME_IS_NO_CLOBBER = os.name == "nt"
 _NO_HARDLINK_ERRNOS = {errno.EPERM, errno.EXDEV, errno.EMLINK, errno.ENOTSUP, errno.EOPNOTSUPP}
 
 
 def _finalize(temp_name: str, path: Path, overwrite: bool) -> None:
-    """Move the finished temporary file into place.
+    """Move the finished temporary file into place, atomically.
 
-    With ``overwrite`` the replacement is atomic (``os.replace``). Without it, the final step
-    itself refuses an existing destination, so a file created by another process after the
-    earlier checks is never replaced: ``os.rename`` on Windows and ``os.link`` elsewhere both
-    fail atomically if the destination exists.
+    With ``overwrite`` the replacement uses ``os.replace``. Without it, the final step itself
+    refuses an existing destination, so a file created by another process after the earlier
+    checks is never replaced: ``os.rename`` on Windows and ``os.link`` elsewhere fail if the
+    destination exists. Where hard links are unavailable, the write fails instead of falling
+    back to a non-atomic copy that could expose a partial file.
     """
     if overwrite:
         os.replace(temp_name, path)
         return
     try:
-        if os.name == "nt":
+        if _RENAME_IS_NO_CLOBBER:
             os.rename(temp_name, path)
             return
-        try:
-            os.link(temp_name, path)
-        except OSError as exc:
-            if isinstance(exc, FileExistsError) or exc.errno not in _NO_HARDLINK_ERRNOS:
-                raise
-            _exclusive_copy(temp_name, path)
-        os.unlink(temp_name)
+        os.link(temp_name, path)
     except FileExistsError:
         raise OutputError(
             f"{path} was created by another process while writing; refusing to overwrite it"
         ) from None
-
-
-def _exclusive_copy(temp_name: str, path: Path) -> None:
-    """Fallback for file systems without hard links: exclusive create, then copy.
-
-    Still never replaces an existing file; the content is not published atomically.
-    """
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o666)
-    try:
-        with os.fdopen(fd, "wb") as handle, open(temp_name, "rb") as source:
-            shutil.copyfileobj(source, handle)
-            handle.flush()
-            os.fsync(handle.fileno())
-    except BaseException:
-        with contextlib.suppress(FileNotFoundError):
-            os.unlink(path)
-        raise
+    except OSError as exc:
+        if _RENAME_IS_NO_CLOBBER or exc.errno not in _NO_HARDLINK_ERRNOS:
+            raise
+        raise OutputError(
+            f"cannot create {path} without risking a partial or overwritten file: this file "
+            f"system does not support hard links ({exc.strerror or exc}). Write to another "
+            "location, or use --overwrite if replacing an existing file there is acceptable."
+        ) from None
+    os.unlink(temp_name)
 
 
 def render_csv(
