@@ -6,6 +6,60 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `csv-tidy profile init INPUT --output PROFILE`: writes a starting profile from a file's
+  header. Every column starts as text and nothing is inferred from values or names. Column
+  types, required columns, keys, formats, and transformations are chosen with options
+  (non-interactive, never prompts) or with `--interactive` guided questions. Existing files
+  and the input are protected; cancelling exits with code 130 and writes nothing.
+- `csv-tidy ui`: a local browser interface for choosing a file, separator and encoding,
+  previewing the data, describing columns or loading a profile, checking, previewing the
+  cleaning with before/after values, and saving the cleaned CSV, output profile, report, and
+  rules. It runs the same pipeline as the commands on a loopback-only server protected by a
+  session key, loads no external resources, and never writes to the chosen file.
+- `csv-tidy batch check|clean INPUT...`: processes files and folders with one profile.
+  Preview by default; `--apply --output-dir DIR` writes `NAME.clean.csv` per input, with
+  optional `--output-schemas` and `--report-dir`. Output collisions and unsafe paths stop the
+  batch before anything is read; one failing file never affects the others. Text and JSON
+  summaries per file and in total. Exit code 2 if any file failed or was not fully read,
+  otherwise 1 if any has data errors, otherwise 0.
+- Reports state the validation coverage (`Checked:` / `Not checked:` in text, `coverage` in
+  JSON) and add `verdict` and `next_steps`. A run without column rules is reported as
+  `PASSED (structure only)` with a pointer to `profile init`.
+- Python API: `CleanResult.export_blocked_reason`, `CheckResult.header`, `run_batch`,
+  `select_inputs`, `BatchResult`.
+- `scripts/benchmark.py` also measures report rendering and export; `docs/USER_TESTING.md`
+  has task lists for developers and administrative staff (not yet run with users).
+
+### Changed
+
+- Text reports start with a `Verdict:` line, list unresolved problems first (`Still to fix`),
+  and show source problems that were repaired or removed in separate `FIXED` / `REMOVED`
+  lists instead of `ERROR [resolved]`. They end with specific next steps. JSON reports keep
+  every existing field and value (including issue `severity` and `status`); the new fields
+  are additions under report `schema_version` 1. Scripts that parse the *text* layout need
+  adjusting; exit codes, the CLI options of `check` and `clean`, profiles, and the API are
+  unchanged.
+- The README quick start is a four-step check, preview, apply, re-check sequence whose
+  commands match the documented installation (`.\.venv\Scripts\csv-tidy.exe`).
+
+### Fixed
+
+- A decoding error was located by counting only LF characters, so a file with CR line breaks
+  reported line 1 for bad bytes on line 3. Lines are now counted as the parser counts them
+  (LF, CRLF, CR), for every encoding.
+- After a decoding error, `physical_lines` stayed 0 and records in front of the bad bytes
+  could be missing from the counts. The scan now reports every complete line and record read
+  before the failure, and stays incomplete (exit code 2).
+- `max_field_chars` relied on the process-wide `csv.field_size_limit`: with two reads running
+  at the same time, a read limited to 10 characters could accept a 50-character field. Each
+  read now enforces its own limit, and the process-wide value is restored after the last
+  read, also after exceptions.
+- `export_clean` on a result with an incomplete scan said "0 output error(s) remain". It now
+  states the real reason (incomplete scan with the fatal code and line, missing header, or
+  the remaining errors) and what to do.
+
 ## [0.1.0] - 2026-10-11
 
 Initial early-alpha release.

@@ -1,6 +1,6 @@
 # User validation plan
 
-**Status (2026-10-11): no external users have tried CSV Tidy yet.** Everything below is a
+**Status (2026-10-13): no external users have tried CSV Tidy yet.** Everything below is a
 plan; field validation is not complete. Benchmarks, synthetic examples, and maintainer testing
 are not evidence of usefulness to others.
 
@@ -8,12 +8,15 @@ are not evidence of usefulness to others.
 
 1. People who prepare CSV imports regularly meet mixed number conventions, numeric date
    ambiguity, stray whitespace, duplicates, and missing values.
-2. They can describe their data in a small TOML profile (possibly by copying an example).
+2. They can describe their data in a small TOML profile (possibly by copying an example, or
+   with `csv-tidy profile init`), or with the controls of the local interface.
 3. English reports with record/line locations and suggestions are understandable, including
    for non-developers.
 4. Explicit, opt-in repairs are preferred over automatic "smart" fixes.
 5. The `id`, `us`, and `canonical` grammars and numeric date formats cover their data.
 6. Performance is adequate for the file sizes they handle.
+7. People who work in Excel and do not use a command line can complete a check and a clean
+   with the local interface, and understand what was and was not checked.
 
 ## Proposed pilot
 
@@ -23,6 +26,10 @@ the maintainer's own plan, not a requirement of any program.
 
 Participants use their own **non-sensitive or synthetic** files. Nobody sends data to the
 maintainer.
+
+Step-by-step task lists for both groups, with completion criteria and a recording template,
+are in [USER_TESTING.md](USER_TESTING.md): one for developers (commands, batch, API) and one
+for administrative staff (the local interface). The short list below is the minimum.
 
 ### Tasks
 

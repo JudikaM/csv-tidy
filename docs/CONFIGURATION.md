@@ -1,7 +1,7 @@
 # Configuration and data contracts
 
 This is the authoritative reference for CSV Tidy 0.1 profiles, options, defaults, and the
-input/output contracts of `check` and `clean`.
+input/output contracts of `check`, `clean`, `profile init`, `batch`, and `ui`.
 
 ## Profiles
 
@@ -47,6 +47,44 @@ mean" hint), invalid delimiters/encodings/number formats/date directives/line en
 column that is not declared `decimal` or `date`, empty or repeated key definitions, and
 `deduplicate = "keys"` without keys. Columns referenced by the profile or options but absent
 from the CSV header are reported as `missing_column` errors when the file is read.
+
+## Creating profiles
+
+`csv-tidy profile init INPUT --output PROFILE` reads the header of `INPUT` and writes a
+starting profile. It reuses the profile validation and the TOML serializer described here, so
+a generated profile is always a valid profile.
+
+- **Nothing is inferred.** Every column is `type = "text"`, `required = false`, unless you
+  select otherwise. Values and column names are never used to guess a type or format.
+- **Reading settings are explicit.** `--delimiter` (default `,`) and `--encoding` (default
+  `utf-8`) are used to read the header and are written into `[source]`. The source number
+  and date formats (`--number-format`, `--date-format`, or the defaults) are written too.
+- **Options (non-interactive).** `--decimal COLUMN`, `--date COLUMN`, `--required COLUMN`,
+  `--trim COLUMN`, `--normalize COLUMN` (each repeatable), `--key COLUMN [COLUMN ...]`
+  (repeatable; several columns after one `--key` form a combined key), `--deduplicate`,
+  `--output-number-format`, `--output-date-format`. Per-column formats are added by editing
+  the file.
+- **Never waits for input by default.** Without `--interactive` the command does not prompt
+  and does not read standard input.
+- **Guided mode.** `--interactive` asks for the delimiter and encoding (unless given as
+  options), then which columns are decimal, date, required, unique keys, trimmed, and
+  normalized, the formats, and the duplicate handling. Answers are column numbers (`1,3`,
+  `2-4`), exact names, `all`, or Enter for none. One example value per column is shown as a
+  reading aid only. Questions go to stderr. An invalid answer is asked again. The profile is
+  shown and written only after confirmation.
+- **Cancellation.** Answering `q`, declining the confirmation, the end of input, or Ctrl+C
+  cancels with exit code 130; nothing is written.
+- **Refused with exit code 2, nothing written:** an existing `PROFILE` without `--overwrite`;
+  `PROFILE` being the input file; a file without a header row or whose start cannot be
+  decoded; an empty or duplicate header name; a header that is a single column containing the
+  other delimiter (pass the right `--delimiter`); a column name that is not in the header; a
+  column selected as both decimal and date; and every inconsistency a profile would be
+  rejected for (for example normalizing a text column).
+- Header names with spaces, dots, quotes, brackets, or non-ASCII letters are written as quoted
+  TOML keys and read back unchanged.
+
+The local interface can also save its current rules as a profile; both kinds are ordinary
+profiles.
 
 ## Defaults and precedence
 
@@ -99,9 +137,11 @@ supported in 0.1.
 - Fields are always text. Quoted fields may contain delimiters, doubled quotes (`""`), and
   line breaks; such records span several physical lines and are reported with a line range.
 - Comma and semicolon delimiters, LF and CRLF line endings, UTF-8 with or without BOM.
+  Line numbers count LF, CRLF, and lone CR line breaks, as Python's `csv` module does.
   With `encoding = "utf-8"` a UTF-8 BOM is accepted and removed from the header.
 - Decoding is strict: undecodable bytes stop the scan with a fatal `decode_error`; nothing is
-  replaced or skipped. Encodings must be text encodings (for example `utf-8`, `utf-16`,
+  replaced or skipped. The reported line is the physical line that contains the bytes, and
+  the scan counts cover every complete line in front of it. Encodings must be text encodings (for example `utf-8`, `utf-16`,
   `cp1252`, `latin-1`); binary or text-to-text codecs such as `base64_codec`, `hex_codec`, or
   `rot_13`, and the placeholder `undefined` codec, are rejected as configuration errors.
 - Parsing follows Python's `csv` module in strict mode. It stops on malformed quoting such as
@@ -177,6 +217,88 @@ duplicate keys that appear after trimming).
   may save a report with `--report` but never writes a CSV or output profile.
 - A fatal parsing error makes the scan incomplete: reports say so, counts cover only what was
   read, and the exit code is 2. A partially scanned file is never reported as valid.
+- `profile init` exits with 0 when the profile was written, 2 for the refusals listed under
+  "Creating profiles", and 130 when cancelled.
+- `ui` exits with 0 after it was stopped, and 2 if the server cannot start.
+
+### Validation coverage
+
+`check` validates only what the settings declare:
+
+| Declared | Checked |
+|----------|---------|
+| nothing (no profile, or a profile without column rules) | file structure only: header names, field counts, blank lines, and identical rows (warning) |
+| `type = "decimal"` / `"date"` | the values of that column, in its number grammar or date format |
+| `required = true` | the column is not empty |
+| `[duplicates] keys` | uniqueness of the key columns |
+
+`--number-format` and `--date-format` set the *format of declared columns*; on their own they
+check nothing. A file can therefore pass with exit code 0 while containing `31/02/2026` in a
+column that no profile declares as a date. Reports make this explicit: the text report has
+`Checked:` and `Not checked:` lines and the verdict `PASSED (structure only)`, and JSON has a
+`coverage` object. CSV Tidy does not detect types; create a profile with `profile init`.
+
+## Batch processing
+
+`csv-tidy batch check INPUT...` and `csv-tidy batch clean INPUT...` apply one profile and one
+set of options to several files through the same functions as the single-file commands.
+
+- **Selection.** An `INPUT` that is a file is taken as given, whatever its name. An `INPUT`
+  that is a folder selects the files directly inside it whose names match `--pattern`
+  (default `*.csv`, case-insensitive), sorted by name without regard to case; `--recursive`
+  also selects matching files in subfolders. Inputs are processed in the order given.
+  Selecting no file (a folder without matches) or the same file twice is an error (exit 2).
+- **Same pipeline, explicitly.** `--schema` and all source, output, and transformation options
+  of `check`/`clean` are accepted and apply to every file. Without column rules only the
+  structure is checked, and the summary says so.
+- **Preview by default.** `batch clean` writes no cleaned file unless `--apply` is given.
+  `--apply` requires `--output-dir DIR`; `--output-dir` and `--output-schemas` require
+  `--apply`.
+- **Output names.** For an input `NAME.ext`: `DIR/NAME.clean.csv`, with `--output-schemas`
+  also `DIR/NAME.output.toml`, and with `--report-dir RDIR` a full single-file report
+  `RDIR/NAME.report.json` (`.txt` with `--format text`). A file found in a subfolder of a
+  selected folder keeps that subfolder below `DIR`/`RDIR`. `--report PATH` saves the batch
+  summary.
+- **Checked before anything is read (exit 2, nothing written):** two inputs that would
+  produce the same output path, an output path that is an input file or the profile
+  (including hard-link aliases), an output path that is a directory, an existing output file
+  without `--overwrite`, and invalid settings.
+- **Isolation.** Files are processed one after another. A file that cannot be read, stops on
+  a fatal error, stays blocked, or whose output cannot be written is reported with its reason
+  and exit code; other files are still processed and their outputs stay in place. A blocked
+  file's CSV and profile are `not_written`; its report is still written.
+- **Summary.** Text and JSON list every file with `status` (`valid`/`invalid` for `check`,
+  `ready`/`blocked` for `clean`, `incomplete`, or `failed`), `exit_code`, record and issue
+  counts, `structure_only`, `error`, and `artifacts`, followed by `totals` (`files`, `ok`,
+  `data_errors`, `failed`, `data_records`, `errors`, `warnings`, `changed_fields`,
+  `removed_records`, `written`). `totals.errors` counts source errors for `check` and errors
+  remaining in the results for `clean`. JSON has `command: "batch"` and `action`.
+- **Exit code.** 2 if any file failed, was not fully scanned, or could not be written;
+  otherwise 1 if any file has data errors; otherwise 0.
+
+## Local interface
+
+`csv-tidy ui [--port N] [--no-browser] [--max-file-mb N]` serves one page from a server bound
+to `127.0.0.1` and opens it in the default browser.
+
+- The page sends the chosen file to that local process, which stores it in a private
+  temporary folder (removed when another file is chosen, on **Quit**, and on Ctrl+C). The
+  original file is never opened for writing. Files larger than `--max-file-mb` (default 200)
+  are refused.
+- Preview, check, and cleaning call `check_file`/`clean_file`; the rules set on the page are
+  sent as a profile and validated by the profile loader; saving calls `export_clean`. Saved
+  files are browser downloads named `NAME.clean.csv`, `NAME.output.toml`,
+  `NAME.clean-report.txt|json` (or `NAME.check-report.*`), and `NAME.profile.toml`.
+- The cleaned CSV and its profile cannot be downloaded while the scan is incomplete or errors
+  remain; the page states the reason. Reports can always be saved. Reports from the page have
+  `mode: "dry-run"` because the server itself writes no file to a user location.
+- A result belongs to the file and settings it was made with. Choosing another file or
+  changing any setting discards it on the page, and the server refuses to serve a download
+  for a result whose settings no longer match.
+- Requests are served only if they are addressed to the loopback host name, carry the session
+  key from the page address, and (when the browser sends one) a same-origin `Origin` header.
+  The page uses a content security policy that allows only its own script and style sheet;
+  file contents are inserted as text. No external resources are loaded.
 
 ## Output safety
 
@@ -187,6 +309,9 @@ duplicate keys that appear after trimming).
 - Existing files are refused unless `--overwrite` is given (which still never allows writing
   an input). Without `--overwrite` the final rename itself refuses an existing destination,
   so a file created by another process while CSV Tidy is writing is never replaced.
+- `export_clean` refuses a result that is not export-ready and states the actual reason:
+  an incomplete scan (with the fatal code and line), a missing header row, or the number of
+  remaining output errors (`CleanResult.export_blocked_reason`).
 - Library results remember the absolute paths of the input CSV and profile when they are
   read, so a later `export_clean` call is protected even if the working directory changed.
 - Each file is written to a temporary file in the same directory and moved into place. On
@@ -210,6 +335,25 @@ On cleaned output those transformations are no-ops, so `check` passes and a seco
 makes no changes. The profile reflects CLI overrides, not just the original TOML.
 
 ## Reports
+
+Text reports are ordered for reading top-down:
+
+1. `Verdict:` on the second line: `PASSED`, `PASSED (structure only)`, `FAILED`, or
+   `INCOMPLETE` for `check`; `READY TO EXPORT`, `BLOCKED`, or `INCOMPLETE` for `clean`.
+2. Source, scan counts, and the `Checked:` / `Not checked:` coverage lines.
+3. `check`: issues with errors in front of warnings. `clean`: transformations and changes,
+   then `Still to fix` (what remains in the cleaned result, errors first), then separately
+   `Repaired by the selected transformations` (`FIXED`) and `Gone with records removed as
+   duplicates` (`REMOVED`), then the `Source issues before cleaning` totals.
+4. `Export:` state and artifacts (`clean`), `Next steps:`, and the `Status:` line.
+
+JSON keeps every earlier field and adds `verdict` (`state`, `headline`), `coverage` (`scope`:
+`structure_only` or `structure_and_values`, `declared_columns`, `undeclared_columns`,
+`unchecked_columns`, `unique_keys`, `duplicate_rows`, `header_columns`), and `next_steps` (a
+list of sentences). Source issues keep their `severity` and `status` (`resolved`,
+`unresolved`, `removed`) in JSON; only the text layout separates them. `verdict.state` for
+`check` is `passed`, `passed_structure_only`, `failed`, or `incomplete`; `summary.status`
+is unchanged (`valid`, `invalid`, `incomplete`).
 
 `--format text|json` selects the report format for stdout and `--report PATH`. JSON contains
 `schema_version` (currently 1), `tool`, `command`, `source`, `scan` (`complete`,

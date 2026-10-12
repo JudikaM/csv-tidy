@@ -35,6 +35,14 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | AC-25 | CLI/API consistency, `--help`, `--version`, `python -m csv_tidy`, API example | `integration/test_cli.py`: `test_version_and_help`, `test_python_dash_m_runs_the_cli`, `test_cli_and_api_agree`, `test_api_example_runs` |
 | AC-26 | Built wheel installs and works in a fresh environment | `scripts/smoke_dist.py` (run locally and in CI after `python -m build`) |
 | AC-27 | Source files are never modified | `integration/test_examples.py`: `test_transactions_fixable_full_chain`, `test_unfixable_transactions_block_export`; `scripts/smoke_dist.py` |
+| AC-28 | Reports state coverage: structure-only runs are labelled, checked and unchecked columns are listed, JSON has `coverage` | `integration/test_reports.py`: `test_check_without_column_rules_says_only_structure_was_checked`, `test_check_without_column_rules_reports_coverage_in_json`, `test_check_with_a_profile_lists_checked_and_unchecked_columns`, `test_passing_check_with_rules_states_what_passed` |
+| AC-29 | Text reports: verdict first, unresolved before repaired, `FIXED`/`REMOVED` separated, next steps; JSON history unchanged | `integration/test_reports.py`: `test_clean_preview_separates_repaired_problems_from_remaining_ones`, `test_blocked_clean_lists_unresolved_problems_first_and_once`, `test_clean_json_keeps_the_issue_history_and_adds_coverage`, `test_incomplete_check_puts_the_stop_location_in_the_verdict`, `test_incomplete_clean_shows_what_was_found_before_the_stop`, `test_duplicates_removed_by_deduplication_are_listed_as_removed` |
+| AC-30 | `profile init`: all-text template, no inference, explicit reading settings, non-interactive options never read stdin | `integration/test_profile_init.py`: `test_template_declares_every_column_as_text_and_guesses_nothing`, `test_values_that_look_like_numbers_or_dates_stay_text`, `test_options_build_a_complete_profile_without_prompting`, `test_special_column_names_round_trip` |
+| AC-31 | `profile init`: existing destination and input protected, invalid configuration and unusable headers refused, guided mode with re-prompt and cancellation | `integration/test_profile_init.py`: `test_existing_destination_and_inputs_are_protected`, `test_invalid_configuration_writes_nothing`, `test_unusable_headers_are_refused_with_the_reason`, `test_guided_answers_produce_the_same_profile`, `test_guided_mode_reprompts_after_an_invalid_answer`, `test_guided_mode_can_be_cancelled_without_writing` |
+| AC-32 | Local interface: same results as the library and CLI, downloads equal the CLI export, blocked/incomplete results cannot be saved, stale results refused | `integration/test_ui.py`: `test_preview_shows_rows_and_never_guesses_the_delimiter`, `test_check_and_clean_match_the_library_results`, `test_downloads_equal_the_cli_export`, `test_blocked_and_incomplete_results_cannot_be_downloaded_as_csv`, `test_results_go_stale_when_the_file_or_settings_change`, `test_invalid_settings_and_profiles_are_explained`, `test_rules_saved_from_the_page_work_with_the_cli` |
+| AC-33 | Local interface: loopback only, session key and origin checks, no external resources, content returned as data, private copies removed on quit | `integration/test_ui.py`: `test_page_is_self_contained_and_needs_the_key`, `test_server_listens_on_loopback_only`, `test_requests_without_the_key_or_from_other_origins_are_refused`, `test_uploads_are_private_copies_with_safe_names_and_a_size_limit`, `test_html_in_data_is_returned_as_plain_json_text`, `test_quit_stops_the_server_and_removes_the_temporary_copies` |
+| AC-34 | Batch: documented selection, per-file results and totals, aggregate exit code, preview by default | `integration/test_batch.py`: `test_directory_selection_is_documented_sorted_and_not_recursive`, `test_explicit_files_are_taken_as_given_in_order`, `test_empty_and_repeated_selections_are_refused`, `test_batch_check_reports_each_file_and_totals`, `test_aggregate_exit_code_prefers_operational_failures`, `test_batch_clean_is_a_preview_by_default`, `test_batch_report_file_and_text_summary` |
+| AC-35 | Batch: deterministic output names, collisions and unsafe paths stop before writing, a failing file does not affect others, single-file commands unchanged | `integration/test_batch.py`: `test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files`, `test_output_name_collisions_stop_the_batch_before_writing`, `test_existing_outputs_and_inputs_are_protected`, `test_one_failed_write_does_not_undo_the_other_files`, `test_overrides_apply_to_every_file`, `test_library_entry_point_matches_the_command`, `test_single_file_commands_are_unchanged_and_help_lists_batch` |
 
 ## Regression tests
 
@@ -54,6 +62,10 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | RB | The `undefined` codec escaped as a raw `UnicodeError` (follow-up audit) | AC-16 | `test_rb_undefined_codec_is_a_configuration_error` |
 | RD | Without hard-link support, no-clobber writes fell back to a non-atomic copy (follow-up audit) | AC-19, AC-20 | `test_rd_*` (the hard-link strategy is exercised on every platform) |
 | RE | `profile_to_toml` rejected valid list-valued `Profile` collections (follow-up review of `8389d1d`) | AC-22, AC-25 | `test_re_*` |
+| RF | A decoding error in a file with CR line breaks was reported on line 1 | AC-05 | `integration/test_reliability.py`: `test_rf_*` (LF, CRLF, CR, lines inside quoted fields, UTF-16) |
+| RG | After a decoding error `physical_lines` stayed 0 and readable records were not counted | AC-05, AC-21 | `test_rg_*` (every newline, a file larger than one read buffer, earlier malformed quoting, open quoted field) |
+| RH | Overlapping reads shared the process-wide field limit, so a 50-character field passed a limit of 10 | AC-05 | `test_rh_overlapping_reads_each_keep_their_own_field_limit` (both orders), `test_rh_field_limit_boundary_is_unchanged`, `test_rh_global_field_limit_is_restored_after_failures` |
+| RI | `export_clean` on an incomplete result said "0 output error(s) remain" | AC-20 | `test_ri_*` |
 | — | Parsing contract: a quote inside an unquoted field is kept literally | AC-05 | `test_quote_inside_unquoted_field_follows_python_csv_and_is_kept_literally` |
 
 ## Fixture expectations
@@ -71,6 +83,37 @@ the commands below.
 | `customers_valid.csv` | `customers-us.toml` | 0 issues, exit 0 | — |
 | `customers_fixable.csv` | `customers-us.toml` | 2 errors: `invalid_number` (record 1, `credit_limit` `' 1,250.50'`), `invalid_date` (record 2, `signup_date` `' 02/15/2026'`); exit 1 | both `resolved`, export ready, exit 0; record 1 becomes `00123`, `Ada Lovelace`, `081234567890`, `1250.50`, `2026-02-01`; `+62 812 3456 7890` unchanged |
 | `customers_trim_duplicates.csv` | `customers-us.toml` | 0 issues, exit 0 (keys differ before trimming) | `duplicate_key` record 2 `introduced`, exit 1; with `--deduplicate keys`: record 2 removed, exit 0, output re-checks cleanly |
+
+## Checks of the local interface in a browser
+
+`tests/integration/test_ui.py` covers the server over HTTP. The page itself was driven in
+headless Chrome through the DevTools protocol on 2026-10-13 (Windows 11, Chrome, 1366 x 768
+and 1024 x 600), with these observed results:
+
+| Flow | Observed |
+|------|----------|
+| Empty state | Status "No file chosen yet", every action disabled, steps 2 and 3 explain what will appear |
+| Wrong separator | Warning "The file loaded as one wide column"; switching to semicolon reads 4 rows, 5 columns; nothing is guessed |
+| Check without rules | Warning "Structure is fine, but no values were checked" |
+| Rules set with the controls | Changing a rule clears earlier results; the check finds 2 problems with record, file line, and suggestion |
+| Preview without repairs | Saving blocked, reason shown, CSV button disabled, report still available |
+| Preview with repairs | "Ready to save: 4 rows, 9 values changed, 0 rows removed"; edge spaces visible; 9 changed cells highlighted |
+| Saving | Five downloads; the CSV equals the CLI export; the example file is unchanged |
+| Loading a profile | Controls filled from the profile; same result as setting them by hand |
+| Unfixable file | Saving blocked with 3 problems |
+| Invalid date format, invalid profile file | Explained in the status strip, nothing lost |
+| Undecodable file | "This file could not be read to the end" with the file line; choosing the right encoding reads it |
+| HTML in cell values | Shown as text; no element is created and no script runs |
+| Cancel | "Cancelled. Nothing was changed or saved." |
+| Loading state | Progress bar, Cancel button, other actions disabled |
+| Keyboard | Skip link first, then controls in order; a 3 px focus outline on each |
+| 1024 x 600 | No horizontal page scrolling; the status strip stays at the top while scrolling |
+| Labels | Every input, select, and button has an accessible name |
+| Network and console | No request to another host, no content-security-policy violation, no script error |
+| Quit | Server stops and removes its temporary folder |
+
+This was an automated walk-through by the maintainer's tooling, not a test with users or with
+assistive technology; see [docs/USER_TESTING.md](docs/USER_TESTING.md).
 
 ## Manual checks before a release
 

@@ -1,4 +1,4 @@
-"""Reproducible synthetic benchmark for check and clean (dry run, nothing exported).
+"""Reproducible synthetic benchmark for check, clean preview, reports, and export.
 
 Usage:
     python scripts/benchmark.py --rows 1000            # smoke size
@@ -21,7 +21,8 @@ import time
 import tracemalloc
 from pathlib import Path
 
-from csv_tidy import check_file, clean_file, load_profile
+from csv_tidy import check_file, clean_file, export_clean, load_profile
+from csv_tidy.reporting import clean_report, render_clean_text, to_json
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "examples" / "profiles" / "transactions-id.toml"
@@ -33,7 +34,7 @@ def id_amount(rng: random.Random) -> str:
     return f"{'-' if rng.random() < 0.05 else ''}{grouped},{rng.randint(0, 99):02d}"
 
 
-def generate(path: Path, rows: int, issue_rate: float, seed: int) -> None:
+def generate(path: Path, rows: int, issue_rate: float, seed: int, unfixable: bool = True) -> None:
     rng = random.Random(seed)
     with path.open("w", encoding="utf-8", newline="") as handle:
         handle.write("transaction_id;customer_id;amount;date;note\r\n")
@@ -44,7 +45,7 @@ def generate(path: Path, rows: int, issue_rate: float, seed: int) -> None:
             roll = rng.random()
             if roll < issue_rate / 2:
                 amount = f" {amount} "  # fixable by trim
-            elif roll < issue_rate:
+            elif roll < issue_rate and unfixable:
                 date = "31/02/2026"  # unfixable
             handle.write(f"TX-{i:08d};{customer};{amount};{date};synthetic row {i}\r\n")
 
@@ -83,9 +84,29 @@ def main() -> None:
         data = Path(tmp) / "transactions.csv"
         generate(data, args.rows, args.issue_rate, args.seed)
         size = data.stat().st_size
+        preview = clean_file(data, profile)
+
+        def report() -> int:
+            built = clean_report(preview, "dry-run", 100, 10)
+            return len(to_json(built)) + len(render_clean_text(built))
+
+        # Export needs a result without remaining errors, so it uses a second file whose
+        # problems are all repairable by the profile's trim selection.
+        fixable = Path(tmp) / "fixable.csv"
+        generate(fixable, args.rows, args.issue_rate, args.seed, unfixable=False)
+        ready = clean_file(fixable, profile)
+
+        def export() -> int:
+            written = export_clean(
+                ready, Path(tmp) / "out.csv", output_schema=Path(tmp) / "out.toml", overwrite=True
+            )
+            return len(written)
+
         steps = [
             measure("check", lambda: check_file(data, profile).errors, args.memory),
-            measure("clean (dry run)", lambda: len(clean_file(data, profile).changes), args.memory),
+            measure("clean preview", lambda: len(clean_file(data, profile).changes), args.memory),
+            measure("report (JSON + text, default limits)", report, args.memory),
+            measure("export (CSV + output profile)", export, args.memory),
         ]
     report = {
         "rows": args.rows,

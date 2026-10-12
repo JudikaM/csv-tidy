@@ -20,8 +20,12 @@ taken seriously and acknowledged as soon as possible.
 
 ## Scope
 
-CSV Tidy runs locally, makes no network connections, and executes no code from CSV content or
-profiles. Relevant issues include, for example: writing outside the requested output paths,
+CSV Tidy runs locally, makes no outgoing network connections, and executes no code from CSV
+content or profiles. `csv-tidy ui` opens a listening socket on the loopback address
+(`127.0.0.1`) only, for the browser on the same computer; requests need the session key
+printed at start-up. Relevant issues include, for example: a way to use the local interface
+from another computer, from a web page of another origin, or without the session key; cell
+content being interpreted as HTML or script by the page; writing outside the requested output paths,
 overwriting input files, crashes or unbounded resource use on crafted input beyond the
 documented limits, and data being silently changed. Spreadsheet formula injection in CSV
 content is a known property of the CSV format (see the README); CSV Tidy reports values as

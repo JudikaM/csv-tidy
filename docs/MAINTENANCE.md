@@ -24,6 +24,10 @@
 - Does any path change a value that the user did not select?
 - Are counts, record indexes, and line numbers still correct?
 - Are new messages English, specific, and paired with a suggestion?
+- Does a new feature reach the data only through `api.py`, so the commands, batch
+  processing, and the local interface cannot disagree?
+- For the local interface: is file content inserted as text only, does the page still load
+  nothing external, and does every request still need the session key?
 - Are public contracts (profile keys, issue codes, report fields, exit codes) unchanged, or
   versioned and documented?
 
@@ -48,5 +52,9 @@ Candidates, to be prioritized by real user requests rather than built speculativ
 - Compact `YYYYMMDD` dates and date-time values.
 - Opt-in delimiter detection with explicit confirmation.
 - Optional spreadsheet-formula neutralization as an explicit transformation.
-- `.xlsx` input, a web UI, database targets (deferred; not planned for 0.x).
+- `.xlsx` input, hosted or multi-user web access, database targets (deferred; not planned
+  for 0.x). The local, single-user interface (`csv-tidy ui`) exists; changes to it should
+  come from sessions described in [USER_TESTING.md](USER_TESTING.md).
+- Per-column formats and combined keys in `profile init` options; a native file dialog
+  for the local interface.
 - Translations of messages/documentation if users need them.

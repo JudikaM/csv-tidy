@@ -19,6 +19,10 @@ input.csv ──► reader.read_csv ─► Table (header, records, lines, fatal)
                                         │
                                         └─► api.export_clean ─► output.write_artifact (CSV, profile)
 reporting: CheckResult / CleanResult ─► JSON dict ─► text or JSON
+
+entry points that all call api.check_file / clean_file / export_clean:
+  cli (check, clean) · batch.run_batch (many files) · ui (local HTTP page) ·
+  profile_init (header ─► Profile ─► schema.profile_to_toml)
 ```
 
 | Module | Responsibility |
@@ -31,6 +35,9 @@ reporting: CheckResult / CleanResult ─► JSON dict ─► text or JSON
 | `output.py` | Path identity checks, collisions, overwrite policy, atomic writes, CSV serialization |
 | `api.py` | Public `check_file`, `clean_file`, `export_clean`; result types |
 | `reporting.py` | Report dictionaries, JSON, and English text |
+| `profile_init.py` | Starting profiles from a header: explicit choices, guided questions through injected `ask`/`say` callables |
+| `batch.py` | Input selection, artifact planning and collision checks, per-file isolation, batch summary |
+| `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page (HTML, CSS, JS; no dependencies) |
 | `cli.py` | Argument parsing, exit codes, stdout/stderr separation |
 
 ## Result model and public API
@@ -47,11 +54,15 @@ if result.export_ready:
     export_clean(result, "output/clean.csv", output_schema="output/clean.output.toml")
 ```
 
-- `CheckResult`: `issues`, `errors`, `warnings`, `scan` (`ScanInfo`), `settings`, `exit_code`
-  (0 valid, 1 source errors, 2 incomplete scan), `ok`.
+- `CheckResult`: `issues`, `errors`, `warnings`, `scan` (`ScanInfo`), `settings`, `header`,
+  `exit_code` (0 valid, 1 source errors, 2 incomplete scan), `ok`.
 - `CleanResult`: `source_issues` (with `status`), `output_issues` (with `introduced`),
   `changes` (`FieldChange`), `removed` (`RemovedRecord`), `header`, `rows`, `output_profile`,
-  `export_ready`, `exit_code`, `csv_text()`, `output_profile_toml()`.
+  `export_ready`, `export_blocked_reason` (`None` when ready), `exit_code`, `csv_text()`,
+  `output_profile_toml()`.
+- `run_batch(action, select_inputs(paths), profile, ...)` returns a `BatchResult` with one
+  `FileOutcome` per file and the aggregate `exit_code`; `batch.batch_report` turns it into
+  the summary dictionary.
 - `Issue`: `code`, `severity` (`error`, `warning`, `fatal`), `stage`, `record`,
   `line_start`, `line_end`, `column`, `value`, `message`, `suggestion`, `related_record`,
   `related_line`.
@@ -78,7 +89,12 @@ if result.export_ready:
 6. An exported CSV passes `check` with its generated output profile.
 7. A second `clean` with the output profile makes no changes (idempotence).
 8. Report totals are complete even when details are truncated; incomplete scans are never valid.
+   After a decoding failure the counts cover every complete line in front of the bad bytes.
 9. Issue order and report content are deterministic for the same input and settings.
+10. Each read enforces its own `max_field_chars`, also when reads overlap in threads, and the
+    process-wide `csv.field_size_limit` is restored after the last read.
+11. The CLI, batch processing, and the local interface produce the same results for the same
+    file and settings, because all of them call the functions in `api.py`.
 
 ## Important decisions
 
@@ -92,6 +108,23 @@ if result.export_ready:
 - **In-memory processing.** The file is read as a stream but records are kept in memory for
   cleaning and duplicate detection. Memory grows with file size and distinct rows/keys
   (see [BENCHMARKS.md](BENCHMARKS.md)). Streaming is a roadmap item.
+- **Per-read field limit.** `csv.field_size_limit` is one value for the whole process. While
+  reads overlap, the reader holds it at the largest limit any active read needs and checks
+  each parsed field against that read's own limit; the previous value is restored when the
+  last read ends, including after exceptions. Code outside CSV Tidy that changes the limit
+  during a read is outside this guarantee.
+- **Decoding failures are located by parsing the valid prefix again.** Text decoding is
+  buffered, so the stream fails before the lines in front of the bad bytes are parsed. The
+  reader then decodes the bytes up to the failure and parses those complete lines, which
+  gives exact counts and a line number for LF, CRLF, and CR files in any encoding.
+- **A local web page instead of a desktop toolkit.** The interface is a standard-library
+  HTTP server on the loopback address plus one static page. This adds no dependency, works
+  with keyboard and screen readers through ordinary HTML controls, and can be tested over
+  HTTP. The browser cannot hand the server a path, so the page sends the file's bytes to
+  the local process and receives results as downloads; that also means the original file
+  cannot be overwritten. The server holds one session: the latest file and results.
+- **No type detection, also in the interface and `profile init`.** Both start every column
+  as text and show example values only as a reading aid.
 - **Delimiter auto-detection is not provided.** A single-column header containing the other
   supported delimiter produces a `possible_wrong_delimiter` hint instead.
 - **`tomli-w` for TOML output.** Writing TOML correctly requires escaping rules; the generated

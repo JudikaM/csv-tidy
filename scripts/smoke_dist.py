@@ -18,6 +18,19 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+UI_CHECK = """
+import threading, urllib.request
+from csv_tidy.ui import create_server
+server, session, url = create_server(0)
+threading.Thread(target=server.serve_forever, daemon=True).start()
+base = url.split("/?")[0]
+page = urllib.request.urlopen(url, timeout=10).read().decode("utf-8")
+assert session.token in page and "CSV Tidy" in page
+for name in ("/app.css", "/app.js"):
+    assert len(urllib.request.urlopen(base + name, timeout=10).read()) > 1000, name
+server.shutdown(); server.server_close(); session.close()
+"""
+
 
 def run(cmd: list[str], cwd: Path, expect: int) -> str:
     proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
@@ -146,6 +159,56 @@ def main() -> None:
             sys.exit("an invalid result CSV was written")
         if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
             sys.exit("the source file changed")
+        run(
+            [
+                str(cli),
+                "profile",
+                "init",
+                "examples/transactions_fixable.csv",
+                "--delimiter",
+                ";",
+                "--output",
+                "output/starting.toml",
+            ],
+            work,
+            0,
+        )
+        started = run(
+            [
+                str(cli),
+                "check",
+                "examples/transactions_fixable.csv",
+                "--schema",
+                "output/starting.toml",
+            ],
+            work,
+            0,
+        )
+        if "PASSED (structure only)" not in started:
+            sys.exit("a starting profile should check the structure only")
+        batch = run(
+            [
+                str(cli),
+                "batch",
+                "clean",
+                "examples",
+                "--pattern",
+                "transactions_*fix*.csv",
+                "--schema",
+                profile,
+                "--apply",
+                "--output-dir",
+                "output/batch",
+            ],
+            work,
+            1,
+        )
+        if "1 CSV file written" not in batch:
+            sys.exit("batch clean did not write exactly the one exportable file")
+        if not (work / "output" / "batch" / "transactions_fixable.clean.csv").exists():
+            sys.exit("batch clean did not write the expected output name")
+        # The interface's page, style sheet and script must be inside the wheel.
+        run([str(python), "-I", "-c", UI_CHECK], work, 0)
         api = run([str(python), "-I", "examples/api_example.py"], work, 0)
         if "clean: export ready = True" not in api:
             sys.exit("API example output was unexpected")

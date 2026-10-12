@@ -9,7 +9,7 @@ from typing import Any
 from . import __version__
 from .api import CheckResult, CleanResult, ScanInfo
 from .output import ArtifactOutcome
-from .schema import Settings
+from .schema import DEFAULT_DELIMITER, DEFAULT_ENCODING, Settings
 from .validation import ERROR, FATAL, WARNING, Issue
 
 REPORT_SCHEMA_VERSION = 1
@@ -78,6 +78,142 @@ def _artifact_list(artifacts: Sequence[ArtifactOutcome]) -> list[dict[str, Any]]
     ]
 
 
+def coverage_dict(settings: Settings, header: Sequence[str] | None) -> dict[str, Any]:
+    """What the run could check. Without column rules only the file structure is checked;
+    nothing is inferred from values or column names."""
+    declared = [
+        {
+            "column": c.name,
+            "type": c.type,
+            "required": c.required,
+            "format": None if c.type == "text" else settings.source_format(c),
+        }
+        for c in settings.columns
+    ]
+    ruled = {c.name for c in settings.columns if c.type != "text" or c.required}
+    ruled |= {name for key in settings.duplicate_keys for name in key}
+    names = {c.name for c in settings.columns}
+    columns = list(dict.fromkeys(header or ()))
+    return {
+        "scope": "structure_and_values" if ruled else "structure_only",
+        "structure": True,
+        "header_columns": len(header) if header is not None else None,
+        "declared_columns": declared,
+        "undeclared_columns": [name for name in columns if name not in names],
+        "unchecked_columns": [name for name in columns if name not in ruled],
+        "unique_keys": [list(key) for key in settings.duplicate_keys],
+        "duplicate_rows": settings.duplicate_rows,
+    }
+
+
+def shown_arg(value: str) -> str:
+    """Quote a command-line value for display when it would not survive unquoted."""
+    safe = value and all(ch.isalnum() or ch in "-_./\\:=+," for ch in value)
+    return value if safe else '"' + value.replace('"', '\\"') + '"'
+
+
+def _command(action: str, source: dict[str, Any], *extra: str) -> str:
+    """A command for the same input. Without a profile, the non-default source settings are
+    repeated; with one, options given on the command line must be repeated by the user."""
+    parts = ["csv-tidy", action, shown_arg(source["path"])]
+    if source["profile"]:
+        parts += ["--schema", shown_arg(source["profile"])]
+    else:
+        if source["delimiter"] != DEFAULT_DELIMITER:
+            parts += ["--delimiter", shown_arg(source["delimiter"])]
+        if source["encoding"] != DEFAULT_ENCODING:
+            parts += ["--encoding", shown_arg(source["encoding"])]
+    return " ".join([*parts, *extra])
+
+
+def _stop(scan: dict[str, Any]) -> str:
+    fatal = scan["fatal_error"]
+    where = f"at line {fatal['line']} " if fatal["line"] is not None else ""
+    return f"the scan stopped {where}({fatal['code']})"
+
+
+def _incomplete_steps(scan: dict[str, Any]) -> list[str]:
+    fatal = scan["fatal_error"]
+    where = f" near line {fatal['line']}" if fatal["line"] is not None else ""
+    hint = {
+        "decode_error": "Fix the bytes{where} or set the encoding the file really uses "
+        "(--encoding, or [source] encoding in the profile)",
+        "malformed_csv": "Fix the quoting{where} or set the delimiter the file really uses "
+        "(--delimiter, or [source] delimiter in the profile)",
+        "field_too_large": "Fix the record{where} (often an unclosed quote) or raise "
+        "[source] max_field_chars in the profile",
+    }.get(fatal["code"], "Fix the problem{where}")
+    return [
+        hint.format(where=where) + ", then run the command again.",
+        f"Only {_n(scan['data_records'], 'record')} in front of that point "
+        f"{'was' if scan['data_records'] == 1 else 'were'} read; "
+        "nothing after it was scanned.",
+    ]
+
+
+def _profile_steps(source: dict[str, Any], coverage: dict[str, Any]) -> list[str]:
+    if coverage["scope"] != "structure_only":
+        return []
+    if source["profile"]:
+        return [
+            f"The profile {source['profile']} declares no value rules. Declare decimal, date "
+            "or required columns (or unique keys) in it to have values checked."
+        ]
+    start = _command("profile init", {**source, "profile": None}, "--output profile.toml")
+    return [
+        "No values were checked: numbers, dates, required fields and unique keys are only "
+        "checked for columns declared in a profile, and nothing is guessed from the data.",
+        f"Create a profile: {start} (add --interactive for guided questions), "
+        "then run check again with --schema profile.toml.",
+    ]
+
+
+def _check_verdict(
+    status: str, errors: int, warnings: int, scan: dict[str, Any], coverage: dict[str, Any]
+) -> dict[str, str]:
+    notes = f" ({_n(warnings, 'warning')} to review)" if warnings else ""
+    if status == "incomplete":
+        return {
+            "state": "incomplete",
+            "headline": f"INCOMPLETE - {_stop(scan)}; the file was not fully validated.",
+        }
+    if status == "invalid":
+        return {
+            "state": "failed",
+            "headline": f"FAILED - {_n(errors, 'error')} found in the source file.{notes}",
+        }
+    if coverage["scope"] == "structure_only":
+        return {
+            "state": "passed_structure_only",
+            "headline": "PASSED (structure only) - the file structure is consistent, but "
+            f"values were not checked because no column rules are declared.{notes}",
+        }
+    return {
+        "state": "passed",
+        "headline": f"PASSED - no errors found by the declared rules.{notes}",
+    }
+
+
+def _check_steps(
+    status: str, source: dict[str, Any], scan: dict[str, Any], coverage: dict[str, Any]
+) -> list[str]:
+    if status == "incomplete":
+        return _incomplete_steps(scan)
+    if status == "invalid":
+        return [
+            "Fix the listed values in the source file, or preview explicit repairs (a dry "
+            f"run that writes nothing): {_command('clean', source)}",
+            *_profile_steps(source, coverage),
+        ]
+    steps = _profile_steps(source, coverage)
+    if not steps:
+        steps = [
+            "No action is needed. To prepare a cleaned copy, preview it with: "
+            f"{_command('clean', source)}"
+        ]
+    return steps
+
+
 def check_report(
     result: CheckResult,
     max_details: int,
@@ -88,14 +224,17 @@ def check_report(
     (the report) failed even when validation passed; ``summary.status`` is the validation result."""
     shown = list(result.issues[:max_details])
     status = "incomplete" if not result.scan.complete else ("invalid" if result.errors else "valid")
+    source = _source_dict(result.source_path, result.profile_path, result.settings, result.scan.bom)
+    scan = _scan_dict(result.scan)
+    coverage = coverage_dict(result.settings, result.header)
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
         "tool": {"name": "csv-tidy", "version": __version__},
         "command": "check",
-        "source": _source_dict(
-            result.source_path, result.profile_path, result.settings, result.scan.bom
-        ),
-        "scan": _scan_dict(result.scan),
+        "verdict": _check_verdict(status, result.errors, result.warnings, scan, coverage),
+        "source": source,
+        "scan": scan,
+        "coverage": coverage,
         "summary": {
             "status": status,
             "errors": result.errors,
@@ -110,6 +249,7 @@ def check_report(
             "shown": len(shown),
             "truncated": len(shown) < len(result.issues),
         },
+        "next_steps": _check_steps(status, source, scan, coverage),
         "artifacts": _artifact_list(artifacts),
     }
 
@@ -150,14 +290,61 @@ def clean_report(
     else:
         status = "ready" if result.export_ready else "blocked"
     o = result.settings.output
+    source = _source_dict(result.source_path, result.profile_path, result.settings, result.scan.bom)
+    scan = _scan_dict(result.scan)
+    coverage = coverage_dict(result.settings, result.header)
+    repaired = sum(i.status == "resolved" and i.severity == ERROR for i in src)
+    warnings = _count(out, WARNING)
+    notes = f" ({_n(warnings, 'warning')} to review)" if warnings else ""
+    if status == "incomplete":
+        verdict = f"INCOMPLETE - {_stop(scan)}; nothing can be exported."
+        steps = _incomplete_steps(scan)
+    elif status == "ready":
+        verdict = "READY TO EXPORT - no errors remain in the cleaned result"
+        verdict += f"; {_n(repaired, 'source problem')} repaired" if repaired else ""
+        verdict += f".{notes}"
+        written = {a.kind: a.path for a in artifacts if a.status == "written"}
+        if mode == "dry-run":
+            steps = [
+                "Nothing was written. To write the result, run the same command with "
+                "--apply --output PATH (add --output-schema PATH to save a profile that "
+                "describes the cleaned file)."
+            ]
+        elif "output CSV" in written:
+            recheck = {**source, "path": written["output CSV"], "profile": None}
+            if "output profile" in written:
+                recheck["profile"] = written["output profile"]
+                steps = [f"Re-check the exported file: {_command('check', recheck)}"]
+            else:
+                steps = [
+                    "The cleaned CSV was written. Export again with --output-schema PATH to "
+                    "get a profile for re-checking it."
+                ]
+        else:
+            steps = ["The cleaned CSV was not written; see the error above and run again."]
+        steps += _profile_steps(source, coverage)
+    elif result.header is None:
+        verdict = "BLOCKED - the file has no header row; nothing can be exported."
+        steps = ["Provide a CSV file whose first row contains the column names."]
+    else:
+        count = _n(result.output_errors, "error")
+        verb = "remains" if result.output_errors == 1 else "remain"
+        verdict = f"BLOCKED - {count} {verb} in the cleaned result; nothing can be exported."
+        steps = [
+            f"Fix the {count} listed under 'Still to fix' in the source file, or select a "
+            "transformation that repairs them (--trim COLUMN, --normalize COLUMN, "
+            "--deduplicate rows|keys, or the profile's [transform] table), then run clean "
+            "again.",
+            "Each problem has its own suggestion. Nothing is exported while errors remain.",
+        ]
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
         "tool": {"name": "csv-tidy", "version": __version__},
         "command": "clean",
         "mode": mode,
-        "source": _source_dict(
-            result.source_path, result.profile_path, result.settings, result.scan.bom
-        ),
+        "verdict": {"state": status, "headline": verdict},
+        "source": source,
+        "coverage": coverage,
         "output": {
             "delimiter": o.delimiter,
             "encoding": o.encoding,
@@ -166,7 +353,7 @@ def clean_report(
             "line_ending": o.line_ending,
         },
         "transformations": _transformations(result.settings),
-        "scan": _scan_dict(result.scan),
+        "scan": scan,
         "changes": {
             "changed_fields": len(result.changes),
             "changed_records": changed_records,
@@ -225,6 +412,7 @@ def clean_report(
             "output_errors": result.output_errors,
             "exit_code": result.exit_code if exit_code is None else exit_code,
         },
+        "next_steps": steps,
         "export": {"artifacts": _artifact_list(artifacts)},
     }
 
@@ -261,16 +449,63 @@ def _location(issue: dict[str, Any]) -> str:
     return location or "file"
 
 
-def _issue_lines(items: list[dict[str, Any]]) -> list[str]:
+def _issue_lines(items: list[dict[str, Any]], tag: str | None = None) -> list[str]:
+    """``tag`` replaces the severity for source issues that no longer need action."""
     lines = []
     for item in items:
-        tag = item["severity"].upper()
-        extra = f" [{item['status']}]" if "status" in item else ""
-        extra += " [introduced by transformations]" if item.get("introduced") else ""
-        lines.append(f"  {tag} {item['code']} ({_location(item)}){extra}")
-        lines.append(f"    {item['message']}")
-        lines.append(f"    Suggestion: {item['suggestion']}")
+        extra = " [introduced by transformations]" if item.get("introduced") else ""
+        lines.append(
+            f"  {tag or item['severity'].upper()} {item['code']} ({_location(item)}){extra}"
+        )
+        if tag:
+            lines.append(f"    Was: {item['message']}")
+        else:
+            lines.append(f"    {item['message']}")
+            lines.append(f"    Suggestion: {item['suggestion']}")
     return lines
+
+
+def _unresolved_first(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Errors and fatal problems in front of warnings; the order inside each group is kept."""
+    return sorted(items, key=lambda item: item["severity"] == WARNING)
+
+
+def _coverage_lines(coverage: dict[str, Any]) -> list[str]:
+    def listed(parts: list[str], limit: int = 8) -> str:
+        more = f", and {len(parts) - limit} more" if len(parts) > limit else ""
+        return ", ".join(parts[:limit]) + more
+
+    ruled = []
+    for column in coverage["declared_columns"]:
+        facts = [column["type"]]
+        facts += [column["format"]] if column["format"] else []
+        facts += ["required"] if column["required"] else []
+        if column["type"] != "text" or column["required"]:
+            ruled.append(f"{column['column']} ({', '.join(facts)})")
+    total = coverage["header_columns"]
+    unchecked = coverage["unchecked_columns"]
+    checked = ["file structure"]
+    if ruled:
+        of = f" of {total}" if total is not None else ""
+        noun = "column" if (total or len(ruled)) == 1 else "columns"
+        checked.append(f"values in {len(ruled)}{of} {noun}: {listed(ruled)}")
+    for key in coverage["unique_keys"]:
+        checked.append(f"unique key ({' + '.join(key)})")
+    if coverage["duplicate_rows"] == "warn":
+        checked.append("duplicate rows (warning)")
+    lines = ["Checked: " + "; ".join(checked)]
+    if unchecked:
+        every = "all " if coverage["scope"] == "structure_only" else ""
+        noun = "column" if len(unchecked) == 1 else "columns"
+        lines.append(
+            f"Not checked: values in {every}{len(unchecked)} {noun} without rules "
+            f"({listed(unchecked)})"
+        )
+    return lines
+
+
+def _step_lines(steps: list[str]) -> list[str]:
+    return ["", "Next steps:", *(f"  - {step}" for step in steps)] if steps else []
 
 
 def _source_lines(source: dict[str, Any]) -> list[str]:
@@ -298,27 +533,31 @@ def render_check_text(report: dict[str, Any]) -> str:
     s, d = report["summary"], report["details"]
     lines = [
         f"CSV Tidy {report['tool']['version']} - check",
+        f"Verdict: {report['verdict']['headline']}",
         *_source_lines(report["source"]),
         _scan_line(report["scan"]),
+        *_coverage_lines(report["coverage"]),
         f"Result: {_n(s['errors'], 'error')}, {_n(s['warnings'], 'warning')}"
         + (", 1 fatal error" if s["fatal"] else ""),
     ]
     if d["total"]:
         lines.append("")
-        lines.append(f"Issues (showing {d['shown']} of {d['total']}):")
-        lines += _issue_lines(report["issues"])
+        lines.append(f"Issues (showing {d['shown']} of {d['total']}, errors first):")
+        lines += _issue_lines(_unresolved_first(report["issues"]))
         if d["truncated"]:
             lines.append(
                 f"  ... {d['total'] - d['shown']} more issues not shown "
                 "(totals above are complete)."
             )
     lines += _artifact_lines(report["artifacts"])
+    lines += _step_lines(report["next_steps"])
     lines.append("")
     verdict = {
-        "valid": "source validation passed",
-        "invalid": "source validation failed",
+        "passed": "source validation passed",
+        "passed_structure_only": "structure check passed; values were not checked",
+        "failed": "source validation failed",
         "incomplete": "scan incomplete; the file was not fully validated",
-    }[s["status"]]
+    }[report["verdict"]["state"]]
     lines.append(f"Status: {verdict} (exit code {s['exit_code']})")
     return "\n".join(lines) + "\n"
 
@@ -335,11 +574,13 @@ def render_clean_text(report: dict[str, Any]) -> str:
     o, t, c = report["output"], report["transformations"], report["changes"]
     lines = [
         f"CSV Tidy {report['tool']['version']} - clean ({mode})",
+        f"Verdict: {report['verdict']['headline']}",
         *_source_lines(report["source"]),
         f"Output: delimiter {o['delimiter']!r}, encoding {o['encoding']}, "
         f"numbers {o['number_format']}, "
         f"dates {o['date_format']}, line ending {o['line_ending'].upper()}",
         _scan_line(report["scan"]),
+        *_coverage_lines(report["coverage"]),
         "",
         "Transformations (applied in this order):",
         f"  1. trim: {', '.join(t['trim']) or 'none'}",
@@ -369,19 +610,35 @@ def render_clean_text(report: dict[str, Any]) -> str:
             f"  ... examples limited to {c['examples_limit']} per list (counts above are complete)."
         )
     si, oi, d = report["source_issues"], report["output_issues"], report["details"]
+    lines.append("")
+    if report["summary"]["status"] == "incomplete":
+        # Nothing was transformed, so the source findings are the open problems.
+        lines.append(
+            "Still to fix: the problem that stopped the scan, and what was found before it"
+        )
+        lines += _issue_lines(_unresolved_first(si["items"]))
+    elif oi["errors"] or oi["warnings"]:
+        lines.append(
+            f"Still to fix: {_n(oi['errors'], 'error')}, {_n(oi['warnings'], 'warning')} in "
+            f"the cleaned result ({oi['introduced']} introduced by transformations)"
+        )
+        lines += _issue_lines(_unresolved_first(oi["items"]))
+    else:
+        lines.append("Still to fix: nothing; the cleaned result has no errors or warnings.")
+    for status, tag, title in (
+        ("resolved", "FIXED", "Repaired by the selected transformations"),
+        ("removed", "REMOVED", "Gone with records removed as duplicates"),
+    ):
+        if si[status]:
+            lines += ["", f"{title}: {si[status]} (no action needed)"]
+            lines += _issue_lines([i for i in si["items"] if i.get("status") == status], tag)
     lines += [
         "",
-        f"Source issues: {_n(si['errors'], 'error')}, {_n(si['warnings'], 'warning')} "
+        f"Source issues before cleaning: {_n(si['errors'], 'error')}, "
+        f"{_n(si['warnings'], 'warning')} "
         f"({si['resolved']} resolved, {si['unresolved']} unresolved, "
         f"{si['removed']} removed with records)",
     ]
-    lines += _issue_lines(si["items"])
-    lines += [
-        "",
-        f"Remaining output issues: {_n(oi['errors'], 'error')}, {_n(oi['warnings'], 'warning')} "
-        f"({oi['introduced']} introduced by transformations)",
-    ]
-    lines += _issue_lines(oi["items"])
     if d["truncated"]:
         lines.append(
             f"  ... issue details limited to {d['limit']} per list (totals above are complete)."
@@ -405,5 +662,7 @@ def render_clean_text(report: dict[str, Any]) -> str:
             "no CSV is written."
         )
     lines += _artifact_lines(report["export"]["artifacts"])
+    lines += _step_lines(report["next_steps"])
+    lines.append("")
     lines.append(f"Status: exit code {s['exit_code']}")
     return "\n".join(lines) + "\n"

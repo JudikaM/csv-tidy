@@ -57,6 +57,7 @@ class CheckResult:
     # even if the working directory changes later.
     source_file: Path | None = None
     profile_file: Path | None = None
+    header: tuple[str, ...] | None = None
 
     @property
     def errors(self) -> int:
@@ -103,6 +104,29 @@ class CleanResult:
     @property
     def export_ready(self) -> bool:
         return self.scan.complete and self.header is not None and self.output_errors == 0
+
+    @property
+    def export_blocked_reason(self) -> str | None:
+        """Why the result cannot be exported, with the next step; ``None`` when it can."""
+        if self.export_ready:
+            return None
+        fatal = self.scan.fatal
+        if fatal is not None:
+            where = f" at line {fatal.line}" if fatal.line is not None else ""
+            return (
+                f"the scan is incomplete ({fatal.code}{where}), so the file was not fully "
+                "read and nothing can be exported. Fix the file structure or encoding (or "
+                "the delimiter/encoding settings), then run the command again"
+            )
+        if self.header is None:
+            return (
+                "the file has no header row, so there is nothing to export. Provide a CSV "
+                "file whose first row contains the column names"
+            )
+        return (
+            f"{self.output_errors} output error(s) remain. Fix the reported values in the "
+            "source file or select a transformation that repairs them, then run clean again"
+        )
 
     @property
     def exit_code(self) -> int:
@@ -189,6 +213,7 @@ def check_file(
         tuple(issues),
         source_file=Path(path).resolve(),
         profile_file=_profile_file(loaded),
+        header=table.header,
     )
 
 
@@ -292,7 +317,7 @@ def export_clean(
     ``outcomes`` record that the CSV was written.
     """
     if not result.export_ready:
-        raise OutputError(f"export blocked: {result.output_errors} output error(s) remain")
+        raise OutputError(f"export blocked: {result.export_blocked_reason}")
     output = Path(output)
     schema = Path(output_schema) if output_schema is not None else None
     validate_artifact_paths(

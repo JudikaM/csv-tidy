@@ -224,3 +224,7 @@ __marimo__/
 /data/
 /.local/
 .claude/settings.local.json
+
+# Recommended by the publication check
+*.py[cod]
+.venv/

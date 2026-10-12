@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csv-tidy-token" content="{{token}}">
+<meta name="csv-tidy-max-file-mb" content="{{max_file_mb}}">
+<title>CSV Tidy</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the steps</a>
+
+<header class="top">
+  <div class="top-title">
+    <h1>CSV Tidy <span class="version">{{version}}</span></h1>
+    <p>Check and clean a CSV file. Everything runs on this computer; nothing is sent to the internet.</p>
+  </div>
+  <button type="button" id="quit" class="quiet">Quit CSV Tidy</button>
+</header>
+
+<div class="status" id="status" data-kind="idle">
+  <div class="status-text" role="status" aria-live="polite" aria-atomic="true">
+    <p class="status-main" id="status-main">No file chosen yet.</p>
+    <p class="status-next" id="status-next">Next: choose a CSV file in step 1.</p>
+  </div>
+  <div class="status-side">
+    <div class="busy" id="busy" hidden><span class="busy-bar" aria-hidden="true"></span></div>
+    <button type="button" id="cancel" hidden>Cancel</button>
+  </div>
+</div>
+
+<main id="main">
+
+<section aria-labelledby="h-file">
+  <h2 id="h-file"><span class="num" aria-hidden="true">1</span> Choose the file</h2>
+  <div class="row">
+    <div class="field">
+      <label for="file">CSV file</label>
+      <input type="file" id="file" accept=".csv,.txt,text/csv,text/plain">
+      <p class="hint" id="file-note">Your file is only read. It is never changed.</p>
+    </div>
+    <fieldset class="field">
+      <legend>Columns are separated by</legend>
+      <label class="choice"><input type="radio" name="delimiter" value="," checked> Comma <code>,</code></label>
+      <label class="choice"><input type="radio" name="delimiter" value=";"> Semicolon <code>;</code></label>
+      <p class="hint">Not detected automatically. If the preview shows one wide column, switch this.</p>
+    </fieldset>
+    <div class="field">
+      <label for="encoding">Text encoding</label>
+      <select id="encoding">
+        <option value="utf-8">UTF-8 (most common)</option>
+        <option value="cp1252">Windows-1252 (older Excel, Western Europe)</option>
+        <option value="latin-1">Latin-1 (ISO 8859-1)</option>
+        <option value="utf-16">UTF-16 (Excel "Unicode Text")</option>
+        <option value="other">Other…</option>
+      </select>
+      <div id="encoding-other-wrap" hidden>
+        <label for="encoding-other">Encoding name</label>
+        <input type="text" id="encoding-other" autocomplete="off" spellcheck="false" placeholder="for example cp1250">
+      </div>
+      <p class="hint">Change this if letters such as é or ñ look wrong, or the file cannot be read.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="h-preview">
+  <h2 id="h-preview"><span class="num" aria-hidden="true">2</span> Look at the data</h2>
+  <div id="preview-empty" class="empty">
+    <p>The first rows of your file appear here, exactly as they are stored. Use them to confirm the separator and encoding before setting any rules.</p>
+  </div>
+  <div id="preview" hidden>
+    <p class="facts" id="preview-facts"></p>
+    <div id="preview-issues"></div>
+    <div class="scroll" id="preview-table" tabindex="0" role="region" aria-label="Preview of the file"></div>
+  </div>
+</section>
+
+<section aria-labelledby="h-rules">
+  <h2 id="h-rules"><span class="num" aria-hidden="true">3</span> Describe the columns</h2>
+  <div id="rules-empty" class="empty">
+    <p>After a file is loaded, each column is listed here. Every column starts as plain text: CSV Tidy never guesses which columns are numbers or dates. You decide, or you load a profile that already contains the rules.</p>
+  </div>
+  <div id="rules" hidden>
+    <div class="row tools">
+      <div class="field">
+        <label for="profile-file">Load rules from a profile file (optional)</label>
+        <input type="file" id="profile-file" accept=".toml">
+        <p class="hint" id="profile-note">A profile is a small <code>.toml</code> file with saved rules. You can save one in step 6.</p>
+      </div>
+      <button type="button" id="reset-rules" class="quiet">Reset all rules to text</button>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="src-number">Numbers in this file are written like</label>
+        <select id="src-number">
+          <option value="canonical">1250.50 (no thousands separator)</option>
+          <option value="id">1.250,50 (dot for thousands, comma for decimals)</option>
+          <option value="us">1,250.50 (comma for thousands, dot for decimals)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="src-date">Dates in this file are written like</label>
+        <input type="text" id="src-date" list="date-formats" value="YYYY-MM-DD" autocomplete="off" spellcheck="false">
+        <p class="hint">Use DD, MM, YYYY with <code>-</code> <code>/</code> or <code>.</code> For example DD/MM/YYYY.</p>
+      </div>
+    </div>
+    <datalist id="date-formats">
+      <option value="YYYY-MM-DD"></option>
+      <option value="DD/MM/YYYY"></option>
+      <option value="MM/DD/YYYY"></option>
+      <option value="DD-MM-YYYY"></option>
+      <option value="DD.MM.YYYY"></option>
+      <option value="D/M/YYYY"></option>
+    </datalist>
+
+    <div class="scroll" id="columns-wrap" tabindex="0" role="region" aria-label="Rules for each column">
+      <table class="grid" id="columns">
+        <caption class="sr">Rules for each column</caption>
+        <thead>
+          <tr>
+            <th scope="col">Column</th>
+            <th scope="col">Contains</th>
+            <th scope="col">Written like</th>
+            <th scope="col">Must not be empty</th>
+            <th scope="col">Must be unique</th>
+            <th scope="col" class="repair">Repair: trim spaces</th>
+            <th scope="col" class="repair">Repair: convert format</th>
+          </tr>
+        </thead>
+        <tbody id="columns-body"></tbody>
+      </table>
+    </div>
+    <p class="hint">"Repair" options change values only in the cleaned copy, and only in the columns you tick. Nothing else is touched.</p>
+
+    <div class="row">
+      <div class="field">
+        <label for="out-number">In the cleaned copy, write converted numbers like</label>
+        <select id="out-number">
+          <option value="">Same as in this file</option>
+          <option value="canonical">1250.50</option>
+          <option value="id">1.250,50</option>
+          <option value="us">1,250.50</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="out-date">In the cleaned copy, write converted dates like</label>
+        <input type="text" id="out-date" list="date-formats" placeholder="Same as in this file" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="dedupe">Duplicate rows in the cleaned copy</label>
+        <select id="dedupe">
+          <option value="off">Keep every row</option>
+          <option value="rows">Remove rows identical to an earlier row</option>
+          <option value="keys">Also remove rows that repeat a unique value</option>
+        </select>
+        <p class="hint">The first row is always the one that is kept.</p>
+      </div>
+    </div>
+
+    <details id="more">
+      <summary>More settings</summary>
+      <div class="row">
+        <div class="field">
+          <label for="dup-rows">Identical rows in the source file</label>
+          <select id="dup-rows">
+            <option value="warn">Report as a warning</option>
+            <option value="ignore">Do not report</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="out-delimiter">Separator of the cleaned copy</label>
+          <select id="out-delimiter">
+            <option value="">Same as this file</option>
+            <option value=",">Comma ,</option>
+            <option value=";">Semicolon ;</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="out-encoding">Encoding of the cleaned copy</label>
+          <input type="text" id="out-encoding" placeholder="Same as this file" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="line-ending">Line endings of the cleaned copy</label>
+          <select id="line-ending">
+            <option value="crlf">Windows (CRLF)</option>
+            <option value="lf">Unix (LF)</option>
+          </select>
+        </div>
+      </div>
+      <fieldset class="field wide">
+        <legend>Combined unique keys</legend>
+        <p class="hint">Use this when two or more columns together must be unique (for example customer and date).</p>
+        <ul id="keys" class="chips"></ul>
+        <div class="row tight">
+          <div class="field">
+            <label for="key-columns">Columns (hold Ctrl to pick several)</label>
+            <select id="key-columns" multiple size="4"></select>
+          </div>
+          <button type="button" id="add-key">Add combined key</button>
+        </div>
+      </fieldset>
+    </details>
+  </div>
+</section>
+
+<section aria-labelledby="h-check">
+  <h2 id="h-check"><span class="num" aria-hidden="true">4</span> Check the file</h2>
+  <p class="lead">Finds problems using your rules. Nothing is changed.</p>
+  <button type="button" id="run-check" class="primary" disabled>Check file</button>
+  <div id="check-result" class="result" hidden></div>
+</section>
+
+<section aria-labelledby="h-clean">
+  <h2 id="h-clean"><span class="num" aria-hidden="true">5</span> Preview the cleaned copy</h2>
+  <p class="lead">Applies only the repairs ticked in step 3 and shows every value before and after. Still nothing is saved.</p>
+  <button type="button" id="run-clean" class="primary" disabled>Preview cleaning</button>
+  <div id="clean-result" class="result" hidden></div>
+</section>
+
+<section aria-labelledby="h-save">
+  <h2 id="h-save"><span class="num" aria-hidden="true">6</span> Save</h2>
+  <p class="lead" id="save-note">Files are saved through your browser's download folder. Your original file stays as it is.</p>
+  <div class="actions">
+    <button type="button" id="save-csv" class="primary" disabled>Save cleaned CSV</button>
+    <button type="button" id="save-output-profile" disabled>Save profile of the cleaned file</button>
+    <button type="button" id="save-report" disabled>Save report (text)</button>
+    <button type="button" id="save-report-json" disabled>Save report (JSON)</button>
+    <button type="button" id="save-profile" disabled>Save these rules as a profile</button>
+  </div>
+  <p class="blocked" id="save-blocked" hidden></p>
+</section>
+
+</main>
+
+<footer>
+  <p>CSV Tidy never guesses types or formats and repairs only what you select. The same engine runs behind the <code>csv-tidy</code> command; profiles saved here work there.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
