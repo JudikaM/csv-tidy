@@ -1,6 +1,6 @@
 # Configuration and data contracts
 
-This is the authoritative reference for CSV Tidy 0.1 profiles, options, defaults, and the
+This is the authoritative reference for CSV Tidy 0.2 profiles, options, defaults, and the
 input/output contracts of `check`, `clean`, `profile init`, `batch`, and `ui`.
 
 ## Profiles
@@ -129,7 +129,7 @@ Examples: `YYYY-MM-DD`, `DD/MM/YYYY`, `MM/DD/YYYY`, `D.M.YYYY`. Tokens are upper
 Calendar validity is checked (`31/02/2026` and `29/02/2025` are invalid; `29/02/2024` is valid).
 `01/02/2026` is 1 February with `DD/MM/YYYY` and 2 January with `MM/DD/YYYY`; CSV Tidy never
 guesses which one you meant. Month names, times, time zones, and compact `YYYYMMDD` are not
-supported in 0.1.
+supported.
 
 ## Reading rules
 

@@ -17,7 +17,7 @@ No dataset is committed.
 ## Recorded results
 
 Measured on 2026-10-13 on one developer machine: Windows 11 (10.0.26300), CPython 3.13.3,
-12 logical CPUs, CSV Tidy 0.1.0 plus the unreleased changes, seed 20260211, issue rate 0.02.
+12 logical CPUs, CSV Tidy 0.2.0, seed 20260211, issue rate 0.02.
 Single runs; expect variation between runs and machines. These numbers are not performance
 guarantees.
 

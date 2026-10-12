@@ -12,8 +12,10 @@ import hashlib
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import venv
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,11 +45,37 @@ def run(cmd: list[str], cwd: Path, expect: int) -> str:
     return proc.stdout
 
 
+UI_ASSETS = ("index.html", "app.css", "app.js")
+
+
+def check_ui_assets(wheel: Path, dist: Path) -> None:
+    """The interface is three static files; both archives must carry all of them."""
+    with zipfile.ZipFile(wheel) as archive:
+        wheel_names = set(archive.namelist())
+    missing = [n for n in UI_ASSETS if f"csv_tidy/ui_static/{n}" not in wheel_names]
+    if missing:
+        sys.exit(f"{wheel.name} lacks interface assets: {missing}")
+    sdists = sorted(dist.glob("csv_tidy-*.tar.gz"))
+    if len(sdists) != 1:
+        sys.exit(f"expected exactly one csv_tidy sdist in {dist}, found {len(sdists)}")
+    with tarfile.open(sdists[0]) as archive:
+        sdist_names = archive.getnames()
+    missing = [
+        n
+        for n in UI_ASSETS
+        if not any(m.endswith(f"/src/csv_tidy/ui_static/{n}") for m in sdist_names)
+    ]
+    if missing:
+        sys.exit(f"{sdists[0].name} lacks interface assets: {missing}")
+    print(f"ok: interface assets present in {wheel.name} and {sdists[0].name}")
+
+
 def main() -> None:
     dist = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "dist")
     wheels = sorted(dist.glob("csv_tidy-*.whl"))
     if len(wheels) != 1:
         sys.exit(f"expected exactly one csv_tidy wheel in {dist}, found {len(wheels)}")
+    check_ui_assets(wheels[0], dist)
     with tempfile.TemporaryDirectory(prefix="csv-tidy-smoke-") as tmp:
         tmp_path = Path(tmp)
         env_dir = tmp_path / "venv"
