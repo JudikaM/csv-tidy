@@ -1,4 +1,4 @@
-"""Reproducible synthetic benchmark for check, clean preview, reports, and export.
+"""Reproducible synthetic benchmark for check, clean preview, reports, export, and batches.
 
 Usage:
     python scripts/benchmark.py --rows 1000            # smoke size
@@ -22,10 +22,14 @@ import tracemalloc
 from pathlib import Path
 
 from csv_tidy import check_file, clean_file, export_clean, load_profile
+from csv_tidy.batch import BatchInput, run_batch
 from csv_tidy.reporting import clean_report, render_clean_text, to_json
+from csv_tidy.schema import profile_to_dict
+from csv_tidy.ui import Session
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "examples" / "profiles" / "transactions-id.toml"
+BATCH_FILES = 5
 
 
 def id_amount(rng: random.Random) -> str:
@@ -102,12 +106,42 @@ def main() -> None:
             )
             return len(written)
 
+        # Batch: the same number of rows split over BATCH_FILES files, all repairable, so
+        # every file is exported. Measured through run_batch (as `csv-tidy batch clean`)
+        # and through the local interface's session (batch preview plus the ZIP download).
+        parts = []
+        for number in range(BATCH_FILES):
+            part = Path(tmp) / f"part-{number}.csv"
+            generate(
+                part, max(1, args.rows // BATCH_FILES), args.issue_rate, args.seed + number, False
+            )
+            parts.append(part)
+        inputs = [BatchInput(part, Path(part.name)) for part in parts]
+        session = Session(2**40)
+        ids = [session.store_file(p.name, p.read_bytes(), append=True)["file_id"] for p in parts]
+        settings = profile_to_dict(profile)
+
+        def interface_batch() -> int:
+            body = {"action": "clean", "file_ids": ids, "profile": settings}
+            stored = session.batch(body)
+            kind = {"batch_id": stored["batch_id"], "profile": settings, "kind": "batch-zip"}
+            return len(session.download(kind)[2])
+
         steps = [
             measure("check", lambda: check_file(data, profile).errors, args.memory),
             measure("clean preview", lambda: len(clean_file(data, profile).changes), args.memory),
             measure("report (JSON + text, default limits)", report, args.memory),
             measure("export (CSV + output profile)", export, args.memory),
+            measure(
+                f"batch clean preview ({BATCH_FILES} files, same rows in total)",
+                lambda: run_batch("clean", inputs, profile).exit_code,
+                args.memory,
+            ),
+            measure(
+                f"interface batch preview + ZIP ({BATCH_FILES} files)", interface_batch, args.memory
+            ),
         ]
+        session.close()
     report = {
         "rows": args.rows,
         "file_mib": round(size / 2**20, 2),

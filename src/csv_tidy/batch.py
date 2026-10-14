@@ -14,7 +14,7 @@ from __future__ import annotations
 import fnmatch
 import os
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -41,10 +41,17 @@ ACTIONS = ("check", "clean")
 @dataclass(frozen=True)
 class BatchInput:
     """One selected file. ``relative`` decides where its outputs go below the output folder:
-    the file name for a file given directly, the path below the folder for a folder member."""
+    the file name for a file given directly, the path below the folder for a folder member.
+    ``label``, when given, names the file in outcomes and reports instead of ``path`` (the
+    local interface uses it to show the original file name instead of a private copy)."""
 
     path: Path
     relative: Path
+    label: str | None = None
+
+    @property
+    def shown(self) -> str:
+        return self.label or str(self.path)
 
 
 @dataclass(frozen=True)
@@ -266,7 +273,7 @@ def run_batch(
                 )
             )
         except CsvTidyError as exc:
-            outcomes.append(FileOutcome(str(item.path), item.relative, "failed", 2, error=str(exc)))
+            outcomes.append(FileOutcome(item.shown, item.relative, "failed", 2, error=str(exc)))
     mode = None if action == "check" else ("apply" if apply else "dry-run")
     return BatchResult(action, mode, loaded.path if loaded else None, tuple(outcomes))
 
@@ -287,10 +294,14 @@ def _one(
     error = None
     if action == "check":
         result = check_file(item.path, profile, overrides=overrides)
+        if item.label:
+            result = replace(result, source_path=item.label)
         status = "valid" if result.exit_code == 0 else "invalid"
         facts = {"errors": result.errors, "warnings": result.warnings}
     else:
         result = clean_file(item.path, profile, overrides=overrides)
+        if item.label:
+            result = replace(result, source_path=item.label)
         status = "ready" if result.export_ready else "blocked"
         facts = {
             "errors": sum(i.severity == "error" for i in result.source_issues),
@@ -350,7 +361,7 @@ def _one(
         status = "failed"
     coverage = coverage_dict(result.settings, result.header)
     return FileOutcome(
-        str(item.path),
+        item.shown,
         item.relative,
         status,
         exit_code,

@@ -61,7 +61,9 @@ if result.export_ready:
   `export_ready`, `export_blocked_reason` (`None` when ready), `exit_code`, `csv_text()`,
   `output_profile_toml()`.
 - `run_batch(action, select_inputs(paths), profile, ...)` returns a `BatchResult` with one
-  `FileOutcome` per file and the aggregate `exit_code`; `batch.batch_report` turns it into
+  `FileOutcome` per file and the aggregate `exit_code`. `BatchInput(path, relative, label)`
+  may carry a `label` that names the file in outcomes and reports instead of its path (the
+  local interface passes the original file name). `batch.batch_report` turns the result into
   the summary dictionary.
 - `Issue`: `code`, `severity` (`error`, `warning`, `fatal`), `stage`, `record`,
   `line_start`, `line_end`, `column`, `value`, `message`, `suggestion`, `related_record`,
@@ -117,6 +119,11 @@ if result.export_ready:
   buffered, so the stream fails before the lines in front of the bad bytes are parsed. The
   reader then decodes the bytes up to the failure and parses those complete lines, which
   gives exact counts and a line number for LF, CRLF, and CR files in any encoding.
+- **Several files in the interface use `run_batch`.** The page's several-files mode calls the
+  same batch function as `csv-tidy batch`, so statuses and exit codes cannot drift apart.
+  Downloads recompute each file with `clean_file` and export it with `export_clean` into
+  the private session folder; the ZIP is refused if a file's export readiness differs from
+  the status shown.
 - **A local web page instead of a desktop toolkit.** The interface is a standard-library
   HTTP server on the loopback address plus one static page. This adds no dependency, works
   with keyboard and screen readers through ordinary HTML controls, and can be tested over

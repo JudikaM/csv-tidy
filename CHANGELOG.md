@@ -6,6 +6,34 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-14
+
+The local interface now covers what was only possible on the command line: several files
+with one set of rules, the field-size limit, and the report and preview limits.
+
+**Upgrade notes.** Nothing changes for the CLI, profiles, JSON reports, or exit codes. Added
+API is optional (`BatchInput.label`). The interface keeps its one-file flow as the default.
+
+### Added
+
+- Interface: **several files with the same rules**. Choose many files, set or load the rules
+  once, check or preview all of them through `run_batch` (the same function as
+  `csv-tidy batch`), see one row per file with its status and reason, open **Details** for a
+  file, save a cleaned CSV per ready file, or **Save all results as ZIP** (cleaned CSV and
+  output profile per ready file, a report per file, and the batch summary). Blocked or
+  unreadable files are never exported and are named with their reason.
+- Interface: **More settings** has the longest allowed value (`max_field_chars`) and the
+  number of problems listed, changed values listed, and rows shown in previews. Saved
+  reports use the same limits; totals stay complete.
+- `BatchInput.label`: names a file in batch outcomes and reports instead of its path.
+- `scripts/benchmark.py` measures a five-file batch through `run_batch` and through the
+  interface (batch preview plus ZIP). `scripts/smoke_dist.py` runs the interface's batch and
+  ZIP from the installed wheel.
+
+### Changed
+
+- `csv-tidy ui --max-file-mb` also limits the total size of several files chosen together.
+
 ## [0.2.0] - 2026-10-14
 
 Second early-alpha release: a profile creator, a local browser interface, batch processing,

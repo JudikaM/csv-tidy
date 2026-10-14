@@ -1,10 +1,13 @@
 """The local interface server: same pipeline as the CLI, loopback only, token protected."""
 
+import io
 import json
 import re
+import shutil
 import threading
 import urllib.error
 import urllib.request
+import zipfile
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
@@ -45,13 +48,14 @@ class Client:
         status, _, data = self.request(path, json.dumps(body).encode(), send)
         return status, json.loads(data)
 
-    def upload(self, path: Path, name=None):
+    def upload(self, path: Path, name=None, append=False):
         headers = {
             TOKEN_HEADER: self.token,
             "Content-Type": "application/octet-stream",
             "X-File-Name": quote(name or path.name),
         }
-        status, _, data = self.request("/api/file", path.read_bytes(), headers)
+        target = "/api/file?mode=append" if append else "/api/file"
+        status, _, data = self.request(target, path.read_bytes(), headers)
         assert status == 200, data
         return json.loads(data)
 
@@ -299,3 +303,227 @@ def test_ui_command_is_documented_and_rejects_a_bad_port():
     text = run_cli("ui", "--help").out
     assert "127.0.0.1" in text and "--no-browser" in text
     assert run_cli("ui", "--port", "70000").code == 2
+
+
+# --------------------------------------------------------------------------- 0.3.0: batch
+
+
+@pytest.fixture
+def batch_files(ui, write):
+    """Four uploads in this order: ready, blocked, ready, unreadable."""
+    bad = write("bad.csv", b"transaction_id;customer_id;amount;date;note\nTX-1;0;1,00;\xff\n")
+    loaded = [ui.upload(FIXABLE)]
+    loaded.append(ui.upload(UNFIXABLE, append=True))
+    loaded.append(ui.upload(EXAMPLES / "transactions_valid.csv", append=True))
+    loaded.append(ui.upload(bad, append=True))
+    return [item["file_id"] for item in loaded]
+
+
+def run_ui_batch(ui, ids, action="clean", profile=None, limits=None):
+    body = {"action": action, "file_ids": ids, "profile": profile or profile_dict()}
+    if limits is not None:
+        body["limits"] = limits
+    return ui.post("/api/batch", body)
+
+
+def test_batch_gives_each_file_its_own_status_like_the_cli(ui, batch_files, tmp_path):
+    status, data = run_ui_batch(ui, batch_files)
+    assert status == 200, data
+    report = data["report"]
+    assert report["command"] == "batch" and report["action"] == "clean"
+    assert [(f["path"], f["status"], f["exit_code"]) for f in report["files"]] == [
+        ("transactions_fixable.csv", "ready", 0),
+        ("transactions_unfixable.csv", "blocked", 1),
+        ("transactions_valid.csv", "ready", 0),
+        ("bad.csv", "incomplete", 2),
+    ]
+    assert "decode_error" in report["files"][3]["error"]
+    assert report["summary"]["exit_code"] == 2
+    assert report["totals"]["files"] == 4 and report["totals"]["failed"] == 1
+    assert [f["file_id"] for f in data["files"]] == batch_files
+
+    folder = tmp_path / "same"
+    folder.mkdir()
+    for name in (
+        "transactions_fixable.csv",
+        "transactions_unfixable.csv",
+        "transactions_valid.csv",
+    ):
+        shutil.copy(EXAMPLES / name, folder / name)
+    cli = json.loads(
+        run_cli("batch", "clean", str(folder), "--schema", str(ID_PROFILE), "--format", "json").out
+    )
+    pick = ("status", "exit_code", "data_records", "errors", "output_errors", "changed_fields")
+    by_name = {Path(f["path"]).name: {k: f[k] for k in pick} for f in cli["files"]}
+    for entry in report["files"][:3]:
+        assert {k: entry[k] for k in pick} == by_name[entry["path"]]
+
+
+def test_batch_file_details_equal_the_single_file_result(ui, batch_files):
+    _, data = run_ui_batch(ui, batch_files)
+    body = {"batch_id": data["batch_id"], "file_id": batch_files[1], "profile": profile_dict()}
+    status, detail = ui.post("/api/batch/file", body)
+    assert status == 200, detail
+    expected = clean_report(clean_file(UNFIXABLE, load_profile(ID_PROFILE)), "dry-run", 200, 200)
+    for key in ("summary", "output_issues", "changes"):
+        assert detail["report"][key] == expected[key]
+    assert detail["report"]["source"]["path"] == "transactions_unfixable.csv"
+    assert "3 output error(s) remain" in detail["blocked_reason"]
+
+
+def test_batch_zip_holds_only_exportable_files_and_matches_the_cli(ui, batch_files, tmp_path):
+    _, data = run_ui_batch(ui, batch_files)
+    base = {"batch_id": data["batch_id"], "profile": profile_dict()}
+    status, headers, payload = ui.download({**base, "kind": "batch-zip"})
+    assert status == 200 and headers["X-File-Name"] == "csv-tidy-batch.zip"
+    archive = zipfile.ZipFile(io.BytesIO(payload))
+    assert sorted(archive.namelist()) == [
+        "bad.report.json",
+        "batch-summary.json",
+        "batch-summary.txt",
+        "transactions_fixable.clean.csv",
+        "transactions_fixable.output.toml",
+        "transactions_fixable.report.json",
+        "transactions_unfixable.report.json",
+        "transactions_valid.clean.csv",
+        "transactions_valid.output.toml",
+        "transactions_valid.report.json",
+    ]
+    out = tmp_path / "cli.csv"
+    assert (
+        run_cli(
+            "clean", str(FIXABLE), "--schema", str(ID_PROFILE), "--apply", "--output", str(out)
+        ).code
+        == 0
+    )
+    assert archive.read("transactions_fixable.clean.csv") == out.read_bytes()
+    summary = json.loads(archive.read("batch-summary.json"))
+    assert [f["status"] for f in summary["files"]] == ["ready", "blocked", "ready", "incomplete"]
+    blocked = json.loads(archive.read("transactions_unfixable.report.json"))
+    assert blocked["summary"]["status"] == "blocked"
+    assert "Verdict: 2 of 4 files need attention" in archive.read("batch-summary.txt").decode()
+
+
+def test_batch_single_downloads_respect_the_export_gate(ui, batch_files):
+    _, data = run_ui_batch(ui, batch_files)
+    base = {"batch_id": data["batch_id"], "profile": profile_dict(), "kind": "batch-csv"}
+    status, headers, payload = ui.download({**base, "file_id": batch_files[0]})
+    assert status == 200 and headers["X-File-Name"] == "transactions_fixable.clean.csv"
+    for blocked in batch_files[1], batch_files[3]:
+        status, _, payload = ui.download({**base, "file_id": blocked})
+        assert status == 409 and "Saving is blocked" in json.loads(payload)["error"]
+    status, _, payload = ui.download({**base, "kind": "batch-summary-text"})
+    assert status == 200 and payload.decode().splitlines()[1].startswith("Verdict:")
+
+
+def test_batch_check_mode_and_rules_missing_columns(ui, batch_files):
+    _, data = run_ui_batch(ui, batch_files[:3], action="check")
+    assert [f["status"] for f in data["report"]["files"]] == ["invalid", "invalid", "valid"]
+    status, _, payload = ui.download(
+        {"batch_id": data["batch_id"], "profile": profile_dict(), "kind": "batch-zip"}
+    )
+    assert status == 200
+    names = sorted(zipfile.ZipFile(io.BytesIO(payload)).namelist())
+    assert not any(name.endswith(".clean.csv") for name in names)
+
+
+def test_batch_refuses_duplicate_names_and_goes_stale(ui, batch_files, write):
+    twin = write("other/transactions_fixable.csv", FIXABLE.read_bytes())
+    extra = ui.upload(twin, append=True)["file_id"]
+    status, data = run_ui_batch(ui, [*batch_files, extra])
+    assert status == 400 and "same name" in data["error"]
+
+    _, data = run_ui_batch(ui, batch_files)
+    changed = profile_dict()
+    changed["transform"]["trim"] = []
+    status, _, payload = ui.download(
+        {"batch_id": data["batch_id"], "profile": changed, "kind": "batch-zip"}
+    )
+    assert status == 409 and "settings changed" in json.loads(payload)["error"]
+    assert ui.post("/api/file/remove", {"file_id": batch_files[2]}) == (200, {"removed": True})
+    status, _, _ = ui.download(
+        {"batch_id": data["batch_id"], "profile": profile_dict(), "kind": "batch-zip"}
+    )
+    assert status == 409
+    status, data = run_ui_batch(ui, batch_files)
+    assert status == 409 and "no longer loaded" in data["error"]
+    ui.upload(FIXABLE)  # one-file mode replaces the whole selection
+    status, data = run_ui_batch(ui, batch_files[:1])
+    assert status == 409
+
+
+def test_batch_request_validation(ui, batch_files):
+    assert run_ui_batch(ui, [])[0] == 400
+    assert run_ui_batch(ui, batch_files, action="delete")[0] == 400
+    assert run_ui_batch(ui, ["x"])[0] == 409
+
+
+# --------------------------------------------------------------------------- 0.3.0: limits
+
+
+def test_report_and_preview_limits_are_honored_and_validated(ui):
+    loaded = ui.upload(UNFIXABLE)
+    limits = {"max_details": 1, "max_examples": 1, "preview_rows": 2}
+    status, data = ui.post(
+        "/api/preview", {"file_id": loaded["file_id"], "delimiter": ";", "limits": limits}
+    )
+    assert status == 200 and len(data["rows"]) == 2 and data["rows_total"] == 4
+    body = {"file_id": loaded["file_id"], "profile": profile_dict(), "limits": limits}
+    _, checked = ui.post("/api/check", body)
+    assert len(checked["report"]["issues"]) == 1
+    assert checked["report"]["details"] == {"limit": 1, "total": 3, "shown": 1, "truncated": True}
+    _, cleaned = ui.post("/api/clean", body)
+    assert len(cleaned["report"]["changes"]["examples"]) == 1
+    assert cleaned["report"]["changes"]["changed_fields"] == 6
+    assert len(cleaned["rows"]) == 2
+    status, _, payload = ui.download(
+        {
+            "result_id": checked["result_id"],
+            "profile": profile_dict(),
+            "limits": limits,
+            "kind": "check-report-json",
+        }
+    )
+    assert status == 200 and len(json.loads(payload)["issues"]) == 1
+    status, _, payload = ui.download(
+        {"result_id": checked["result_id"], "profile": profile_dict(), "kind": "check-report-json"}
+    )
+    assert status == 409  # different limits than the result was made with
+    for bad in (
+        {"max_details": -1},
+        {"max_examples": "many"},
+        {"preview_rows": 0},
+        {"preview_rows": 5000},
+    ):
+        status, data = ui.post("/api/check", {**body, "limits": bad})
+        assert status == 400 and next(iter(bad)) in data["error"]
+
+
+def test_default_limits_are_unchanged(ui):
+    loaded = ui.upload(FIXABLE)
+    _, data = ui.post("/api/preview", {"file_id": loaded["file_id"], "delimiter": ";"})
+    assert data["report"]["details"]["limit"] == 200
+
+
+# --------------------------------------------------------------------------- 0.3.0: field limit
+
+
+def test_max_field_chars_applies_to_preview_check_and_saved_profiles(ui, write, tmp_path):
+    loaded = ui.upload(write("long.csv", "id,note\n1," + "x" * 12 + "\n"))
+    status, data = ui.post("/api/preview", {"file_id": loaded["file_id"], "max_field_chars": 10})
+    assert status == 200
+    assert data["report"]["scan"]["fatal_error"]["code"] == "field_too_large"
+    assert ui.post("/api/preview", {"file_id": loaded["file_id"], "max_field_chars": 12})[1][
+        "report"
+    ]["scan"]["complete"]
+    status, data = ui.post("/api/preview", {"file_id": loaded["file_id"], "max_field_chars": 0})
+    assert status == 400 and "max_field_chars" in data["error"]
+    profile = {"schema_version": 1, "source": {"max_field_chars": 10}}
+    _, checked = ui.post("/api/check", {"file_id": loaded["file_id"], "profile": profile})
+    assert checked["report"]["scan"]["complete"] is False
+    headers = {"Content-Type": "application/json", TOKEN_HEADER: ui.token}
+    body = json.dumps({"profile": profile, "file_name": "long.csv"}).encode()
+    _, _, saved = ui.request("/api/profile/toml", body, headers)
+    target = tmp_path / "saved.toml"
+    target.write_bytes(saved)
+    assert load_profile(target).max_field_chars == 10

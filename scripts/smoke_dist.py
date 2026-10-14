@@ -21,16 +21,41 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 UI_CHECK = """
-import threading, urllib.request
+import io, json, threading, tomllib, urllib.request, zipfile
+from pathlib import Path
 from csv_tidy.ui import create_server
 server, session, url = create_server(0)
 threading.Thread(target=server.serve_forever, daemon=True).start()
 base = url.split("/?")[0]
 page = urllib.request.urlopen(url, timeout=10).read().decode("utf-8")
-assert session.token in page and "CSV Tidy" in page
+assert session.token in page and "CSV Tidy" in page and "Several files" in page
 for name in ("/app.css", "/app.js"):
     assert len(urllib.request.urlopen(base + name, timeout=10).read()) > 1000, name
+
+def post(path, data, kind="application/json", extra=None):
+    body = data if isinstance(data, bytes) else json.dumps(data).encode()
+    headers = {"X-CSV-Tidy-Token": session.token, "Content-Type": kind, **(extra or {})}
+    request = urllib.request.Request(base + path, data=body, headers=headers)
+    return urllib.request.urlopen(request, timeout=30).read()
+
+ids = []
+for number, name in enumerate(("transactions_fixable.csv", "transactions_unfixable.csv")):
+    mode = "?mode=append" if number else ""
+    data = Path("examples", name).read_bytes()
+    stored = post("/api/file" + mode, data, "application/octet-stream", {"X-File-Name": name})
+    ids.append(json.loads(stored)["file_id"])
+profile = tomllib.loads(Path("examples/profiles/transactions-id.toml").read_text(encoding="utf-8"))
+limits = {"max_details": 5, "max_examples": 5, "preview_rows": 2}
+request = {"action": "clean", "file_ids": ids, "profile": profile, "limits": limits}
+result = json.loads(post("/api/batch", request))
+assert [f["status"] for f in result["report"]["files"]] == ["ready", "blocked"]
+wanted = {"batch_id": result["batch_id"], "profile": profile, "limits": limits, "kind": "batch-zip"}
+archive = post("/api/download", wanted)
+names = sorted(zipfile.ZipFile(io.BytesIO(archive)).namelist())
+assert "transactions_fixable.clean.csv" in names, names
+assert "transactions_unfixable.clean.csv" not in names, names
 server.shutdown(); server.server_close(); session.close()
+print("interface batch and ZIP ok")
 """
 
 
@@ -235,7 +260,8 @@ def main() -> None:
             sys.exit("batch clean did not write exactly the one exportable file")
         if not (work / "output" / "batch" / "transactions_fixable.clean.csv").exists():
             sys.exit("batch clean did not write the expected output name")
-        # The interface's page, style sheet and script must be inside the wheel.
+        # The interface's page, style sheet and script must be inside the wheel, and its
+        # several-files mode must work from the installed package.
         run([str(python), "-I", "-c", UI_CHECK], work, 0)
         api = run([str(python), "-I", "examples/api_example.py"], work, 0)
         if "clean: export ready = True" not in api:

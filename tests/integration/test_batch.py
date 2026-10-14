@@ -2,6 +2,7 @@
 
 import json
 import shutil
+from pathlib import Path
 
 import pytest
 from conftest import EXAMPLES, run_cli, sha256
@@ -302,6 +303,25 @@ def test_library_entry_point_matches_the_command(data):
         ("unfixable.csv", "blocked"),
         ("valid.csv", "ready"),
     ]
+
+
+def test_labels_name_files_in_outcomes_and_reports(data, tmp_path):
+    from csv_tidy.batch import BatchInput
+
+    inputs = [
+        BatchInput(data / "fixable.csv", Path("fixable.csv"), label="January.csv"),
+        BatchInput(data / "missing.csv", Path("missing.csv"), label="February.csv"),
+    ]
+    reports = tmp_path / "reports"
+    result = run_batch("clean", inputs, load_profile(ID_PROFILE), report_dir=reports)
+    assert [(f.path, f.status) for f in result.files] == [
+        ("January.csv", "ready"),
+        ("February.csv", "failed"),
+    ]
+    report = json.loads((reports / "fixable.report.json").read_text(encoding="utf-8"))
+    assert report["source"]["path"] == "January.csv"
+    unlabelled = run_batch("check", [BatchInput(data / "valid.csv", Path("valid.csv"))])
+    assert unlabelled.files[0].path == str(data / "valid.csv")
 
 
 def test_single_file_commands_are_unchanged_and_help_lists_batch(data):

@@ -7,7 +7,7 @@ Public API::
 See docs/ARCHITECTURE.md for the result model and exceptions.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from .api import CheckResult, CleanResult, ScanInfo, check_file, clean_file, export_clean
 from .batch import BatchResult, run_batch, select_inputs

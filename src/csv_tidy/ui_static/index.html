@@ -35,9 +35,14 @@
 
 <section aria-labelledby="h-file">
   <h2 id="h-file"><span class="num" aria-hidden="true">1</span> Choose the file</h2>
+  <fieldset class="field wide mode">
+    <legend>What do you want to work on?</legend>
+    <label class="choice"><input type="radio" name="mode" value="single" checked> One file</label>
+    <label class="choice"><input type="radio" name="mode" value="batch"> Several files with the same rules</label>
+  </fieldset>
   <div class="row">
     <div class="field">
-      <label for="file">CSV file</label>
+      <label for="file" id="file-label">CSV file</label>
       <input type="file" id="file" accept=".csv,.txt,text/csv,text/plain">
       <p class="hint" id="file-note">Your file is only read. It is never changed.</p>
     </div>
@@ -63,6 +68,16 @@
       <p class="hint">Change this if letters such as é or ñ look wrong, or the file cannot be read.</p>
     </div>
   </div>
+  <div id="batch-files-wrap" hidden>
+    <h3 id="batch-files-title">Chosen files</h3>
+    <p class="hint">Every file is checked and cleaned with the same separator, encoding, and rules. The rules in step 3 are based on the columns of the file you preview.</p>
+    <div class="scroll" tabindex="0" role="region" aria-labelledby="batch-files-title">
+      <table>
+        <thead><tr><th scope="col">File</th><th scope="col" class="n">Size</th><th scope="col">Actions</th></tr></thead>
+        <tbody id="batch-files"></tbody>
+      </table>
+    </div>
+  </div>
 </section>
 
 <section aria-labelledby="h-preview">
@@ -71,6 +86,12 @@
     <p>The first rows of your file appear here, exactly as they are stored. Use them to confirm the separator and encoding before setting any rules.</p>
   </div>
   <div id="preview" hidden>
+    <div class="row tight" id="preview-pick-wrap" hidden>
+      <div class="field">
+        <label for="preview-pick">File to preview</label>
+        <select id="preview-pick"></select>
+      </div>
+    </div>
     <p class="facts" id="preview-facts"></p>
     <div id="preview-issues"></div>
     <div class="scroll" id="preview-table" tabindex="0" role="region" aria-label="Preview of the file"></div>
@@ -189,7 +210,30 @@
             <option value="lf">Unix (LF)</option>
           </select>
         </div>
+        <div class="field">
+          <label for="max-field">Longest allowed value (characters)</label>
+          <input type="number" id="max-field" min="1" max="100000000" step="1" inputmode="numeric" placeholder="131072 (default)">
+          <p class="hint">A longer value stops reading with "field too large". It usually means an unclosed quote. Raise it only for files with very long texts. Saved in profiles as max_field_chars.</p>
+        </div>
       </div>
+      <fieldset class="field wide">
+        <legend>How much detail to show</legend>
+        <p class="hint">Counts are always complete. These limits set how many items are listed on the page and in saved reports.</p>
+        <div class="row tight">
+          <div class="field">
+            <label for="limit-details">Problems listed</label>
+            <input type="number" id="limit-details" min="0" max="10000" step="1" inputmode="numeric" value="200">
+          </div>
+          <div class="field">
+            <label for="limit-examples">Changed values listed</label>
+            <input type="number" id="limit-examples" min="0" max="10000" step="1" inputmode="numeric" value="200">
+          </div>
+          <div class="field">
+            <label for="limit-rows">Rows shown in previews</label>
+            <input type="number" id="limit-rows" min="1" max="1000" step="1" inputmode="numeric" value="50">
+          </div>
+        </div>
+      </fieldset>
       <fieldset class="field wide">
         <legend>Combined unique keys</legend>
         <p class="hint">Use this when two or more columns together must be unique (for example customer and date).</p>
@@ -223,11 +267,18 @@
 <section aria-labelledby="h-save">
   <h2 id="h-save"><span class="num" aria-hidden="true">6</span> Save</h2>
   <p class="lead" id="save-note">Files are saved through your browser's download folder. Your original file stays as it is.</p>
-  <div class="actions">
+  <div class="actions" id="batch-actions" hidden>
+    <button type="button" id="save-zip" class="primary" disabled>Save all results as ZIP</button>
+    <button type="button" id="save-batch-summary" disabled>Save summary (text)</button>
+    <button type="button" id="save-batch-summary-json" disabled>Save summary (JSON)</button>
+  </div>
+  <div class="actions" id="single-actions">
     <button type="button" id="save-csv" class="primary" disabled>Save cleaned CSV</button>
     <button type="button" id="save-output-profile" disabled>Save profile of the cleaned file</button>
     <button type="button" id="save-report" disabled>Save report (text)</button>
     <button type="button" id="save-report-json" disabled>Save report (JSON)</button>
+  </div>
+  <div class="actions">
     <button type="button" id="save-profile" disabled>Save these rules as a profile</button>
   </div>
   <p class="blocked" id="save-blocked" hidden></p>

@@ -20,8 +20,8 @@ There are three ways to use the same engine:
 | You are | Use | Start with |
 |---------|-----|------------|
 | A developer automating imports | the `csv-tidy` command or the Python API | [Quick start](#quick-start) |
-| Someone who works in Excel and prefers forms | the local interface, `csv-tidy ui` | [Local interface](#local-interface-for-people-who-prefer-forms) |
-| Processing a folder of exports | `csv-tidy batch` | [Many files](#many-files-at-once) |
+| Someone who works in Excel and prefers forms | the local interface, `csv-tidy ui` (one file or several files) | [Local interface](#local-interface-for-people-who-prefer-forms) |
+| Processing a folder of exports | `csv-tidy batch`, or several files in `csv-tidy ui` | [Many files](#many-files-at-once) |
 
 ## Features
 
@@ -44,7 +44,8 @@ There are three ways to use the same engine:
   problems before repaired ones, and end with the next step. English text and JSON with
   stable issue codes and documented exit codes.
 - Batch processing of files and folders with one profile and separate results per file.
-- A local browser interface that runs the same pipeline without a command line.
+- A local browser interface that runs the same pipeline without a command line, for one
+  file or several files with the same rules (results per file, all results as one ZIP).
 
 ## Installation
 
@@ -52,7 +53,7 @@ Requires Python 3.11 or newer. CSV Tidy is **not published on PyPI**. Published 
 installation files (a wheel and a source distribution) are listed on the
 [GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); a downloaded wheel
 installs with `python -m pip install <path-to-wheel>` inside a virtual environment. This
-README describes version 0.2.0; changes made after a release are listed under "Unreleased"
+README describes version 0.3.0; changes made after a release are listed under "Unreleased"
 in the [changelog](CHANGELOG.md). You can also install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's programs directly, so the
@@ -145,7 +146,7 @@ normalize = ["amount", "date"]
 ### 1. Check
 
 ```text
-CSV Tidy 0.2.0 - check
+CSV Tidy 0.3.0 - check
 Verdict: FAILED - 2 errors found in the source file.
 Source: examples\transactions_fixable.csv
 Profile: examples\profiles\transactions-id.toml
@@ -199,7 +200,7 @@ JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 ### 2. Preview a clean (dry run is the default)
 
 ```text
-CSV Tidy 0.2.0 - clean (dry run, nothing written)
+CSV Tidy 0.3.0 - clean (dry run, nothing written)
 Verdict: READY TO EXPORT - no errors remain in the cleaned result; 2 source problems repaired.
 ...
 Transformations (applied in this order):
@@ -310,13 +311,24 @@ work with `check`, `clean`, `batch`, and the local interface. Details:
 
 This starts a small web server **on this computer only** and opens a page in your browser:
 
-1. Choose the CSV file, the separator (comma or semicolon), and the encoding.
-2. Look at the first rows exactly as they are stored.
+1. Choose **one file** or **several files with the same rules**, then the separator (comma
+   or semicolon) and the encoding.
+2. Look at the first rows exactly as they are stored (with several files, pick which one).
 3. Describe the columns with drop-downs and checkboxes, or load a profile.
-4. Check the file: problems are listed with record, file line, column, and what to do.
-5. Preview the cleaned copy: every changed value is shown before and after.
+4. Check: problems are listed with record, file line, column, and what to do. With several
+   files there is one row per file (No problems, Problems found, Not fully read, Failed) and
+   **Details** opens the problems of a file.
+5. Preview the cleaned copy: every changed value is shown before and after. With several
+   files each file is **Ready** or **Blocked** (or could not be read), with the reason.
 6. Save the cleaned CSV, the profile of the cleaned file, the report, and your rules as a
-   profile (through the browser's download folder).
+   profile (through the browser's download folder). With several files: **Save CSV** per
+   ready file, or **Save all results as ZIP**: a cleaned CSV and output profile for every
+   ready file, a report for every file, and a batch summary. Files that are blocked or could
+   not be read are never exported; they are in the ZIP as reports only.
+
+**More settings** also holds the longest allowed value (`max_field_chars`, saved in profiles)
+and how many problems, changed values, and preview rows are listed (counts stay complete;
+saved reports use the same limits).
 
 The page always shows the current status and the next step, clears results that no longer
 match when the file or a setting changes, and explains why saving is blocked while problems
@@ -325,9 +337,10 @@ remain. It uses the same functions as the commands; a profile saved from the pag
 
 Privacy and safety: the server listens on `127.0.0.1` only, the page loads nothing from the
 internet, and the address contains a one-time key without which other programs and web pages
-cannot use it. The chosen file is copied into a private temporary folder that is removed when
-you select **Quit** (or press Ctrl+C in the window that started it); your original file is
-never written to. Options: `--port N`, `--no-browser`, `--max-file-mb N` (default 200). A
+cannot use it. The chosen files are copied into a private temporary folder that is removed
+when you select **Quit** (or press Ctrl+C in the window that started it); your original files
+are never written to. Options: `--port N`, `--no-browser`, `--max-file-mb N` (largest file,
+and largest total of several files together; default 200). A
 step-by-step guide for first-time users is in
 [docs/USER_TESTING.md](docs/USER_TESTING.md#guide-for-administrative-staff).
 
@@ -342,7 +355,7 @@ step-by-step guide for first-time users is in
 ```
 
 ```text
-CSV Tidy 0.2.0 - batch clean (dry run, nothing written)
+CSV Tidy 0.3.0 - batch clean (dry run, nothing written)
 Verdict: 2 of 4 files need attention (2 with data errors).
 Profile: examples\profiles\transactions-id.toml
 
@@ -367,6 +380,8 @@ Status: exit code 1
   written and never removes the results of the others.
 - **Exit code:** 2 if any file failed or could not be fully read or written; otherwise 1 if
   any file has data errors; otherwise 0. `batch check` works the same way without writing.
+- **Without a command line:** the several-files mode of `csv-tidy ui` runs the same batch
+  function and gives the same status per file.
 
 ## Options
 
