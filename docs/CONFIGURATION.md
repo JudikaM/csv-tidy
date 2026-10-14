@@ -332,6 +332,12 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   `csv-tidy-ui-error.txt` in the temporary folder, because there is no window to show it.
 - **Plain suggestions.** The page explains problems with its own controls, based on each
   issue's `remedy` (see Reports); for other issues it shows the suggestion text.
+- **Look.** A dark theme (default) and a light theme, switched in the header and remembered
+  in the browser's local storage for this address. Quit asks for confirmation. Files can be
+  dropped onto the file area. The page uses only its own style sheet and scripts
+  (`app.css`, `theme.js`, `app.js`); no fonts or styles are loaded from elsewhere.
+- **One server per port.** On Windows the port is claimed exclusively, so starting a second
+  interface on a port that is in use fails with an explanation instead of sharing the port.
 - **Dates from a list.** Date formats are chosen from `YYYY-MM-DD`, `DD/MM/YYYY`,
   `MM/DD/YYYY`, `DD-MM-YYYY`, `DD.MM.YYYY`, `YYYY/MM/DD`, `D/M/YYYY`, and `M/D/YYYY`;
   **Other…** accepts any format valid under "Date formats". Profiles with other formats load

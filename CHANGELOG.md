@@ -6,6 +6,27 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-14
+
+A new look for the local interface, and a port fix on Windows. The CLI, profiles, reports,
+exit codes, and the Python API are unchanged.
+
+### Changed
+
+- Interface: a new look with a dark "Cosmos" theme (the default) and a light theme, switched
+  in the header and remembered by the browser. Each step is a card with a numbered badge; the
+  status strip shows the current step in a step navigation; files can be dropped onto the
+  file area; mode and separator choices are cards; Quit asks for confirmation in a dialog; a
+  short notice confirms saved files. Everything stays local (no web fonts or external styles;
+  Inter and JetBrains Mono are used only when installed), and text contrast is at least 4.5:1
+  in both themes.
+
+### Fixed
+
+- On Windows, a second `csv-tidy ui --port N` could bind the port of a running one (Python
+  enables address reuse, which Windows treats as port sharing), so the new page was refused.
+  The port is now claimed exclusively and the second start fails with an explanation.
+
 ## [0.4.0] - 2026-10-14
 
 Start, update, and use the local interface without a command line.

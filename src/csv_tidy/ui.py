@@ -19,8 +19,10 @@ import contextlib
 import hmac
 import io
 import json
+import os
 import secrets
 import shutil
+import socket
 import sys
 import tempfile
 import threading
@@ -70,6 +72,7 @@ MAX_PREVIEW_ROWS = 1_000
 STATIC = {
     "/app.css": ("app.css", "text/css; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+    "/theme.js": ("theme.js", "text/javascript; charset=utf-8"),
 }
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
@@ -711,6 +714,21 @@ class Handler(BaseHTTPRequestHandler):
             )
 
 
+class LocalServer(ThreadingHTTPServer):
+    """The loopback server. Its port is never shared: on Windows ``SO_REUSEADDR`` would let a
+    second server bind a port that a running one uses (and requests would keep going to the
+    first), so the port is claimed exclusively there and address reuse is off."""
+
+    allow_reuse_address = os.name != "nt"
+    daemon_threads = True
+
+    def server_bind(self) -> None:
+        exclusive = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)
+        if exclusive is not None:
+            self.socket.setsockopt(socket.SOL_SOCKET, exclusive, 1)
+        super().server_bind()
+
+
 def create_server(
     port: int = 0, max_file_mb: int = DEFAULT_MAX_FILE_MB
 ) -> tuple[ThreadingHTTPServer, Session, str]:
@@ -718,14 +736,13 @@ def create_server(
     session = Session(max_file_mb * 1024 * 1024)
     handler = type("SessionHandler", (Handler,), {"session": session})
     try:
-        server = ThreadingHTTPServer((LOOPBACK, port), handler)
+        server = LocalServer((LOOPBACK, port), handler)
     except OSError as exc:
         session.close()
         raise CsvTidyError(
             f"cannot start the local interface on port {port}: {exc.strerror or exc}. "
             "Choose another port with --port, or omit --port to pick a free one."
         ) from None
-    server.daemon_threads = True
     url = f"http://{LOOPBACK}:{server.server_address[1]}/?token={session.token}"
     return server, session, url
 

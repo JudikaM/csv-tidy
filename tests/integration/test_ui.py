@@ -86,13 +86,19 @@ def test_page_is_self_contained_and_needs_the_key(ui):
     assert status == 200 and ui.token in page
     assert "default-src 'none'" in headers["Content-Security-Policy"]
     assert headers["X-Frame-Options"] == "DENY" and headers["Cache-Control"] == "no-store"
-    assets = [ui.request(path)[2].decode("utf-8") for path in ("/app.css", "/app.js")]
+    paths = ("/app.css", "/app.js", "/theme.js")
+    assets = [ui.request(path)[2].decode("utf-8") for path in paths]
     for text in (page, *assets):
         assert not re.search(r"(https?:)?//(?!127\.0\.0\.1)[\w.-]+\.\w+", text), "external URL"
-    assert "innerHTML" not in assets[1] and "eval(" not in assets[1]
+    for script in assets[1:]:
+        assert "innerHTML" not in script and "eval(" not in script
+    # The content security policy allows no inline styles or event handlers.
+    assert not re.search(r'\sstyle="|\son[a-z]+="', page)
+    assert "<script>" not in page and "<style" not in page
     assert re.findall(r'<(?:script|link)[^>]+(?:src|href)="([^"]+)"', page) == [
         "data:,",
         "app.css",
+        "theme.js",
         "app.js",
     ]
     assert ui.request("/")[0] == 403 and ui.request("/?token=wrong")[0] == 403
@@ -617,3 +623,18 @@ def test_ui_command_accepts_idle_minutes(monkeypatch):
     monkeypatch.setattr(ui_module, "run_ui", lambda *a: seen.append(a) or 0)
     assert run_cli("ui", "--no-browser", "--idle-minutes", "5").code == 0
     assert seen == [(0, False, 200, 5)]
+
+
+def test_a_second_server_cannot_share_the_port_of_a_running_one():
+    from csv_tidy.errors import CsvTidyError
+
+    server, session, client, _ = serve()
+    port = server.server_address[1]
+    try:
+        with pytest.raises(CsvTidyError, match=f"port {port}"):
+            create_server(port)
+        assert client.post("/api/ping", {})[0] == 200  # the first server still answers
+    finally:
+        server.shutdown()
+        server.server_close()
+        session.close()
