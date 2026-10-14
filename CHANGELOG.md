@@ -6,6 +6,17 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-14
+
+Second early-alpha release: a profile creator, a local browser interface, batch processing,
+clearer reports, and four reliability fixes. The code was published in commit `0cdae3a`; this
+release sets the version and aligns the documentation.
+
+**Upgrade notes.** Profiles (`schema_version = 1`), JSON reports (report `schema_version` 1),
+exit codes, the options of `check` and `clean`, and the Python API of 0.1.0 keep working
+unchanged. JSON reports gain fields; the layout of *text* reports changed, so scripts should
+read JSON. The process-wide `csv.field_size_limit` is no longer left modified by a read.
+
 ### Added
 
 - `csv-tidy profile init INPUT --output PROFILE`: writes a starting profile from a file's
@@ -31,6 +42,10 @@ All notable changes are documented here. The format follows
   `select_inputs`, `BatchResult`.
 - `scripts/benchmark.py` also measures report rendering and export; `docs/USER_TESTING.md`
   has task lists for developers and administrative staff (not yet run with users).
+- `scripts/smoke_dist.py` also checks that the wheel and the source distribution contain the
+  interface's page, style sheet, and script, and exercises `profile init`, `batch`, and the
+  interface server from the installed wheel. A release-consistency test ties the package
+  version to the changelog and the documented sample output.
 
 ### Changed
 

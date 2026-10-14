@@ -10,7 +10,7 @@ and numeric dates such as `DD/MM/YYYY`. It never guesses: it repairs only what y
 reports everything else with record and line locations, and refuses to export a result that
 still has errors.
 
-**Status:** early alpha (0.1.x); interfaces may still change between minor versions, and
+**Status:** early alpha (0.x); interfaces may still change between minor versions, and
 changes are listed in [CHANGELOG.md](CHANGELOG.md). It works locally and offline, with no
 telemetry, internet access, or AI services. It has not yet been validated with external
 users. Feedback is welcome (see [Feedback](#feedback-and-bug-reports)).
@@ -51,9 +51,9 @@ There are three ways to use the same engine:
 Requires Python 3.11 or newer. CSV Tidy is **not published on PyPI**. Published versions and
 installation files (a wheel and a source distribution) are listed on the
 [GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); a downloaded wheel
-installs with `python -m pip install <path-to-wheel>` inside a virtual environment. Features
-described here that are newer than the latest release are marked "Unreleased" in the
-[changelog](CHANGELOG.md) and need an installation from a source checkout:
+installs with `python -m pip install <path-to-wheel>` inside a virtual environment. This
+README describes version 0.2.0; changes made after a release are listed under "Unreleased"
+in the [changelog](CHANGELOG.md). You can also install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's programs directly, so the
 ExecutionPolicy does not need to change):
@@ -145,7 +145,7 @@ normalize = ["amount", "date"]
 ### 1. Check
 
 ```text
-CSV Tidy 0.1.0 - check
+CSV Tidy 0.2.0 - check
 Verdict: FAILED - 2 errors found in the source file.
 Source: examples\transactions_fixable.csv
 Profile: examples\profiles\transactions-id.toml
@@ -199,7 +199,7 @@ JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 ### 2. Preview a clean (dry run is the default)
 
 ```text
-CSV Tidy 0.1.0 - clean (dry run, nothing written)
+CSV Tidy 0.2.0 - clean (dry run, nothing written)
 Verdict: READY TO EXPORT - no errors remain in the cleaned result; 2 source problems repaired.
 ...
 Transformations (applied in this order):
@@ -342,7 +342,7 @@ step-by-step guide for first-time users is in
 ```
 
 ```text
-CSV Tidy 0.1.0 - batch clean (dry run, nothing written)
+CSV Tidy 0.2.0 - batch clean (dry run, nothing written)
 Verdict: 2 of 4 files need attention (2 with data errors).
 Profile: examples\profiles\transactions-id.toml
 
