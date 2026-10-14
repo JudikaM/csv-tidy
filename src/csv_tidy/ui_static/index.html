@@ -1,59 +1,113 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="cosmos">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csv-tidy-token" content="{{token}}">
 <meta name="csv-tidy-max-file-mb" content="{{max_file_mb}}">
-<title>CSV Tidy</title>
+<title>CSV Tidy {{version}}: check and clean a CSV file</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="app.css">
+<script src="theme.js"></script>
 </head>
 <body>
+<div class="backdrop" aria-hidden="true"></div>
 <a class="skip" href="#main">Skip to the steps</a>
 
 <header class="top">
-  <div class="top-title">
-    <h1>CSV Tidy <span class="version">{{version}}</span></h1>
-    <p>Check and clean a CSV file. Everything runs on this computer; nothing is sent to the internet.</p>
+  <div class="wrap top-inner">
+    <div class="brand">
+      <div class="brand-line">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+        </span>
+        <h1>CSV Tidy</h1>
+        <span class="chip mono version">{{version}}</span>
+        <span class="pill pill-ok"><span class="pulse" aria-hidden="true"></span>Offline &amp; local</span>
+      </div>
+      <p class="tagline">Check and clean a CSV file. Everything runs on this computer; nothing is sent to the internet.</p>
+    </div>
+    <div class="top-actions">
+      <button type="button" id="theme-toggle" class="secondary small" aria-pressed="false">
+        <svg class="icon theme-dark" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
+        <svg class="icon theme-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <span id="theme-label">Cosmos dark</span>
+      </button>
+      <button type="button" id="quit" class="secondary small danger-hover">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Quit CSV Tidy
+      </button>
+    </div>
   </div>
-  <button type="button" id="quit" class="quiet">Quit CSV Tidy</button>
 </header>
 
 <div class="status" id="status" data-kind="idle">
-  <div class="status-text" role="status" aria-live="polite" aria-atomic="true">
-    <p class="status-main" id="status-main">No file chosen yet.</p>
-    <p class="status-next" id="status-next">Next: choose a CSV file in step 1.</p>
-  </div>
-  <div class="status-side">
-    <div class="busy" id="busy" hidden><span class="busy-bar" aria-hidden="true"></span></div>
-    <button type="button" id="cancel" hidden>Cancel</button>
+  <div class="wrap status-inner">
+    <div class="status-text" role="status" aria-live="polite" aria-atomic="true">
+      <span class="dot" aria-hidden="true"></span>
+      <div>
+        <p class="status-main" id="status-main">No file chosen yet.</p>
+        <p class="status-next" id="status-next">Next: choose a CSV file in step 1.</p>
+      </div>
+    </div>
+    <div class="status-side">
+      <div class="busy" id="busy" hidden><span class="busy-bar" aria-hidden="true"></span></div>
+      <button type="button" id="cancel" class="secondary small" hidden>Cancel</button>
+      <nav class="steps" aria-label="Steps">
+        <a href="#step-1" data-step="1">1. Choose</a>
+        <a href="#step-2" data-step="2">2. Look</a>
+        <a href="#step-3" data-step="3">3. Columns</a>
+        <a href="#step-4" data-step="4">4. Check</a>
+        <a href="#step-5" data-step="5">5. Preview</a>
+        <a href="#step-6" data-step="6">6. Save</a>
+      </nav>
+    </div>
   </div>
 </div>
 
-<main id="main">
+<main id="main" class="wrap">
 
-<section aria-labelledby="h-file">
+<section class="card" id="step-1" aria-labelledby="h-file">
   <h2 id="h-file"><span class="num" aria-hidden="true">1</span> Choose the file</h2>
-  <fieldset class="field wide mode">
-    <legend>What do you want to work on?</legend>
-    <label class="choice"><input type="radio" name="mode" value="single" checked> One file</label>
-    <label class="choice"><input type="radio" name="mode" value="batch"> Several files with the same rules</label>
+  <fieldset class="mode">
+    <legend class="eyebrow">What do you want to work on?</legend>
+    <div class="options two">
+      <label class="option">
+        <input type="radio" name="mode" value="single" checked>
+        <span><span class="option-title">One file</span><span class="option-text">Check and clean a single CSV file</span></span>
+      </label>
+      <label class="option">
+        <input type="radio" name="mode" value="batch">
+        <span><span class="option-title">Several files with the same rules</span><span class="option-text">Apply one set of column rules to a batch of files</span></span>
+      </label>
+    </div>
   </fieldset>
-  <div class="row">
+  <div class="setup">
     <div class="field">
-      <label for="file" id="file-label">CSV file</label>
-      <input type="file" id="file" accept=".csv,.txt,text/csv,text/plain">
-      <p class="hint" id="file-note">Your file is only read. It is never changed.</p>
+      <span class="eyebrow" id="file-label">CSV file</span>
+      <label class="dropzone" id="dropzone" for="file">
+        <input type="file" id="file" class="sr" accept=".csv,.txt,text/csv,text/plain" aria-labelledby="file-label">
+        <span class="dz-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        </span>
+        <span class="dz-text">
+          <span class="dz-name" id="file-name">No file chosen</span>
+          <span class="dz-hint" id="dz-hint">Click to browse, or drop a .csv file here</span>
+        </span>
+        <span class="dz-button" aria-hidden="true">Choose file</span>
+      </label>
+      <p class="hint with-icon" id="file-note">Your file is only read. It is never changed.</p>
     </div>
     <fieldset class="field">
-      <legend>Columns are separated by</legend>
-      <label class="choice"><input type="radio" name="delimiter" value="," checked> Comma <code>,</code></label>
-      <label class="choice"><input type="radio" name="delimiter" value=";"> Semicolon <code>;</code></label>
+      <legend class="eyebrow">Columns are separated by</legend>
+      <div class="options two compact">
+        <label class="option"><input type="radio" name="delimiter" value="," checked><span class="option-title">Comma</span><code class="chip">,</code></label>
+        <label class="option"><input type="radio" name="delimiter" value=";"><span class="option-title">Semicolon</span><code class="chip">;</code></label>
+      </div>
       <p class="hint">Not detected automatically. If the preview shows one wide column, switch this.</p>
     </fieldset>
     <div class="field">
-      <label for="encoding">Text encoding</label>
+      <label for="encoding" class="eyebrow">Text encoding</label>
       <select id="encoding">
         <option value="utf-8">UTF-8 (most common)</option>
         <option value="cp1252">Windows-1252 (older Excel, Western Europe)</option>
@@ -65,7 +119,7 @@
         <label for="encoding-other">Encoding name</label>
         <input type="text" id="encoding-other" autocomplete="off" spellcheck="false" placeholder="for example cp1250">
       </div>
-      <p class="hint">Change this if letters such as é or ñ look wrong, or the file cannot be read.</p>
+      <p class="hint">Change this if letters such as <code>é</code> or <code>ñ</code> look wrong, or the file cannot be read.</p>
     </div>
   </div>
   <div id="batch-files-wrap" hidden>
@@ -80,9 +134,10 @@
   </div>
 </section>
 
-<section aria-labelledby="h-preview">
+<section class="card" id="step-2" aria-labelledby="h-preview">
   <h2 id="h-preview"><span class="num" aria-hidden="true">2</span> Look at the data</h2>
   <div id="preview-empty" class="empty">
+    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
     <p>The first rows of your file appear here, exactly as they are stored. Use them to confirm the separator and encoding before setting any rules.</p>
   </div>
   <div id="preview" hidden>
@@ -98,19 +153,26 @@
   </div>
 </section>
 
-<section aria-labelledby="h-rules">
+<section class="card" id="step-3" aria-labelledby="h-rules">
   <h2 id="h-rules"><span class="num" aria-hidden="true">3</span> Describe the columns</h2>
   <div id="rules-empty" class="empty">
+    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
     <p>After a file is loaded, each column is listed here. Every column starts as plain text: CSV Tidy never guesses which columns are numbers or dates. You decide, or you load a profile that already contains the rules.</p>
   </div>
   <div id="rules" hidden>
     <div class="row tools">
       <div class="field">
-        <label for="profile-file">Load rules from a profile file (optional)</label>
-        <input type="file" id="profile-file" accept=".toml">
+        <span class="eyebrow" id="profile-label">Load rules from a profile file (optional)</span>
+        <label class="dropzone small" for="profile-file">
+          <input type="file" id="profile-file" class="sr" accept=".toml" aria-labelledby="profile-label">
+          <span class="dz-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </span>
+          <span class="dz-text"><span class="dz-name">Choose a profile (.toml)</span></span>
+        </label>
         <p class="hint" id="profile-note">A profile is a small <code>.toml</code> file with saved rules. You can save one in step 6.</p>
       </div>
-      <button type="button" id="reset-rules" class="quiet">Reset all rules to text</button>
+      <button type="button" id="reset-rules" class="secondary small">Reset all rules to text</button>
     </div>
 
     <div class="row">
@@ -127,7 +189,7 @@
         <select id="src-date-pick" data-date-default="YYYY-MM-DD"></select>
         <div id="src-date-wrap" hidden>
           <label for="src-date">Other date format</label>
-          <input type="text" id="src-date" autocomplete="off" spellcheck="false" placeholder="for example DD-MM-YY is not supported; use DD-MM-YYYY">
+          <input type="text" id="src-date" autocomplete="off" spellcheck="false" placeholder="for example DD-MM-YYYY">
         </div>
         <p class="hint">The example shows 31 December 2026 in each format. 01/02/2026 is never guessed: it is 1 February with DD/MM/YYYY and 2 January with MM/DD/YYYY.</p>
       </div>
@@ -181,7 +243,7 @@
       </div>
     </div>
 
-    <details id="more">
+    <details id="more" class="panel">
       <summary>More settings</summary>
       <div class="row">
         <div class="field">
@@ -243,52 +305,71 @@
             <label for="key-columns">Columns (hold Ctrl to pick several)</label>
             <select id="key-columns" multiple size="4"></select>
           </div>
-          <button type="button" id="add-key">Add combined key</button>
+          <button type="button" id="add-key" class="secondary">Add combined key</button>
         </div>
       </fieldset>
     </details>
   </div>
 </section>
 
-<section aria-labelledby="h-check">
+<section class="card" id="step-4" aria-labelledby="h-check">
   <h2 id="h-check"><span class="num" aria-hidden="true">4</span> Check the file</h2>
   <p class="lead">Finds problems using your rules. Nothing is changed.</p>
   <button type="button" id="run-check" class="primary" disabled>Check file</button>
   <div id="check-result" class="result" hidden></div>
 </section>
 
-<section aria-labelledby="h-clean">
+<section class="card" id="step-5" aria-labelledby="h-clean">
   <h2 id="h-clean"><span class="num" aria-hidden="true">5</span> Preview the cleaned copy</h2>
   <p class="lead">Applies only the repairs ticked in step 3 and shows every value before and after. Still nothing is saved.</p>
   <button type="button" id="run-clean" class="primary" disabled>Preview cleaning</button>
   <div id="clean-result" class="result" hidden></div>
 </section>
 
-<section aria-labelledby="h-save">
+<section class="card" id="step-6" aria-labelledby="h-save">
   <h2 id="h-save"><span class="num" aria-hidden="true">6</span> Save</h2>
   <p class="lead" id="save-note">Files are saved through your browser's download folder. Your original file stays as it is.</p>
   <div class="actions" id="batch-actions" hidden>
     <button type="button" id="save-zip" class="primary" disabled>Save all results as ZIP</button>
-    <button type="button" id="save-batch-summary" disabled>Save summary (text)</button>
-    <button type="button" id="save-batch-summary-json" disabled>Save summary (JSON)</button>
+    <button type="button" id="save-batch-summary" class="secondary" disabled>Save summary (text)</button>
+    <button type="button" id="save-batch-summary-json" class="secondary" disabled>Save summary (JSON)</button>
   </div>
   <div class="actions" id="single-actions">
     <button type="button" id="save-csv" class="primary" disabled>Save cleaned CSV</button>
-    <button type="button" id="save-output-profile" disabled>Save profile of the cleaned file</button>
-    <button type="button" id="save-report" disabled>Save report (text)</button>
-    <button type="button" id="save-report-json" disabled>Save report (JSON)</button>
+    <button type="button" id="save-output-profile" class="secondary" disabled>Save profile of the cleaned file</button>
+    <button type="button" id="save-report" class="secondary" disabled>Save report (text)</button>
+    <button type="button" id="save-report-json" class="secondary" disabled>Save report (JSON)</button>
   </div>
   <div class="actions">
-    <button type="button" id="save-profile" disabled>Save these rules as a profile</button>
+    <button type="button" id="save-profile" class="secondary" disabled>Save these rules as a profile</button>
   </div>
   <p class="blocked" id="save-blocked" hidden></p>
 </section>
 
 </main>
 
-<footer>
-  <p>CSV Tidy never guesses types or formats and repairs only what you select. The same engine runs behind the <code>csv-tidy</code> command; profiles saved here work there.</p>
+<footer class="foot">
+  <div class="wrap foot-inner">
+    <p>CSV Tidy never guesses types or formats and repairs only what you select. The same engine runs behind the <code class="chip">csv-tidy</code> command; profiles saved here work there.</p>
+    <p class="mono foot-theme">Theme: <strong id="footer-theme">Cosmos dark</strong></p>
+  </div>
 </footer>
+
+<dialog id="quit-dialog" aria-labelledby="quit-title">
+  <div class="dialog-head">
+    <span class="dialog-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+    </span>
+    <h2 id="quit-title">Quit CSV Tidy?</h2>
+  </div>
+  <p>This stops CSV Tidy on this computer and removes its temporary copies. Rules and previews that you did not save are cleared. Your original files are not changed.</p>
+  <div class="dialog-actions">
+    <button type="button" id="quit-cancel" class="secondary" autofocus>Stay in CSV Tidy</button>
+    <button type="button" id="quit-confirm" class="danger">Quit CSV Tidy</button>
+  </div>
+</dialog>
+
+<div id="toasts" class="toasts" aria-hidden="true"></div>
 
 <script src="app.js"></script>
 </body>

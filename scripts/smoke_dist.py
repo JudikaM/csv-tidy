@@ -70,7 +70,7 @@ def run(cmd: list[str], cwd: Path, expect: int) -> str:
     return proc.stdout
 
 
-UI_ASSETS = ("index.html", "app.css", "app.js")
+UI_ASSETS = ("index.html", "app.css", "app.js", "theme.js")
 
 
 def check_ui_assets(wheel: Path, dist: Path) -> None:

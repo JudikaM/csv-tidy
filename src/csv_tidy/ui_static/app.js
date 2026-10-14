@@ -823,6 +823,7 @@ function renderBatch(box) {
 }
 
 function refreshButtons() {
+  refreshLook();
   const busy = Boolean(state.pending) || state.stopped;
   const loaded = Boolean(state.file) && state.header.length > 0;
   $("run-check").disabled = busy || !loaded;
@@ -1179,6 +1180,7 @@ async function saveResponse(response, what) {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
   setStatus("ok", `${what} saved as ${name}.`, "look in your browser's download folder. Your original file was not changed.");
+  toast("Saved", name);
 }
 
 function download(kind, what) {
@@ -1374,7 +1376,7 @@ $("save-report").addEventListener("click", () => saveReport(false));
 $("save-report-json").addEventListener("click", () => saveReport(true));
 $("save-profile").addEventListener("click", saveProfile);
 $("cancel").addEventListener("click", () => state.pending && state.pending.abort());
-$("quit").addEventListener("click", async () => {
+async function quitNow() {
   if (state.pending) state.pending.abort();
   try {
     await postJson("/api/quit", {});
@@ -1383,9 +1385,93 @@ $("quit").addEventListener("click", async () => {
   }
   state.stopped = true;
   for (const control of document.querySelectorAll("main input, main select, main button, #quit")) control.disabled = true;
-  setStatus("idle", "CSV Tidy has stopped. Temporary copies were removed.", "close this tab. To use it again, start csv-tidy ui.");
+  setStatus("idle", "CSV Tidy has stopped. Temporary copies were removed.", "close this tab. To use it again, start CSV Tidy from its icon or with csv-tidy ui.");
+}
+
+/* Quit asks first, in a dialog on the page (no browser pop-up). */
+$("quit").addEventListener("click", () => {
+  if (state.stopped) return;
+  $("quit-dialog").showModal();
+});
+$("quit-cancel").addEventListener("click", () => $("quit-dialog").close());
+$("quit-confirm").addEventListener("click", () => {
+  $("quit-dialog").close();
+  quitNow();
 });
 
+/* ------------------------------------------------------------------ look and feel */
+
+const THEMES = { cosmos: "Cosmos dark", light: "Light" };
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const other = theme === "cosmos" ? "light" : "cosmos";
+  $("theme-label").textContent = THEMES[theme];
+  $("footer-theme").textContent = THEMES[theme];
+  $("theme-toggle").setAttribute("aria-label", `Color theme: ${THEMES[theme]}. Switch to ${THEMES[other]}.`);
+}
+
+$("theme-toggle").addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "light" ? "cosmos" : "light";
+  applyTheme(next);
+  try {
+    window.localStorage.setItem("csv-tidy-theme", next);
+  } catch (error) {
+    /* the choice is not remembered, which is fine */
+  }
+  toast(`${THEMES[next]} theme`, "Saved for this browser.");
+});
+
+/* A short confirmation in the corner; the status strip remains the announced message. */
+function toast(title, text) {
+  const item = el("div", { class: "toast" }, el("strong", { text: title }), el("span", { text }));
+  $("toasts").append(item);
+  setTimeout(() => item.remove(), 4500);
+}
+
+/* Files can also be dropped on the file area. The browser's own file list is reused, so the
+   dropped files go through exactly the same steps as chosen ones. */
+const dropzone = $("dropzone");
+for (const type of ["dragenter", "dragover"]) {
+  dropzone.addEventListener(type, (event) => {
+    event.preventDefault();
+    dropzone.classList.add("over");
+  });
+}
+for (const type of ["dragleave", "drop"]) dropzone.addEventListener(type, () => dropzone.classList.remove("over"));
+dropzone.addEventListener("drop", (event) => {
+  event.preventDefault();
+  if (state.pending || state.stopped || !event.dataTransfer.files.length) return;
+  $("file").files = event.dataTransfer.files;
+  chooseFile();
+});
+/* A file dropped anywhere else must not make the browser open it instead of the page. */
+for (const type of ["dragover", "drop"]) window.addEventListener(type, (event) => event.preventDefault());
+
+function currentStep() {
+  if (!state.file || !state.header.length) return 1;
+  if (state.clean || (state.batch && state.batch.action === "clean")) return 6;
+  if (state.check || (state.batch && state.batch.action === "check")) return 5;
+  return 3;
+}
+
+function refreshLook() {
+  const step = currentStep();
+  for (const link of document.querySelectorAll(".steps a")) {
+    if (Number(link.dataset.step) === step) link.setAttribute("aria-current", "step");
+    else link.removeAttribute("aria-current");
+  }
+  const batchMode = state.mode === "batch";
+  let name = "No file chosen";
+  if (batchMode && state.files.length) name = count(state.files.length, "file") + " chosen";
+  else if (!batchMode && state.file) name = state.file.name;
+  $("file-name").textContent = name;
+  $("dz-hint").textContent = batchMode
+    ? "Click to browse, or drop .csv files here (several at once)"
+    : "Click to browse, or drop a .csv file here";
+}
+
+applyTheme(document.documentElement.dataset.theme === "light" ? "light" : "cosmos");
 fillDatePicks();
 renderRules();
 refreshButtons();

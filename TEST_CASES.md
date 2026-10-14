@@ -47,6 +47,7 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | AC-38 | Start without a command line: `csv-tidy-ui` (no console), Desktop/Start Menu shortcuts on Windows and Linux, other programs' shortcuts never touched, server stops after inactivity | `integration/test_shortcuts.py`: all tests (Windows `.lnk` created and read back on Windows); `integration/test_ui.py`: `test_idle_server_stops_by_itself_and_contact_keeps_it_running`, `test_requests_without_the_key_do_not_keep_the_server_alive`, `test_run_ui_with_idle_minutes_returns_and_cleans_up`, `test_gui_entry_point_opens_the_browser_without_a_console`, `test_quiet_mode_survives_a_missing_console`, `test_ui_command_accepts_idle_minutes`; `scripts/smoke_dist.py` (program present, shortcuts from the installed wheel) |
 | AC-39 | `csv-tidy update`: explicit, verified (SHA-256 from the release), up to date / check-only without pip, failures explained, no network in other commands | `integration/test_update.py`: all tests |
 | AC-40 | Issues carry `remedy` (JSON only); the interface explains it with its own controls | `integration/test_remedy.py`: all tests |
+| AC-41 | Interface look: self-contained page (own `app.css`, `theme.js`, `app.js`; no inline styles, handlers, or scripts), one server per port | `integration/test_ui.py`: `test_page_is_self_contained_and_needs_the_key`, `test_a_second_server_cannot_share_the_port_of_a_running_one`; `scripts/smoke_dist.py` (`theme.js` in both archives) |
 | AC-35 | Batch: deterministic output names, collisions and unsafe paths stop before writing, a failing file does not affect others, single-file commands unchanged | `integration/test_batch.py`: `test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files`, `test_output_name_collisions_stop_the_batch_before_writing`, `test_existing_outputs_and_inputs_are_protected`, `test_one_failed_write_does_not_undo_the_other_files`, `test_overrides_apply_to_every_file`, `test_library_entry_point_matches_the_command`, `test_single_file_commands_are_unchanged_and_help_lists_batch` |
 
 ## Regression tests
@@ -143,6 +144,15 @@ formats finding the two whitespace problems, suggestions naming "Repair: trim sp
 command-line option on the page, an invalid date pointing to the format, a profile with an
 unlisted format loading into **Other…**, and a stopped server reported as "CSV Tidy is not
 running any more" with a pointer to the icon. No external request or script error.
+
+After the redesign (unreleased), 19 further checks passed in headless Chrome: Cosmos dark by
+default, theme switch with a notice and remembered after reload, the current step marked in the
+step navigation (1, 3, 6 as work progresses), a dropped file read like a chosen one, the
+selected option card highlighted, keyboard focus on the hidden file input outlining the drop
+area, Quit asking in a dialog (Stay keeps the server, Quit stops it), no horizontal scrolling at
+1024 and 390 pixels, every control named, and the lowest text contrast 5.19:1 (dark) and 4.97:1
+(light), with white on the primary-button gradient at 6.29:1 and above. The 0.4.0, 0.3.0, and
+one-file walk-throughs (13, 26, 37 checks) passed again with the new markup.
 
 `csv-tidy update --check` was run once against the real GitHub API (release 0.3.0): the wheel
 and its digest were found and matched the published SHA-256. pip was shown to refuse a wheel
