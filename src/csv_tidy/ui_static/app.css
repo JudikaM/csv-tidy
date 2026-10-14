@@ -161,6 +161,7 @@ td.n, th.n { color: var(--ink-soft); text-align: right; white-space: nowrap; fon
 .grid thead th { white-space: normal; min-width: 5.5rem; }
 .grid select, .grid input[type="text"] { min-width: 12.5rem; }
 .grid .missing { color: var(--bad-ink); font-size: 0.875rem; display: block; }
+.date-pick { display: grid; gap: 0.375rem; }
 th.repair { color: var(--accent); }
 .val { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--panel); padding: 0.0625rem 0.25rem; border-radius: 3px; }
 .ws { background: var(--mark); color: var(--warn-ink); border-radius: 2px; }

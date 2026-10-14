@@ -179,6 +179,13 @@ def _scan(table: Table) -> ScanInfo:
     )
 
 
+FATAL_REMEDIES = {
+    "decode_error": "encoding",
+    "malformed_csv": "quoting",
+    "field_too_large": "max_field_chars",
+}
+
+
 def _fatal_issue(fatal: FatalError, stage: str) -> Issue:
     return Issue(
         fatal.code,
@@ -189,6 +196,7 @@ def _fatal_issue(fatal: FatalError, stage: str) -> Issue:
         stage,
         line_start=fatal.line,
         line_end=fatal.line,
+        remedy=FATAL_REMEDIES.get(fatal.code),
     )
 
 

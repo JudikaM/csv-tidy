@@ -6,6 +6,35 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
+Start, update, and use the local interface without a command line.
+
+**Upgrade notes.** Nothing changes for the CLI options, profiles, or exit codes. JSON reports
+gain the `remedy` field on every issue. After updating, run `csv-tidy shortcut install` once
+per user to get the icons.
+
+### Added
+
+- `csv-tidy-ui`: starts the local interface without a console window (a pip `gui-scripts`
+  entry point). It stops by itself 10 minutes after its page was closed; the page checks in
+  every minute. `csv-tidy ui --idle-minutes N` offers the same from a command line.
+- `csv-tidy shortcut install|remove`: a **CSV Tidy** icon on the Desktop and in the Start
+  Menu and an **Update CSV Tidy** entry (Windows); desktop entries on Linux. Shortcuts of
+  other programs with the same names are never changed or removed.
+- `csv-tidy update [--check] [--version X.Y.Z] [--pause]`: installs the latest (or the given)
+  GitHub release with pip, verified against the SHA-256 that GitHub publishes for the wheel.
+  The only command that connects to the internet, and only when run.
+- Issues have a `remedy` code (JSON reports: `remedy` on every issue).
+- Interface: suggestions name the page's own controls instead of command-line options; date
+  formats are chosen from a list with examples, with **Other…** for any supported format; a
+  stopped server is reported with a pointer to the icon.
+
+### Changed
+
+- The interface's date fields are lists instead of free text; profiles with other formats
+  load into **Other…** unchanged.
+
 ## [0.3.0] - 2026-10-14
 
 The local interface now covers what was only possible on the command line: several files

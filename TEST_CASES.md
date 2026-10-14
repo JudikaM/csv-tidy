@@ -44,6 +44,9 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | AC-34 | Batch: documented selection, per-file results and totals, aggregate exit code, preview by default | `integration/test_batch.py`: `test_directory_selection_is_documented_sorted_and_not_recursive`, `test_explicit_files_are_taken_as_given_in_order`, `test_empty_and_repeated_selections_are_refused`, `test_batch_check_reports_each_file_and_totals`, `test_aggregate_exit_code_prefers_operational_failures`, `test_batch_clean_is_a_preview_by_default`, `test_batch_report_file_and_text_summary` |
 | AC-36 | Interface, several files: one status per file equal to `csv-tidy batch`, per-file details, ZIP with only exportable files plus reports and summary, per-file download gate, stale results, duplicate names refused | `integration/test_ui.py`: `test_batch_gives_each_file_its_own_status_like_the_cli`, `test_batch_file_details_equal_the_single_file_result`, `test_batch_zip_holds_only_exportable_files_and_matches_the_cli`, `test_batch_single_downloads_respect_the_export_gate`, `test_batch_check_mode_and_rules_missing_columns`, `test_batch_refuses_duplicate_names_and_goes_stale`, `test_batch_request_validation`; `integration/test_batch.py`: `test_labels_name_files_in_outcomes_and_reports`; `scripts/smoke_dist.py` (batch and ZIP from the installed wheel) |
 | AC-37 | Interface: `max_field_chars` control and display limits (problems, changed values, preview rows) honored, validated, and used by saved reports | `integration/test_ui.py`: `test_report_and_preview_limits_are_honored_and_validated`, `test_default_limits_are_unchanged`, `test_max_field_chars_applies_to_preview_check_and_saved_profiles` |
+| AC-38 | Start without a command line: `csv-tidy-ui` (no console), Desktop/Start Menu shortcuts on Windows and Linux, other programs' shortcuts never touched, server stops after inactivity | `integration/test_shortcuts.py`: all tests (Windows `.lnk` created and read back on Windows); `integration/test_ui.py`: `test_idle_server_stops_by_itself_and_contact_keeps_it_running`, `test_requests_without_the_key_do_not_keep_the_server_alive`, `test_run_ui_with_idle_minutes_returns_and_cleans_up`, `test_gui_entry_point_opens_the_browser_without_a_console`, `test_quiet_mode_survives_a_missing_console`, `test_ui_command_accepts_idle_minutes`; `scripts/smoke_dist.py` (program present, shortcuts from the installed wheel) |
+| AC-39 | `csv-tidy update`: explicit, verified (SHA-256 from the release), up to date / check-only without pip, failures explained, no network in other commands | `integration/test_update.py`: all tests |
+| AC-40 | Issues carry `remedy` (JSON only); the interface explains it with its own controls | `integration/test_remedy.py`: all tests |
 | AC-35 | Batch: deterministic output names, collisions and unsafe paths stop before writing, a failing file does not affect others, single-file commands unchanged | `integration/test_batch.py`: `test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files`, `test_output_name_collisions_stop_the_batch_before_writing`, `test_existing_outputs_and_inputs_are_protected`, `test_one_failed_write_does_not_undo_the_other_files`, `test_overrides_apply_to_every_file`, `test_library_entry_point_matches_the_command`, `test_single_file_commands_are_unchanged_and_help_lists_batch` |
 
 ## Regression tests
@@ -131,6 +134,19 @@ For 0.3.0 the same tooling walked through the new features on 2026-10-14 (1366 x
 | `max_field_chars` 10 | Reading stops with "exceeds the limit of 10 characters"; 0 is refused with an explanation; raising it reads the file; the saved profile contains it |
 | Preview rows 1 | One preview row |
 | 1024 x 600, labels, network | No horizontal page scrolling; every control has an accessible name; no external request, no CSP violation, no script error |
+
+For 0.4.0 (2026-10-14) the 0.3.0 walk-through (26 checks) and the one-file walk-through (37
+checks, adjusted to choose date formats from the list) were repeated and passed, and 13 new
+checks passed: date lists filled with example labels, **Other…** hidden until chosen and then
+used for a column, the per-column list showing the file's format, a check with list-chosen
+formats finding the two whitespace problems, suggestions naming "Repair: trim spaces" and no
+command-line option on the page, an invalid date pointing to the format, a profile with an
+unlisted format loading into **Other…**, and a stopped server reported as "CSV Tidy is not
+running any more" with a pointer to the icon. No external request or script error.
+
+`csv-tidy update --check` was run once against the real GitHub API (release 0.3.0): the wheel
+and its digest were found and matched the published SHA-256. pip was shown to refuse a wheel
+URL whose `#sha256=` fragment does not match and to accept the right one.
 
 These were automated walk-throughs by the maintainer's tooling, not tests with users or with
 assistive technology; see [docs/USER_TESTING.md](docs/USER_TESTING.md).

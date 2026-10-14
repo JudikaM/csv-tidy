@@ -30,6 +30,11 @@ class Issue:
 
     For ``clean`` results, source issues carry ``status`` ("resolved", "unresolved" or
     "removed") and output issues carry ``introduced`` (true when transformations created them).
+
+    ``remedy`` names the kind of repair the suggestion describes, so that an interface can
+    explain it with its own controls: ``trim``, ``number_format``, ``date_format``,
+    ``deduplicate_rows``, ``deduplicate_keys``, ``delimiter``, ``encoding``, ``quoting``, or
+    ``max_field_chars``. ``None`` means the value can only be corrected in the source.
     """
 
     code: str
@@ -46,6 +51,7 @@ class Issue:
     related_line: int | None = None
     status: str | None = None
     introduced: bool | None = None
+    remedy: str | None = None
 
 
 def _quote(value: str, limit: int = 60) -> str:
@@ -174,6 +180,7 @@ def _header_issues(table: Table, settings: Settings, stage: str) -> list[Issue]:
                     stage,
                     line_start=line,
                     line_end=line,
+                    remedy="delimiter",
                 )
             )
     present = set(header)
@@ -282,6 +289,7 @@ def _record_issues(
                         _number_suggestion(value, why_fmt, column.name, settings, stage),
                         column=column.name,
                         value=value,
+                        remedy=_number_remedy(value, why_fmt),
                         **where,
                     )
                 )
@@ -298,6 +306,7 @@ def _record_issues(
                         _date_suggestion(value, why_fmt.text, column.name, settings, stage),
                         column=column.name,
                         value=value,
+                        remedy=_date_remedy(value, why_fmt.text),
                         **where,
                     )
                 )
@@ -316,6 +325,7 @@ def _record_issues(
                         'deduplicate = "rows" to keep the first copy.',
                         related_record=earlier.index,
                         related_line=earlier.line_start,
+                        remedy="deduplicate_rows",
                         **where,
                     )
                 )
@@ -339,6 +349,7 @@ def _record_issues(
                         value=" | ".join(values),
                         related_record=earlier.index,
                         related_line=earlier.line_start,
+                        remedy="deduplicate_keys",
                         **where,
                     )
                 )
@@ -360,11 +371,27 @@ def _oversized_fields(
             "Raise [source] max_field_chars in the profile, or do not normalize this column.",
             column=name,
             value=value,
+            remedy="max_field_chars",
             **where,
         )
         for name, value in zip(header, rec.fields, strict=True)
         if len(value) > limit
     ]
+
+
+def _number_remedy(value: str, fmt: str) -> str:
+    if value != value.strip() and parse_number(value.strip(), fmt) is not None:
+        return "trim"
+    return "number_format"
+
+
+def _date_remedy(value: str, fmt_text: str) -> str | None:
+    fmt = compile_date_format(fmt_text)
+    if value != value.strip() and fmt.parse(value.strip()) is not None:
+        return "trim"
+    if fmt.matches_shape(value.strip()):
+        return None  # a real calendar error: only the source can be corrected
+    return "date_format"
 
 
 def _number_suggestion(value: str, fmt: str, column: str, settings: Settings, stage: str) -> str:

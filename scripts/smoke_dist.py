@@ -263,6 +263,18 @@ def main() -> None:
         # The interface's page, style sheet and script must be inside the wheel, and its
         # several-files mode must work from the installed package.
         run([str(python), "-I", "-c", UI_CHECK], work, 0)
+        # The no-console program and the shortcuts that start it.
+        gui = bin_dir / ("csv-tidy-ui.exe" if sys.platform == "win32" else "csv-tidy-ui")
+        if not gui.exists():
+            sys.exit(f"the csv-tidy-ui program is missing from {bin_dir}")
+        icons = work / "icons"
+        made = run([str(cli), "shortcut", "install", "--folder", str(icons)], work, 0)
+        if made.count("created: ") != 2 or len(list(icons.iterdir())) != 2:
+            sys.exit(f"shortcut install did not create two shortcuts:\n{made}")
+        gone = run([str(cli), "shortcut", "remove", "--folder", str(icons)], work, 0)
+        if gone.count("removed: ") != 2 or any(icons.iterdir()):
+            sys.exit(f"shortcut remove did not remove the shortcuts:\n{gone}")
+        run([str(cli), "update", "--help"], work, 0)
         api = run([str(python), "-I", "examples/api_example.py"], work, 0)
         if "clean: export ready = True" not in api:
             sys.exit("API example output was unexpected")

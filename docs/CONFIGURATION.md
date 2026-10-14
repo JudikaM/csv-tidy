@@ -1,7 +1,8 @@
 # Configuration and data contracts
 
-This is the authoritative reference for CSV Tidy 0.3 profiles, options, defaults, and the
-input/output contracts of `check`, `clean`, `profile init`, `batch`, and `ui`.
+This is the authoritative reference for CSV Tidy 0.4 profiles, options, defaults, and the
+input/output contracts of `check`, `clean`, `profile init`, `batch`, `ui`, `shortcut`, and
+`update`.
 
 ## Profiles
 
@@ -238,6 +239,47 @@ column that no profile declares as a date. Reports make this explicit: the text 
 `Checked:` and `Not checked:` lines and the verdict `PASSED (structure only)`, and JSON has a
 `coverage` object. CSV Tidy does not detect types; create a profile with `profile init`.
 
+## Shortcuts
+
+`csv-tidy shortcut install [--folder DIR] [--no-desktop]` and
+`csv-tidy shortcut remove [--folder DIR]`.
+
+| System | Install creates | Started program |
+|--------|-----------------|-----------------|
+| Windows | `CSV Tidy.lnk` on the Desktop and in the Start Menu (Programs); `Update CSV Tidy.lnk` in the Start Menu | `csv-tidy-ui` next to the Python that runs the command; for Update: that Python with `-m csv_tidy update --pause` (a console window that waits for Enter) |
+| Linux | `csv-tidy.desktop` and `csv-tidy-update.desktop` in `$XDG_DATA_HOME/applications` (default `~/.local/share/applications`); `csv-tidy.desktop` on the Desktop when `$XDG_DESKTOP_DIR` (default `~/Desktop`) exists | the same |
+| macOS | not supported; start `csv-tidy-ui` | — |
+
+- `--folder DIR` puts the shortcuts in `DIR` (one "CSV Tidy" and one "Update CSV Tidy").
+  `--no-desktop` skips the Desktop.
+- A file with one of these names is replaced or removed only when it was made by CSV Tidy
+  (Windows: it starts `csv-tidy-ui` or runs `-m csv_tidy`; Linux: it contains
+  `X-CSV-Tidy=1`). Otherwise it is reported as `skipped` and left as it is.
+- Each shortcut is reported as `created`, `updated`, `removed`, `absent`, or `skipped`; the
+  exit code is 0, or 2 if the shortcuts cannot be made (for example no `csv-tidy-ui`
+  program next to this Python, or Windows PowerShell is unavailable).
+- On Windows the `.lnk` files are written through the Windows Script Host by Windows
+  PowerShell; nothing else on the system is changed.
+
+## Updates
+
+`csv-tidy update [--check] [--version X.Y.Z] [--pause]` is the only command that connects to
+the internet, and only when it is run.
+
+1. It asks the GitHub API for the latest release of `JudikaM/csv-tidy` (or the release
+   `vX.Y.Z`).
+2. It takes the wheel `csv_tidy-X.Y.Z-py3-none-any.whl` attached to that release. A release
+   without that wheel, without a published `sha256:` digest for it, or whose download address
+   is not under `https://github.com/JudikaM/csv-tidy/releases/download/` is refused.
+3. If the release is newer than the installed version (or `--version` was given), it runs
+   `python -m pip install --upgrade <wheel URL>#sha256=<digest>` with the Python that runs
+   CSV Tidy. pip refuses a file whose SHA-256 differs. pip also installs missing
+   dependencies (`tomli-w`) from PyPI.
+
+`--check` only reports. `--pause` waits for Enter at the end (used by the shortcut). Exit
+codes: 0 updated, up to date, or `--check`; 2 if GitHub cannot be reached, the release is
+unusable, or pip fails (the installed version is kept). Close CSV Tidy before updating.
+
 ## Batch processing
 
 `csv-tidy batch check INPUT...` and `csv-tidy batch clean INPUT...` apply one profile and one
@@ -278,8 +320,22 @@ set of options to several files through the same functions as the single-file co
 
 ## Local interface
 
-`csv-tidy ui [--port N] [--no-browser] [--max-file-mb N]` serves one page from a server bound
-to `127.0.0.1` and opens it in the default browser.
+`csv-tidy ui [--port N] [--no-browser] [--max-file-mb N] [--idle-minutes N]` serves one page
+from a server bound to `127.0.0.1` and opens it in the default browser.
+
+- **Without a console.** The `csv-tidy-ui` program (a standard pip `gui-scripts` entry point)
+  starts the same interface without a console window, opens the browser, and stops by itself
+  10 minutes after the page last contacted it; the page checks in every minute while it is
+  open, including in a background tab. `--idle-minutes N` gives the console command the same
+  behavior (default 0: run until Quit or Ctrl+C). Only requests that carry the session key
+  count as contact. If `csv-tidy-ui` cannot start, the reason is written to
+  `csv-tidy-ui-error.txt` in the temporary folder, because there is no window to show it.
+- **Plain suggestions.** The page explains problems with its own controls, based on each
+  issue's `remedy` (see Reports); for other issues it shows the suggestion text.
+- **Dates from a list.** Date formats are chosen from `YYYY-MM-DD`, `DD/MM/YYYY`,
+  `MM/DD/YYYY`, `DD-MM-YYYY`, `DD.MM.YYYY`, `YYYY/MM/DD`, `D/M/YYYY`, and `M/D/YYYY`;
+  **Other…** accepts any format valid under "Date formats". Profiles with other formats load
+  into **Other…** unchanged.
 
 - The page sends the chosen files to that local process, which stores them in a private
   temporary folder (removed when they are replaced or removed, on **Quit**, and on Ctrl+C).
@@ -367,7 +423,11 @@ Text reports are ordered for reading top-down:
 JSON keeps every earlier field and adds `verdict` (`state`, `headline`), `coverage` (`scope`:
 `structure_only` or `structure_and_values`, `declared_columns`, `undeclared_columns`,
 `unchecked_columns`, `unique_keys`, `duplicate_rows`, `header_columns`), and `next_steps` (a
-list of sentences). Source issues keep their `severity` and `status` (`resolved`,
+list of sentences). Every issue in JSON also has `remedy`: the kind of repair its
+suggestion describes (`trim`, `number_format`, `date_format`, `deduplicate_rows`,
+`deduplicate_keys`, `delimiter`, `encoding`, `quoting`, `max_field_chars`), or `null` when
+only the source can be corrected. Text reports do not show it. Source issues keep their
+`severity` and `status` (`resolved`,
 `unresolved`, `removed`) in JSON; only the text layout separates them. `verdict.state` for
 `check` is `passed`, `passed_structure_only`, `failed`, or `incomplete`; `summary.status`
 is unchanged (`valid`, `invalid`, `incomplete`).

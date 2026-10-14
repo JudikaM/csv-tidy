@@ -527,3 +527,93 @@ def test_max_field_chars_applies_to_preview_check_and_saved_profiles(ui, write, 
     target = tmp_path / "saved.toml"
     target.write_bytes(saved)
     assert load_profile(target).max_field_chars == 10
+
+
+# --------------------------------------------------------------------------- 0.4.0: no console
+
+
+def serve(max_file_mb=1):
+    server, session, url = create_server(0, max_file_mb=max_file_mb)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server, session, Client(url), thread
+
+
+def test_idle_server_stops_by_itself_and_contact_keeps_it_running():
+    from csv_tidy.ui import start_idle_watch
+
+    server, session, client, thread = serve()
+    start_idle_watch(server, session, 0.8)
+    for _ in range(8):  # the page checks in regularly: the server stays up
+        assert client.post("/api/ping", {}) == (200, {"ok": True})
+        thread.join(0.2)
+    assert thread.is_alive()
+    thread.join(5)  # no contact any more: it stops
+    assert not thread.is_alive()
+    server.server_close()
+    session.close()
+
+
+def test_requests_without_the_key_do_not_keep_the_server_alive():
+    server, session, client, thread = serve()
+    before = session.last_contact
+    thread.join(0.05)
+    assert client.post("/api/ping", {}, token=False)[0] == 403
+    assert client.request("/?token=wrong")[0] == 403
+    assert client.request("/app.js")[0] == 200  # static files need no key and are no contact
+    assert session.last_contact == before
+    assert client.post("/api/ping", {})[0] == 200
+    assert session.last_contact > before
+    server.shutdown()
+    server.server_close()
+    session.close()
+
+
+def test_run_ui_with_idle_minutes_returns_and_cleans_up(monkeypatch):
+    import csv_tidy.ui as ui_module
+
+    made = []
+    real = ui_module.create_server
+
+    def spy(*args, **kwargs):
+        made.append(real(*args, **kwargs))
+        return made[-1]
+
+    monkeypatch.setattr(ui_module, "create_server", spy)
+    assert ui_module.run_ui(0, open_browser=False, idle_minutes=0.01, quiet=True) == 0
+    assert not made[0][1]._dir.exists()
+
+
+def test_gui_entry_point_opens_the_browser_without_a_console(monkeypatch, tmp_path):
+    import csv_tidy.ui as ui_module
+
+    calls = []
+    monkeypatch.setattr(ui_module, "run_ui", lambda *a, **k: calls.append((a, k)) or 0)
+    assert ui_module.gui_main() == 0
+    assert calls == [
+        ((0, True, ui_module.DEFAULT_MAX_FILE_MB), {"idle_minutes": 10, "quiet": True})
+    ]
+
+    def broken(*a, **k):
+        raise OSError("port in use")
+
+    monkeypatch.setattr(ui_module, "run_ui", broken)
+    monkeypatch.setattr(ui_module.tempfile, "gettempdir", lambda: str(tmp_path))
+    assert ui_module.gui_main() == 2
+    assert "port in use" in (tmp_path / "csv-tidy-ui-error.txt").read_text(encoding="utf-8")
+
+
+def test_quiet_mode_survives_a_missing_console(monkeypatch):
+    import csv_tidy.ui as ui_module
+
+    monkeypatch.setattr("sys.stdout", None)
+    ui_module._say("hello", quiet=False)  # pythonw has no stdout; nothing may fail
+
+
+def test_ui_command_accepts_idle_minutes(monkeypatch):
+    import csv_tidy.ui as ui_module
+
+    seen = []
+    monkeypatch.setattr(ui_module, "run_ui", lambda *a: seen.append(a) or 0)
+    assert run_cli("ui", "--no-browser", "--idle-minutes", "5").code == 0
+    assert seen == [(0, False, 200, 5)]
