@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from . import __version__, batch, profile_init
+from . import __version__, batch, profile_init, update
 from .api import check_file, clean_file, export_clean
 from .errors import CsvTidyError, OutputError, ProfileError
 from .formats import NUMBER_FORMATS
@@ -39,6 +40,8 @@ examples:
   csv-tidy clean data.csv --schema profile.toml            (dry run, writes nothing)
   csv-tidy batch clean exports/ --schema profile.toml      (many files, one profile)
   csv-tidy ui                                              (local browser interface)
+  csv-tidy shortcut install                                (icons that start it)
+  csv-tidy update --check                                  (the only command that goes online)
   csv-tidy clean data.csv --schema profile.toml --apply --output output/clean.csv \\
       --output-schema output/clean.output.toml
 
@@ -92,6 +95,34 @@ examples:
   csv-tidy batch clean exports/ --schema profile.toml            (preview)
   csv-tidy batch clean exports/ jan.csv --schema profile.toml --apply --output-dir cleaned/ \\
       --output-schemas --report-dir reports/ --format json
+"""
+
+SHORTCUT_EPILOG = """\
+Windows: "CSV Tidy" on the Desktop and in the Start Menu starts the local interface without a
+console window (the csv-tidy-ui program); it stops by itself 10 minutes after its page was
+closed. "Update CSV Tidy" in the Start Menu runs `csv-tidy update`. Linux: the same entries
+in the applications menu, and "CSV Tidy" on the Desktop if that folder exists. macOS is not
+supported yet; start the csv-tidy-ui program instead.
+
+Run it once per user after installing CSV Tidy; the icons keep working after updates. Icons
+with the same names that belong to other programs are never changed or removed.
+
+examples:
+  csv-tidy shortcut install
+  csv-tidy shortcut install --no-desktop
+  csv-tidy shortcut remove
+"""
+
+UPDATE_EPILOG = """\
+update asks the GitHub API for the latest release of CSV Tidy (or the one given with
+--version), and, if it is newer than the installed version, runs pip to install the wheel
+attached to that release. pip checks the SHA-256 that GitHub publishes for the wheel and
+refuses a file that does not match. This is the only command that connects to the internet,
+and it does so only when you run it. Profiles keep working after an update.
+
+Close CSV Tidy before updating, and start it again afterwards to use the new version.
+
+exit codes: 0 updated, already up to date, or --check; 2 GitHub or pip failed
 """
 
 UI_EPILOG = """\
@@ -221,7 +252,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"csv-tidy {__version__}")
     sub = parser.add_subparsers(
-        dest="command", required=True, metavar="{check,clean,batch,profile,ui}"
+        dest="command", required=True, metavar="{check,clean,batch,profile,ui,shortcut,update}"
     )
 
     check = sub.add_parser(
@@ -262,6 +293,53 @@ def build_parser() -> argparse.ArgumentParser:
     _report_options(clean)
     _batch_parser(sub)
     _profile_parser(sub)
+    sc = sub.add_parser(
+        "shortcut",
+        help="add or remove CSV Tidy icons (Desktop and Start Menu)",
+        description="Add or remove icons that start CSV Tidy without a command line.",
+        epilog=SHORTCUT_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    scs = sc.add_subparsers(dest="shortcut_command", required=True, metavar="{install,remove}")
+    for name, text in (
+        ("install", "create or refresh the icons"),
+        ("remove", "remove the icons that CSV Tidy created"),
+    ):
+        cmd = scs.add_parser(
+            name,
+            help=text,
+            epilog=SHORTCUT_EPILOG,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+        )
+        cmd.add_argument(
+            "--folder",
+            metavar="DIR",
+            help="put the icons in DIR instead of the Desktop and the Start Menu",
+        )
+        if name == "install":
+            cmd.add_argument(
+                "--no-desktop", action="store_true", help="only add the Start Menu entries"
+            )
+    upd = sub.add_parser(
+        "update",
+        help="install the latest release from GitHub (the only command that goes online)",
+        epilog=UPDATE_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    upd.add_argument(
+        "--check", action="store_true", help="only report whether a newer release exists"
+    )
+    upd.add_argument(
+        "--version",
+        dest="target_version",
+        metavar="X.Y.Z",
+        help="install this release instead of the latest (also older ones)",
+    )
+    upd.add_argument(
+        "--pause",
+        action="store_true",
+        help="wait for Enter before exiting (used by the Update CSV Tidy shortcut)",
+    )
     ui = sub.add_parser(
         "ui",
         help="open the local browser interface (for people who prefer forms)",
@@ -274,6 +352,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         metavar="N",
         help="loopback port to listen on (default: a free port chosen automatically)",
+    )
+    ui.add_argument(
+        "--idle-minutes",
+        type=_non_negative,
+        default=0,
+        metavar="N",
+        help="stop by itself after N minutes without an open page (default 0: never; the "
+        "csv-tidy-ui program uses 10)",
     )
     ui.add_argument(
         "--no-browser",
@@ -598,6 +684,67 @@ def run_batch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
     return _publish(build, batch.render_batch_text, args, [], result.exit_code)
 
 
+def run_shortcut(args: argparse.Namespace) -> int:
+    from . import shortcuts
+
+    if args.shortcut_command == "install":
+        outcomes = shortcuts.install(args.folder, desktop=not args.no_desktop)
+    else:
+        outcomes = shortcuts.remove(args.folder)
+    for outcome in outcomes:
+        note = " (belongs to another program; left as it is)" if outcome.status == "skipped" else ""
+        print(f"{outcome.status}: {outcome.path}{note}")
+    if args.shortcut_command == "install" and any(o.status != "skipped" for o in outcomes):
+        print("Start CSV Tidy with the CSV Tidy icon; it opens in your browser.")
+    return 0
+
+
+def run_update(args: argparse.Namespace) -> int:
+    code = _update(args)
+    if args.pause:
+        with contextlib.suppress(EOFError, KeyboardInterrupt):
+            input("\nPress Enter to close this window. ")
+    return code
+
+
+def _update(args: argparse.Namespace) -> int:
+    try:
+        release = update.find_release(args.target_version)
+    except CsvTidyError as exc:
+        print(f"csv-tidy: error: {exc}", file=sys.stderr)
+        return 2
+    current = __version__
+    newer = update.version_key(release.version) > update.version_key(current)
+    if args.check:
+        print(f"Installed: CSV Tidy {current}. Latest release: {release.version}.")
+        if newer:
+            print(f"CSV Tidy {release.version} is available ({release.page_url}).")
+            print("Install it with: csv-tidy update")
+        else:
+            print("CSV Tidy is up to date.")
+        return 0
+    if release.version == current or (not newer and args.target_version is None):
+        print(f"CSV Tidy {current} is up to date (latest release: {release.version}).")
+        return 0
+    print(f"Updating CSV Tidy from {current} to {release.version} ({release.page_url}).")
+    print("Close CSV Tidy if it is open; start it again after the update.")
+    print(
+        f"Downloading {release.wheel_name} from GitHub; pip verifies its SHA-256 "
+        f"({release.sha256[:12]}...)."
+    )
+    sys.stdout.flush()
+    code = update.run_pip(update.pip_command(release, sys.executable))
+    if code != 0:
+        print(
+            f"csv-tidy: error: pip could not install CSV Tidy {release.version} (exit code "
+            f"{code}); see pip's messages above. CSV Tidy {current} is still installed.",
+            file=sys.stderr,
+        )
+        return 2
+    print(f"Updated to {release.version}. Start CSV Tidy again to use the new version.")
+    return 0
+
+
 def _ask(prompt: str) -> str:
     """Prompt on stderr (stdout stays free for results) and read one line from stdin."""
     sys.stderr.write(prompt)
@@ -699,10 +846,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_batch_command(args, parser)
         if args.command == "profile":
             return run_profile_init(args)
+        if args.command == "update":
+            return run_update(args)
+        if args.command == "shortcut":
+            return run_shortcut(args)
         if args.command == "ui":
             from .ui import run_ui  # imported on demand: check/clean do not need a server
 
-            return run_ui(args.port, not args.no_browser, args.max_file_mb)
+            return run_ui(args.port, not args.no_browser, args.max_file_mb, args.idle_minutes)
         return run_check(args)
     except CsvTidyError as exc:
         print(f"csv-tidy: error: {exc}", file=sys.stderr)

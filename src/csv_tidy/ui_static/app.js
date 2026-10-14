@@ -8,6 +8,18 @@ const TOKEN = meta("csv-tidy-token");
 const MAX_FILE_MB = Number(meta("csv-tidy-max-file-mb")) || 200;
 const KNOWN_ENCODINGS = ["utf-8", "cp1252", "latin-1", "utf-16"];
 const NUMBER_LABELS = { canonical: "1250.50", id: "1.250,50", us: "1,250.50" };
+/* Common numeric date formats, shown with 31 December 2026 as the example. */
+const DATE_FORMATS = [
+  ["YYYY-MM-DD", "2026-12-31"],
+  ["DD/MM/YYYY", "31/12/2026"],
+  ["MM/DD/YYYY", "12/31/2026"],
+  ["DD-MM-YYYY", "31-12-2026"],
+  ["DD.MM.YYYY", "31.12.2026"],
+  ["YYYY/MM/DD", "2026/12/31"],
+  ["D/M/YYYY", "31/12/2026, also 1/2/2026"],
+  ["M/D/YYYY", "12/31/2026, also 2/1/2026"],
+];
+const PING_SECONDS = 60;
 
 const DEFAULT_LIMITS = { max_details: 200, max_examples: 200, preview_rows: 50 };
 const LIMIT_RANGES = { max_details: [0, 10000], max_examples: [0, 10000], preview_rows: [1, 1000] };
@@ -119,7 +131,7 @@ async function run(working, action) {
     if (error.name === "AbortError") {
       setStatus("warn", "Cancelled. Nothing was changed or saved.", "run the step again when you are ready.");
     } else if (error instanceof TypeError) {
-      setStatus("bad", "CSV Tidy is not answering.", "make sure the csv-tidy ui window is still open, then try again.");
+      setStatus("bad", "CSV Tidy is not running any more.", "start it again from the CSV Tidy icon (it stops by itself after a while without an open page). Your files were not changed.");
     } else {
       setStatus("bad", error.message, "correct this, then try again.");
     }
@@ -192,13 +204,13 @@ function buildProfile() {
     delimiter: currentDelimiter(),
     encoding: currentEncoding(),
     number_format: $("src-number").value,
-    date_format: $("src-date").value.trim(),
+    date_format: dateValue("src-date") || "YYYY-MM-DD",
   };
   const longest = maxFieldChars();
   if (longest !== null) source.max_field_chars = longest;
   const output = { line_ending: $("line-ending").value };
   if ($("out-number").value) output.number_format = $("out-number").value;
-  if ($("out-date").value.trim()) output.date_format = $("out-date").value.trim();
+  if (dateValue("out-date")) output.date_format = dateValue("out-date");
   if ($("out-delimiter").value) output.delimiter = $("out-delimiter").value;
   if ($("out-encoding").value.trim()) output.encoding = $("out-encoding").value.trim();
   const columns = {};
@@ -237,11 +249,11 @@ function applyProfile(profile, name) {
     reread = true;
   }
   $("src-number").value = source.number_format || "canonical";
-  $("src-date").value = source.date_format || "YYYY-MM-DD";
+  setDate("src-date", source.date_format || "YYYY-MM-DD");
   if (String(source.max_field_chars || "") !== $("max-field").value.trim()) reread = true;
   $("max-field").value = source.max_field_chars || "";
   $("out-number").value = output.number_format || "";
-  $("out-date").value = output.date_format || "";
+  setDate("out-date", output.date_format || "");
   $("out-delimiter").value = output.delimiter || "";
   $("out-encoding").value = output.encoding || "";
   $("line-ending").value = output.line_ending || "crlf";
@@ -299,7 +311,7 @@ function renderRules() {
   body.replaceChildren();
   const inFile = new Set(state.header);
   const fileNumber = NUMBER_LABELS[$("src-number").value];
-  const fileDate = $("src-date").value.trim() || "YYYY-MM-DD";
+  const fileDate = dateValue("src-date") || "YYYY-MM-DD";
   let index = 0;
   for (const [name, rule] of state.columns) {
     const id = (field) => `col-${index}-${field}`;
@@ -322,17 +334,30 @@ function renderRules() {
       );
       format.value = rule.numberFormat;
     } else if (rule.type === "date") {
-      format = el("input", {
-        type: "text",
-        id: id("dateFormat"),
-        list: "date-formats",
-        "aria-label": `How dates are written in column ${name}`,
-        "data-field": "dateFormat",
-        placeholder: `Like the file (${fileDate})`,
-        autocomplete: "off",
-        spellcheck: "false",
-      });
-      format.value = rule.dateFormat;
+      const known = DATE_FORMATS.some(([value]) => value === rule.dateFormat);
+      const other = rule.dateOther || (rule.dateFormat && !known);
+      const pick = el(
+        "select",
+        { id: id("dateChoice"), "aria-label": `How dates are written in column ${name}`, "data-field": "dateChoice" },
+        el("option", { value: "", text: `Like the file (${fileDate})` }),
+        ...DATE_FORMATS.map(([value, example]) => el("option", { value, text: `${example} (${value})` })),
+        el("option", { value: "other", text: "Other…" })
+      );
+      pick.value = other ? "other" : rule.dateFormat;
+      format = el("div", { class: "date-pick" }, pick);
+      if (other) {
+        const custom = el("input", {
+          type: "text",
+          id: id("dateFormat"),
+          "aria-label": `Other date format for column ${name}`,
+          "data-field": "dateFormat",
+          placeholder: "for example YYYY.MM.DD",
+          autocomplete: "off",
+          spellcheck: "false",
+        });
+        custom.value = rule.dateFormat;
+        format.append(custom);
+      }
     }
     const tick = (field, label, disabled) => {
       const box = el("input", { type: "checkbox", id: id(field), "aria-label": `${label}: column ${name}`, "data-field": field, disabled });
@@ -416,7 +441,7 @@ function issuesTable(items, tag) {
       el("td", null, where.join(", ") || "Whole file"),
       el("td", null, issue.column ? el("code", { text: issue.column }) : "—"),
       el("td", null, issue.message, issue.introduced ? el("div", { class: "note", text: "Created by a selected repair." }) : null),
-      el("td", null, tag ? "Nothing; already handled." : issue.suggestion)
+      el("td", null, tag ? "Nothing; already handled." : plainSuggestion(issue))
     );
   });
   return el(
@@ -429,6 +454,60 @@ function issuesTable(items, tag) {
       el("tbody", null, ...rows)
     )
   );
+}
+
+/* The page names its own controls instead of command-line options (issue.remedy comes
+   from the same validation as the CLI; the CLI keeps its own wording). */
+function plainSuggestion(issue) {
+  const column = issue.column ? `"${issue.column}"` : "this column";
+  switch (issue.remedy) {
+    case "trim":
+      return `Tick "Repair: trim spaces" for ${column} in step 3, or remove the spaces in your original file.`;
+    case "number_format":
+      return `Correct the value in your original file, or check "Written like" for ${column} in step 3 (for example 1.250,50 or 1,250.50).`;
+    case "date_format":
+      return `Correct the date in your original file, or check how dates in ${column} are written (step 3).`;
+    case "deduplicate_rows":
+      return 'If the copy is not wanted, choose "Remove rows identical to an earlier row" under "Duplicate rows in the cleaned copy" (step 3). The first row is kept.';
+    case "deduplicate_keys":
+      return 'Correct the repeated value in your original file, or choose "Also remove rows that repeat a unique value" (step 3) to keep only the first row.';
+    case "delimiter":
+      return 'Switch "Columns are separated by" in step 1.';
+    case "encoding":
+      return "Choose another text encoding in step 1 (files from older Excel versions are often Windows-1252), or save the file again as UTF-8.";
+    case "quoting":
+      return 'Check the quote marks (") in that row of your original file, and the separator in step 1.';
+    case "max_field_chars":
+      return 'Usually a quote mark (") is not closed in that row. Fix it in your original file, or raise "Longest allowed value" in More settings.';
+    default:
+      return issue.suggestion.replace(/\bin the source\b/g, "in your original file").replace(/\bthe source value\b/g, "the value in your original file");
+  }
+}
+
+function fillDatePicks() {
+  for (const prefix of ["src-date", "out-date"]) {
+    const pick = $(`${prefix}-pick`);
+    const first = prefix === "out-date" ? [el("option", { value: "", text: "Same as in this file" })] : [];
+    pick.replaceChildren(
+      ...first,
+      ...DATE_FORMATS.map(([value, example]) => el("option", { value, text: `${example} (${value})` })),
+      el("option", { value: "other", text: "Other…" })
+    );
+    setDate(prefix, pick.dataset.dateDefault);
+  }
+}
+
+/* A date format from a list, or typed under "Other…". */
+function dateValue(prefix) {
+  const pick = $(`${prefix}-pick`);
+  return pick.value === "other" ? $(prefix).value.trim() : pick.value;
+}
+
+function setDate(prefix, value) {
+  const known = value === "" || DATE_FORMATS.some(([format]) => format === value);
+  $(`${prefix}-pick`).value = known ? value : "other";
+  $(prefix).value = known ? "" : value;
+  $(`${prefix}-wrap`).hidden = known;
 }
 
 function dataTable(header, rows, label) {
@@ -1173,7 +1252,12 @@ $("columns-body").addEventListener("change", (event) => {
   const row = event.target.closest("tr");
   if (!field || !row) return;
   const rule = state.columns.get(row.dataset.column);
-  rule[field] = event.target.type === "checkbox" ? event.target.checked : event.target.value.trim();
+  if (field === "dateChoice") {
+    rule.dateOther = event.target.value === "other";
+    if (!rule.dateOther) rule.dateFormat = event.target.value;
+  } else {
+    rule[field] = event.target.type === "checkbox" ? event.target.checked : event.target.value.trim();
+  }
   if (rule.type === "text") rule.normalize = false;
   renderRules();
   invalidateResults("Rules changed.");
@@ -1234,7 +1318,14 @@ for (const id of ["limit-details", "limit-examples", "limit-rows"]) {
     } else invalidateResults("Detail limits changed.");
   });
 }
-for (const id of ["src-number", "src-date", "out-number", "out-date", "dedupe", "dup-rows", "out-delimiter", "out-encoding", "line-ending"]) {
+for (const prefix of ["src-date", "out-date"]) {
+  $(`${prefix}-pick`).addEventListener("change", () => {
+    const other = $(`${prefix}-pick`).value === "other";
+    $(`${prefix}-wrap`).hidden = !other;
+    if (other) $(prefix).focus();
+  });
+}
+for (const id of ["src-number", "src-date", "src-date-pick", "out-number", "out-date", "out-date-pick", "dedupe", "dup-rows", "out-delimiter", "out-encoding", "line-ending"]) {
   $(id).addEventListener("change", () => {
     renderRules();
     invalidateResults("Settings changed.");
@@ -1263,9 +1354,10 @@ $("reset-rules").addEventListener("click", () => {
   $("max-field").value = "";
   $("profile-file").value = "";
   $("profile-note").textContent = "All rules were reset: every column is text again.";
-  for (const id of ["out-number", "out-date", "out-delimiter", "out-encoding"]) $(id).value = "";
+  for (const id of ["out-number", "out-delimiter", "out-encoding"]) $(id).value = "";
+  setDate("out-date", "");
   $("src-number").value = "canonical";
-  $("src-date").value = "YYYY-MM-DD";
+  setDate("src-date", "YYYY-MM-DD");
   $("dedupe").value = "off";
   $("dup-rows").value = "warn";
   $("line-ending").value = "crlf";
@@ -1294,5 +1386,19 @@ $("quit").addEventListener("click", async () => {
   setStatus("idle", "CSV Tidy has stopped. Temporary copies were removed.", "close this tab. To use it again, start csv-tidy ui.");
 });
 
+fillDatePicks();
 renderRules();
 refreshButtons();
+
+/* While the page is open it checks in, so a server started without a console (the CSV Tidy
+   icon) knows it is still in use. Once the page is closed, the server stops by itself. */
+setInterval(async () => {
+  if (state.stopped || state.pending) return;
+  try {
+    await postJson("/api/ping", {});
+  } catch (error) {
+    state.stopped = true;
+    for (const control of document.querySelectorAll("main input, main select, main button, #quit")) control.disabled = true;
+    setStatus("bad", "CSV Tidy is not running any more.", "start it again from the CSV Tidy icon. Your files were not changed.");
+  }
+}, PING_SECONDS * 1000);

@@ -36,6 +36,10 @@ dev = ["pytest>=8.0", "ruff>=0.15", "build>=1.2"]
 [project.scripts]
 csv-tidy = "csv_tidy.cli:main"
 
+# Starts the local interface without a console window (used by the desktop shortcut).
+[project.gui-scripts]
+csv-tidy-ui = "csv_tidy.ui:gui_main"
+
 [project.urls]
 Homepage = "https://github.com/JudikaM/csv-tidy"
 Issues = "https://github.com/JudikaM/csv-tidy/issues"

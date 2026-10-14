@@ -26,8 +26,9 @@ handling feedback are in [USER_VALIDATION.md](USER_VALIDATION.md).
 1. Install CSV Tidy from a source checkout as described in the [README](../README.md).
 2. Confirm that `.\.venv\Scripts\csv-tidy.exe --version` prints a version (on Linux/macOS:
    `.venv/bin/csv-tidy --version`).
-3. For the administrative guide, start `.\.venv\Scripts\csv-tidy.exe ui` and leave the
-   console window open. If the browser does not open, copy the printed address into it.
+3. For the administrative guide, run `.\.venv\Scripts\csv-tidy.exe shortcut install` once
+   for the participant's Windows user, so that a **CSV Tidy** icon is on the Desktop. Do not
+   start CSV Tidy for them.
 4. Make a working copy of `examples/` so the participant cannot damage the originals.
 
 ## Guide for developers
@@ -44,6 +45,7 @@ repeatable check without reading the source code.
 | D5 | Process all `transactions_*.csv` files in `examples\` in one command, write the files that can be written, and produce a JSON summary. State the exit code and what it means. | Two `*.clean.csv` files exist, the blocked ones do not, and the participant explains exit code 1. |
 | D6 | Use the JSON report of D5 in a script (any language) to print the names of the blocked files. | The script prints the two blocked files. |
 | D7 | From Python, clean one file with `clean_file` and handle the case where export is blocked. | The participant uses `export_ready` or `export_blocked_reason`. |
+| D8 | Find out whether a newer CSV Tidy exists without installing it. | The participant runs `csv-tidy update --check`. |
 
 Questions afterwards:
 
@@ -59,10 +61,12 @@ Goal: find out whether someone who works with Excel, and does not use a command 
 check and clean a file with the local interface, and understands what the tool did and did
 not do.
 
-The participant starts at the open page. The facilitator does not touch the mouse or keyboard.
+The participant starts at the Windows Desktop. The facilitator does not touch the mouse or
+keyboard.
 
 | # | Task | The task is done when |
 |---|------|-----------------------|
+| A0 | Start CSV Tidy. | The page is open in the browser (from the CSV Tidy icon); note how long it took to find the icon. |
 | A1 | Open `transactions_fixable.csv` from the examples folder. | The preview shows five separate columns (the participant switched the separator to semicolon after the "one wide column" message). |
 | A2 | Without changing anything else, select **Check file**. Say whether the data is correct. | The participant says that values were not checked yet, and why. |
 | A3 | Tell the tool that `amount` is a number written like `1.250,50`, that `date` is a date written like `DD/MM/YYYY`, and that `transaction_id` must be unique and not empty. Check again. | The check lists two problems, and the participant can say in which row and column they are. |
@@ -73,7 +77,8 @@ The participant starts at the open page. The facilitator does not touch the mous
 | A8 | Load the rules saved in A6 for a new file (`transactions_valid.csv`) instead of setting them by hand. | The rules appear in step 3 without manual entry and the check passes. |
 | A9 | Switch to **Several files with the same rules**, choose `transactions_fixable.csv`, `transactions_unfixable.csv`, and `transactions_valid.csv`, load the rules saved in A6, and preview the cleaning of all files. Say which files can be saved and why one cannot. | The participant names the blocked file and its reason without opening the CLI. |
 | A10 | Save all results as one ZIP and say what is inside. | The participant notices that the blocked file is in the ZIP only as a report. |
-| A11 | Stop the tool. | **Quit CSV Tidy** was used, or the participant asks how; note which. |
+| A11 | Close the browser tab without using Quit, then start CSV Tidy again from the icon. | The page opens again; note whether the participant expected the earlier page to still work. |
+| A12 | Stop the tool. | **Quit CSV Tidy** was used, or the participant asks how; note which. |
 
 Things to watch without asking:
 

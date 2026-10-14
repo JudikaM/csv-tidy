@@ -12,7 +12,7 @@ still has errors.
 
 **Status:** early alpha (0.x); interfaces may still change between minor versions, and
 changes are listed in [CHANGELOG.md](CHANGELOG.md). It works locally and offline, with no
-telemetry, internet access, or AI services. It has not yet been validated with external
+telemetry or AI services; only the explicit `csv-tidy update` command goes online. It has not yet been validated with external
 users. Feedback is welcome (see [Feedback](#feedback-and-bug-reports)).
 
 There are three ways to use the same engine:
@@ -53,7 +53,7 @@ Requires Python 3.11 or newer. CSV Tidy is **not published on PyPI**. Published 
 installation files (a wheel and a source distribution) are listed on the
 [GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); a downloaded wheel
 installs with `python -m pip install <path-to-wheel>` inside a virtual environment. This
-README describes version 0.3.0; changes made after a release are listed under "Unreleased"
+README describes version 0.4.0; changes made after a release are listed under "Unreleased"
 in the [changelog](CHANGELOG.md). You can also install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's programs directly, so the
@@ -76,6 +76,24 @@ python3 -m venv .venv
 .venv/bin/python -m pip install .
 .venv/bin/csv-tidy --version
 ```
+
+**For people who do not use a command line.** After installing, run this once for each
+Windows user (or Linux user) who will use CSV Tidy:
+
+```powershell
+.\.venv\Scripts\csv-tidy.exe shortcut install
+```
+
+It adds a **CSV Tidy** icon to the Desktop and the Start Menu, which opens the
+[local interface](#local-interface-for-people-who-prefer-forms) in the browser without a
+console window, and an **Update CSV Tidy** entry to the Start Menu. The icons keep working
+after updates; `csv-tidy shortcut remove` removes them again.
+
+**Updating.** `csv-tidy update` (or the **Update CSV Tidy** entry) installs the latest
+release from GitHub with pip, which verifies the SHA-256 that GitHub publishes for the wheel.
+It is the only command that connects to the internet, and only when you run it;
+`csv-tidy update --check` just reports whether a newer version exists. Close CSV Tidy before
+updating. Profiles keep working across versions.
 
 **How the examples are written.** Every command below is written for Windows PowerShell and
 this installation, so it can be pasted as is from the `csv-tidy` folder:
@@ -146,7 +164,7 @@ normalize = ["amount", "date"]
 ### 1. Check
 
 ```text
-CSV Tidy 0.3.0 - check
+CSV Tidy 0.4.0 - check
 Verdict: FAILED - 2 errors found in the source file.
 Source: examples\transactions_fixable.csv
 Profile: examples\profiles\transactions-id.toml
@@ -200,7 +218,7 @@ JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 ### 2. Preview a clean (dry run is the default)
 
 ```text
-CSV Tidy 0.3.0 - clean (dry run, nothing written)
+CSV Tidy 0.4.0 - clean (dry run, nothing written)
 Verdict: READY TO EXPORT - no errors remain in the cleaned result; 2 source problems repaired.
 ...
 Transformations (applied in this order):
@@ -305,6 +323,9 @@ work with `check`, `clean`, `batch`, and the local interface. Details:
 
 ## Local interface (for people who prefer forms)
 
+Start it with the **CSV Tidy** icon (see [Installation](#installation)), the `csv-tidy-ui`
+program, or from a command line:
+
 ```powershell
 .\.venv\Scripts\csv-tidy.exe ui
 ```
@@ -326,6 +347,10 @@ This starts a small web server **on this computer only** and opens a page in you
    ready file, a report for every file, and a batch summary. Files that are blocked or could
    not be read are never exported; they are in the ZIP as reports only.
 
+Dates are chosen from a list of common formats (with an example such as `31/12/2026`), and
+**Other…** accepts any supported format. Suggestions name the page's own controls, for
+example *Tick "Repair: trim spaces" for "amount" in step 3*.
+
 **More settings** also holds the longest allowed value (`max_field_chars`, saved in profiles)
 and how many problems, changed values, and preview rows are listed (counts stay complete;
 saved reports use the same limits).
@@ -338,7 +363,9 @@ remain. It uses the same functions as the commands; a profile saved from the pag
 Privacy and safety: the server listens on `127.0.0.1` only, the page loads nothing from the
 internet, and the address contains a one-time key without which other programs and web pages
 cannot use it. The chosen files are copied into a private temporary folder that is removed
-when you select **Quit** (or press Ctrl+C in the window that started it); your original files
+when you select **Quit** (or press Ctrl+C in the window that started it). Started from the icon,
+without a console window, it also stops by itself 10 minutes after its page was closed
+(`csv-tidy ui --idle-minutes N` does the same from a command line). Your original files
 are never written to. Options: `--port N`, `--no-browser`, `--max-file-mb N` (largest file,
 and largest total of several files together; default 200). A
 step-by-step guide for first-time users is in
@@ -355,7 +382,7 @@ step-by-step guide for first-time users is in
 ```
 
 ```text
-CSV Tidy 0.3.0 - batch clean (dry run, nothing written)
+CSV Tidy 0.4.0 - batch clean (dry run, nothing written)
 Verdict: 2 of 4 files need attention (2 with data errors).
 Profile: examples\profiles\transactions-id.toml
 

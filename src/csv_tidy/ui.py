@@ -24,6 +24,7 @@ import shutil
 import sys
 import tempfile
 import threading
+import time
 import tomllib
 import webbrowser
 import zipfile
@@ -61,6 +62,9 @@ PREVIEW_ROWS = 50
 DETAIL_LIMIT = 200
 MAX_JSON_BYTES = 5 * 1024 * 1024
 DEFAULT_MAX_FILE_MB = 200
+# Without a console window nobody can press Ctrl+C, so the server stops by itself this
+# long after the page last contacted it. The page checks in every minute while open.
+GUI_IDLE_MINUTES = 10
 MAX_LIST_LIMIT = 10_000
 MAX_PREVIEW_ROWS = 1_000
 STATIC = {
@@ -190,6 +194,11 @@ class Session:
         self._check: StoredResult | None = None
         self._clean: StoredResult | None = None
         self._batch: StoredBatch | None = None
+        self.last_contact = time.monotonic()
+
+    def touch(self) -> None:
+        """Record that the page (with the session key) contacted the server."""
+        self.last_contact = time.monotonic()
 
     def close(self) -> None:
         shutil.rmtree(self._dir, ignore_errors=True)
@@ -627,6 +636,7 @@ class Handler(BaseHTTPRequestHandler):
                 b"one-time key). Start `csv-tidy ui` again and use the address it shows.\n",
             )
         else:
+            self.session.touch()
             page = _static("index.html").replace(b"{{token}}", self.session.token.encode())
             page = page.replace(b"{{version}}", __version__.encode())
             limit = str(self.session.max_file_bytes // (1024 * 1024)).encode()
@@ -639,6 +649,7 @@ class Handler(BaseHTTPRequestHandler):
             self._refuse(HTTPStatus.FORBIDDEN, "This request was not sent by the CSV Tidy page.")
             return
         session = self.session
+        session.touch()
         try:
             if url.path == "/api/file":
                 name = unquote(self.headers.get("X-File-Name", "data.csv"))
@@ -680,6 +691,8 @@ class Handler(BaseHTTPRequestHandler):
                         ("X-File-Name", quote(name)),
                     ),
                 )
+            elif url.path == "/api/ping":
+                self._json(HTTPStatus.OK, {"ok": True})
             elif url.path == "/api/quit":
                 self._json(HTTPStatus.OK, {"stopped": True})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
@@ -717,13 +730,47 @@ def create_server(
     return server, session, url
 
 
-def run_ui(port: int = 0, open_browser: bool = True, max_file_mb: int = DEFAULT_MAX_FILE_MB) -> int:
-    """Serve the interface until the page's Quit button or Ctrl+C stops it."""
+def start_idle_watch(
+    server: ThreadingHTTPServer, session: Session, seconds: float
+) -> threading.Thread:
+    """Stop ``server`` once the page has not contacted it for ``seconds``."""
+
+    def watch() -> None:
+        poll = max(0.05, min(15.0, seconds / 4))
+        while True:
+            time.sleep(poll)
+            if time.monotonic() - session.last_contact > seconds:
+                server.shutdown()
+                return
+
+    thread = threading.Thread(target=watch, name="csv-tidy-idle", daemon=True)
+    thread.start()
+    return thread
+
+
+def _say(text: str, quiet: bool) -> None:
+    # Started without a console (pythonw), sys.stdout is None.
+    if not quiet and sys.stdout is not None:
+        print(text)
+        sys.stdout.flush()
+
+
+def run_ui(
+    port: int = 0,
+    open_browser: bool = True,
+    max_file_mb: int = DEFAULT_MAX_FILE_MB,
+    idle_minutes: float = 0,
+    quiet: bool = False,
+) -> int:
+    """Serve the interface until the page's Quit button or Ctrl+C stops it, or, with
+    ``idle_minutes``, until the page has not been in contact for that long."""
     server, session, url = create_server(port, max_file_mb)
-    print("CSV Tidy is running on this computer only (nothing is sent to the internet).")
-    print(f"Open this address in your browser:\n\n  {url}\n")
-    print("Keep this window open while you work. To stop: use Quit on the page, or Ctrl+C.")
-    sys.stdout.flush()
+    _say("CSV Tidy is running on this computer only (nothing is sent to the internet).", quiet)
+    _say(f"Open this address in your browser:\n\n  {url}\n", quiet)
+    _say("Keep this window open while you work. To stop: use Quit on the page, or Ctrl+C.", quiet)
+    if idle_minutes > 0:
+        start_idle_watch(server, session, idle_minutes * 60)
+        _say(f"It also stops by itself after {idle_minutes:g} minutes without an open page.", quiet)
     if open_browser:
         with contextlib.suppress(Exception):
             webbrowser.open(url)
@@ -734,5 +781,19 @@ def run_ui(port: int = 0, open_browser: bool = True, max_file_mb: int = DEFAULT_
     finally:
         server.server_close()
         session.close()
-    print("CSV Tidy stopped. Temporary copies were removed.")
+    _say("CSV Tidy stopped. Temporary copies were removed.", quiet)
     return 0
+
+
+def gui_main() -> int:
+    """Entry point of the ``csv-tidy-ui`` program: no console window, the browser opens, and
+    the server stops by itself when the page is no longer open. A start-up problem is written
+    to ``csv-tidy-ui-error.txt`` in the temporary folder, as there is no window to show it."""
+    try:
+        return run_ui(0, True, DEFAULT_MAX_FILE_MB, idle_minutes=GUI_IDLE_MINUTES, quiet=True)
+    except Exception as exc:
+        with contextlib.suppress(OSError):
+            Path(tempfile.gettempdir(), "csv-tidy-ui-error.txt").write_text(
+                f"CSV Tidy could not start its local interface: {exc}\n", encoding="utf-8"
+            )
+        return 2

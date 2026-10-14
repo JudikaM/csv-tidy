@@ -20,12 +20,15 @@ taken seriously and acknowledged as soon as possible.
 
 ## Scope
 
-CSV Tidy runs locally, makes no outgoing network connections, and executes no code from CSV
-content or profiles. `csv-tidy ui` opens a listening socket on the loopback address
+CSV Tidy runs locally and executes no code from CSV content or profiles. It makes no outgoing
+network connections, except `csv-tidy update` when a user runs it: that command reads the
+release information from the GitHub API and has pip install the release wheel, checked
+against the SHA-256 that GitHub publishes for it. `csv-tidy ui` opens a listening socket on the loopback address
 (`127.0.0.1`) only, for the browser on the same computer; requests need the session key
 printed at start-up. Relevant issues include, for example: a way to use the local interface
 from another computer, from a web page of another origin, or without the session key; cell
-content being interpreted as HTML or script by the page; writing outside the requested output paths,
+content being interpreted as HTML or script by the page; `csv-tidy update` installing a
+file other than the verified release wheel; shortcuts changing files they did not create; writing outside the requested output paths,
 overwriting input files, crashes or unbounded resource use on crafted input beyond the
 documented limits, and data being silently changed. Spreadsheet formula injection in CSV
 content is a known property of the CSV format (see the README); CSV Tidy reports values as

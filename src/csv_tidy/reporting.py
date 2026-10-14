@@ -33,6 +33,7 @@ def _issue_dict(issue: Issue) -> dict[str, Any]:
         "suggestion": issue.suggestion,
         "related_record": issue.related_record,
         "related_line": issue.related_line,
+        "remedy": issue.remedy,
     }
     if issue.status is not None:
         data["status"] = issue.status

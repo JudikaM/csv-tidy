@@ -123,19 +123,15 @@
         </select>
       </div>
       <div class="field">
-        <label for="src-date">Dates in this file are written like</label>
-        <input type="text" id="src-date" list="date-formats" value="YYYY-MM-DD" autocomplete="off" spellcheck="false">
-        <p class="hint">Use DD, MM, YYYY with <code>-</code> <code>/</code> or <code>.</code> For example DD/MM/YYYY.</p>
+        <label for="src-date-pick">Dates in this file are written like</label>
+        <select id="src-date-pick" data-date-default="YYYY-MM-DD"></select>
+        <div id="src-date-wrap" hidden>
+          <label for="src-date">Other date format</label>
+          <input type="text" id="src-date" autocomplete="off" spellcheck="false" placeholder="for example DD-MM-YY is not supported; use DD-MM-YYYY">
+        </div>
+        <p class="hint">The example shows 31 December 2026 in each format. 01/02/2026 is never guessed: it is 1 February with DD/MM/YYYY and 2 January with MM/DD/YYYY.</p>
       </div>
     </div>
-    <datalist id="date-formats">
-      <option value="YYYY-MM-DD"></option>
-      <option value="DD/MM/YYYY"></option>
-      <option value="MM/DD/YYYY"></option>
-      <option value="DD-MM-YYYY"></option>
-      <option value="DD.MM.YYYY"></option>
-      <option value="D/M/YYYY"></option>
-    </datalist>
 
     <div class="scroll" id="columns-wrap" tabindex="0" role="region" aria-label="Rules for each column">
       <table class="grid" id="columns">
@@ -167,8 +163,12 @@
         </select>
       </div>
       <div class="field">
-        <label for="out-date">In the cleaned copy, write converted dates like</label>
-        <input type="text" id="out-date" list="date-formats" placeholder="Same as in this file" autocomplete="off" spellcheck="false">
+        <label for="out-date-pick">In the cleaned copy, write converted dates like</label>
+        <select id="out-date-pick" data-date-default=""></select>
+        <div id="out-date-wrap" hidden>
+          <label for="out-date">Other date format</label>
+          <input type="text" id="out-date" autocomplete="off" spellcheck="false" placeholder="for example YYYY.MM.DD">
+        </div>
       </div>
       <div class="field">
         <label for="dedupe">Duplicate rows in the cleaned copy</label>

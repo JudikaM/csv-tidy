@@ -38,6 +38,8 @@ entry points that all call api.check_file / clean_file / export_clean:
 | `profile_init.py` | Starting profiles from a header: explicit choices, guided questions through injected `ask`/`say` callables |
 | `batch.py` | Input selection, artifact planning and collision checks, per-file isolation, batch summary |
 | `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page (HTML, CSS, JS; no dependencies) |
+| `shortcuts.py` | Desktop and Start Menu shortcuts (Windows `.lnk` through PowerShell and the Windows Script Host, Linux desktop entries) |
+| `update.py` | `csv-tidy update`: GitHub release lookup, wheel and SHA-256 selection, the pip command; the only network access |
 | `cli.py` | Argument parsing, exit codes, stdout/stderr separation |
 
 ## Result model and public API
@@ -130,6 +132,19 @@ if result.export_ready:
   HTTP. The browser cannot hand the server a path, so the page sends the file's bytes to
   the local process and receives results as downloads; that also means the original file
   cannot be overwritten. The server holds one session: the latest file and results.
+- **Icons instead of an installer or a bundled executable.** A `gui-scripts` entry point
+  (`csv-tidy-ui`) gives a program without a console window, made by pip itself, and
+  `csv-tidy shortcut install` points icons at it. Updates replace the package in place, so
+  the icons keep working. A self-contained executable was not chosen: unsigned
+  executables trigger SmartScreen warnings, and every user would have to replace the file
+  on each update. Without a console nobody can press Ctrl+C, so the server stops itself
+  after a period without contact from its page.
+- **Updates are explicit and verified.** Only `csv-tidy update` connects to the internet.
+  It installs the wheel attached to a GitHub release and passes GitHub's SHA-256 digest to
+  pip in the URL fragment, which pip checks before installing.
+- **Remedies, not interface text, come from validation.** Issues carry a short `remedy`
+  code. The CLI keeps its English suggestions; the interface writes its own instructions
+  that name its controls.
 - **No type detection, also in the interface and `profile init`.** Both start every column
   as text and show example values only as a reading aid.
 - **Delimiter auto-detection is not provided.** A single-column header containing the other
