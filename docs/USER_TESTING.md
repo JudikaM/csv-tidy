@@ -4,7 +4,7 @@ Two task lists for trying CSV Tidy: one for developers who use the commands or t
 API, and one for administrative staff who use the local interface. They are meant for a
 first session of 20 to 30 minutes with a facilitator who watches and takes notes.
 
-**Status (2026-10-13): these guides have not been run with any external user yet.** There are
+**Status (2026-10-14): these guides have not been run with any external user yet.** There are
 no pilot results. Nothing here is evidence that the tasks are easy or that the tool is useful;
 that is what the sessions are meant to find out. The research questions and the plan for
 handling feedback are in [USER_VALIDATION.md](USER_VALIDATION.md).
@@ -71,7 +71,9 @@ The participant starts at the open page. The facilitator does not touch the mous
 | A6 | Save the cleaned file, then save the rules so a colleague can reuse them. | A `*.clean.csv` and a `*.profile.toml` are in the download folder. |
 | A7 | Open `transactions_unfixable.csv`. Try to save a cleaned copy. Explain why it does not work and what you would do. | The participant reads the blocked message and names the three values to correct in the original file. |
 | A8 | Load the rules saved in A6 for a new file (`transactions_valid.csv`) instead of setting them by hand. | The rules appear in step 3 without manual entry and the check passes. |
-| A9 | Stop the tool. | **Quit CSV Tidy** was used, or the participant asks how; note which. |
+| A9 | Switch to **Several files with the same rules**, choose `transactions_fixable.csv`, `transactions_unfixable.csv`, and `transactions_valid.csv`, load the rules saved in A6, and preview the cleaning of all files. Say which files can be saved and why one cannot. | The participant names the blocked file and its reason without opening the CLI. |
+| A10 | Save all results as one ZIP and say what is inside. | The participant notices that the blocked file is in the ZIP only as a report. |
+| A11 | Stop the tool. | **Quit CSV Tidy** was used, or the participant asks how; note which. |
 
 Things to watch without asking:
 

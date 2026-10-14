@@ -1,6 +1,6 @@
 # Configuration and data contracts
 
-This is the authoritative reference for CSV Tidy 0.2 profiles, options, defaults, and the
+This is the authoritative reference for CSV Tidy 0.3 profiles, options, defaults, and the
 input/output contracts of `check`, `clean`, `profile init`, `batch`, and `ui`.
 
 ## Profiles
@@ -281,10 +281,10 @@ set of options to several files through the same functions as the single-file co
 `csv-tidy ui [--port N] [--no-browser] [--max-file-mb N]` serves one page from a server bound
 to `127.0.0.1` and opens it in the default browser.
 
-- The page sends the chosen file to that local process, which stores it in a private
-  temporary folder (removed when another file is chosen, on **Quit**, and on Ctrl+C). The
-  original file is never opened for writing. Files larger than `--max-file-mb` (default 200)
-  are refused.
+- The page sends the chosen files to that local process, which stores them in a private
+  temporary folder (removed when they are replaced or removed, on **Quit**, and on Ctrl+C).
+  The original files are never opened for writing. A file larger than `--max-file-mb`
+  (default 200), or several files that are larger together, are refused.
 - Preview, check, and cleaning call `check_file`/`clean_file`; the rules set on the page are
   sent as a profile and validated by the profile loader; saving calls `export_clean`. Saved
   files are browser downloads named `NAME.clean.csv`, `NAME.output.toml`,
@@ -295,6 +295,23 @@ to `127.0.0.1` and opens it in the default browser.
 - A result belongs to the file and settings it was made with. Choosing another file or
   changing any setting discards it on the page, and the server refuses to serve a download
   for a result whose settings no longer match.
+- **Several files with the same rules.** The page sends the rules once and the server calls
+  `run_batch` (the function behind `csv-tidy batch clean`/`check`, as a preview) on all chosen
+  files, labelled with their own names. Statuses, counts, and the aggregate exit code are the
+  same as `csv-tidy batch` reports for the same files and rules: `valid`/`invalid` (check),
+  `ready`/`blocked` (clean), `incomplete`, or `failed`, with the reason. **Details** recomputes
+  one file with `check_file`/`clean_file`. Two chosen files whose names differ only in the
+  extension or in letter case are refused, because their results would share a name.
+- **Batch downloads.** Per ready file: `NAME.clean.csv`. All results: `csv-tidy-batch.zip`
+  with `NAME.clean.csv` and `NAME.output.toml` for every ready file (written by
+  `export_clean`), `NAME.report.json` for every file, `batch-summary.json`, and
+  `batch-summary.txt` (the same summary as `csv-tidy batch --format json|text`). Blocked or
+  incomplete files are never exported. The ZIP is built in memory.
+- **More settings.** `max_field_chars` (1 to 100,000,000, validated by the profile loader,
+  applied to the preview, saved in profiles) and three display limits: problems listed (0 to
+  10,000, like `--max-details`), changed values listed (0 to 10,000, like `--max-examples`),
+  and rows shown in previews (1 to 1,000). Defaults: 200, 200, 50. Totals are always complete,
+  and saved reports use the same limits. A result belongs to the limits it was made with.
 - Requests are served only if they are addressed to the loopback host name, carry the session
   key from the page address, and (when the browser sends one) a same-origin `Origin` header.
   The page uses a content security policy that allows only its own script and style sheet;

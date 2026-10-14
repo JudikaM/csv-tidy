@@ -96,12 +96,16 @@ examples:
 
 UI_EPILOG = """\
 ui starts a small web server on this computer only (127.0.0.1) and opens a page with the
-same check and clean pipeline as the commands: choose a file, set the separator and
-encoding, describe the columns or load a profile, check, preview the cleaning, and save the
-results as downloads. The chosen file is copied to a private temporary folder that is
-removed when the server stops; the original is never written to. The page loads nothing from
-the internet. The printed address contains a one-time key; other programs and web pages
-cannot use the server without it.
+same check and clean pipeline as the commands: choose one file or several files, set the
+separator and encoding, describe the columns or load a profile, check, preview the cleaning,
+and save the results as downloads (one file at a time, or every result of several files as a
+ZIP). "More settings" holds the output settings, max_field_chars, and how many problems,
+changed values, and preview rows are listed.
+
+The chosen files are copied to a private temporary folder that is removed when the server
+stops; the originals are never written to. The page loads nothing from the internet. The
+printed address contains a one-time key; other programs and web pages cannot use the server
+without it.
 
 Stop it with the Quit button on the page or Ctrl+C in this window.
 """
@@ -281,7 +285,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=_positive,
         default=200,
         metavar="N",
-        help="largest file the page accepts, in MB (default 200; files are held in memory)",
+        help="largest file, and largest total of several files chosen together, in MB "
+        "(default 200; results are built in memory)",
     )
     return parser
 

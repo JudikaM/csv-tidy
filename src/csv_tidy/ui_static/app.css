@@ -179,7 +179,17 @@ th.repair { color: var(--accent); }
 .tag { display: inline-block; padding: 0 0.5rem; border-radius: 2rem; font-size: 0.8125rem; font-weight: 650; white-space: nowrap; }
 .tag.error, .tag.fatal { background: var(--bad-bg); color: var(--bad-ink); }
 .tag.warning { background: var(--warn-bg); color: var(--warn-ink); }
-.tag.fixed, .tag.removed { background: var(--ok-bg); color: var(--ok-ink); }
+.tag.fixed, .tag.removed, .tag.ready, .tag.valid { background: var(--ok-bg); color: var(--ok-ink); }
+.tag.blocked, .tag.invalid, .tag.incomplete, .tag.failed { background: var(--bad-bg); color: var(--bad-ink); }
+.mode { max-width: none; margin-bottom: 0.25rem; }
+.mode .choice { display: inline-flex; margin-right: 1.5rem; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.row-actions button { min-height: 2rem; padding: 0.25rem 0.625rem; }
+tr.current > * { background: var(--panel); }
+.detail { margin-top: 1rem; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius); }
+.detail > * + * { margin-top: 0.875rem; }
+input[type="number"] { font: inherit; color: inherit; background: #fff; border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 0.4375rem 0.625rem; min-height: 2.375rem; width: 100%; }
+input[type="number"]::placeholder { color: var(--ink-soft); opacity: 1; }
 .note { color: var(--ink-soft); font-size: 0.875rem; }
 .blocked { padding: 0.75rem 1rem; background: var(--bad-bg); color: var(--bad-ink); border-radius: var(--radius); max-width: 90ch; font-weight: 600; }
 .coverage { max-width: 100ch; }
