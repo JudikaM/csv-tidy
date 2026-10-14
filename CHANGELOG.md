@@ -6,7 +6,7 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-10-13
+## [0.2.0] - 2026-10-14
 
 Second early-alpha release: a profile creator, a local browser interface, batch processing,
 clearer reports, and four reliability fixes. The code was published in commit `0cdae3a`; this
