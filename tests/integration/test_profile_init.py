@@ -244,3 +244,66 @@ def test_help_lists_the_new_command():
     assert "profile" in run_cli("--help").out
     text = run_cli("profile", "init", "--help").out
     assert "--interactive" in text and "never" in text
+
+
+MIXED = "id;amount;usd;day;us_day\n1;1.250,50;1,250.50;31/12/2026;12/31/2026\n"
+
+
+def test_per_column_formats_are_written_and_used(tmp_path, write, no_stdin):
+    source = write("mixed.csv", MIXED)
+    out = tmp_path / "p.toml"
+    result = init(
+        str(source), "--delimiter", ";", "--output", str(out),
+        "--decimal", "amount", "--decimal", "usd", "--date", "day", "--date", "us_day",
+        "--number-format", "id", "--date-format", "DD/MM/YYYY",
+        "--column-number-format", "usd=us", "--column-date-format", "us_day=MM/DD/YYYY",
+    )  # fmt: skip
+    assert result.code == 0, result.err
+    columns = {c.name: c for c in load_profile(out).columns}
+    assert (columns["usd"].number_format, columns["amount"].number_format) == ("us", None)
+    assert (columns["us_day"].date_format, columns["day"].date_format) == ("MM/DD/YYYY", None)
+    assert check_file(source, load_profile(out)).exit_code == 0
+
+
+def test_column_names_may_contain_an_equals_sign(tmp_path, write, no_stdin):
+    source = write("eq.csv", 'id,a=b\n1,"1,5"\n')
+    out = tmp_path / "p.toml"
+    result = init(
+        str(source), "--output", str(out), "--decimal", "a=b",
+        "--column-number-format", "a=b=id",
+    )  # fmt: skip
+    assert result.code == 0, result.err
+    assert {c.name: c.number_format for c in load_profile(out).columns}["a=b"] == "id"
+
+
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        (["--column-number-format", "usd=us"], "--decimal usd"),
+        (["--decimal", "usd", "--column-date-format", "usd=MM/DD/YYYY"], "--date usd"),
+        (["--column-number-format", "nope=us"], "not a column of this file"),
+        (["--decimal", "usd", "--column-number-format", "usd=xx"], "'xx'"),
+        (["--date", "day", "--column-date-format", "day=YYYY-MM"], "YYYY-MM"),
+        (
+            [
+                "--decimal",
+                "usd",
+                "--column-number-format",
+                "usd=us",
+                "--column-number-format",
+                "usd=id",
+            ],
+            "more than once",
+        ),
+        (["--column-number-format", "usd"], "COLUMN=FORMAT"),
+    ],
+)
+def test_per_column_format_mistakes_are_refused_before_writing(
+    tmp_path, write, no_stdin, options, message
+):
+    out = tmp_path / "p.toml"
+    result = init(
+        str(write("mixed.csv", MIXED)), "--delimiter", ";", "--output", str(out), *options
+    )
+    assert result.code == 2 and message in result.err, result.err
+    assert not out.exists()

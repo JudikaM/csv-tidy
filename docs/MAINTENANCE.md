@@ -55,8 +55,7 @@ Candidates, to be prioritized by real user requests rather than built speculativ
 - `.xlsx` input, hosted or multi-user web access, database targets (deferred; not planned
   for 0.x). The local, single-user interface (`csv-tidy ui`) exists; changes to it should
   come from sessions described in [USER_TESTING.md](USER_TESTING.md).
-- Per-column formats and combined keys in `profile init` options; a native file dialog
-  for the local interface.
+- A native file dialog for the local interface.
 - A self-contained Windows executable (needs code signing to avoid SmartScreen warnings),
   only if user testing shows that installing Python is the obstacle; macOS shortcuts.
 - Translations of messages/documentation if users need them.
