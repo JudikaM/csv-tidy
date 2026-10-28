@@ -100,9 +100,10 @@
     </div>
     <fieldset class="field">
       <legend class="eyebrow">Columns are separated by</legend>
-      <div class="options two compact">
+      <div class="options three compact">
         <label class="option"><input type="radio" name="delimiter" value="," checked><span class="option-title">Comma</span><code class="chip">,</code></label>
         <label class="option"><input type="radio" name="delimiter" value=";"><span class="option-title">Semicolon</span><code class="chip">;</code></label>
+        <label class="option"><input type="radio" name="delimiter" value="&#9;"><span class="option-title">Tab</span><code class="chip">&#8677;</code></label>
       </div>
       <p class="hint">Not detected automatically. If the preview shows one wide column, switch this.</p>
     </fieldset>
@@ -259,6 +260,7 @@
             <option value="">Same as this file</option>
             <option value=",">Comma ,</option>
             <option value=";">Semicolon ;</option>
+            <option value="&#9;">Tab</option>
           </select>
         </div>
         <div class="field">

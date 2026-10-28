@@ -180,7 +180,11 @@ def ask_source(ask: Ask, say: Say, delimiter: str | None, encoding: str | None) 
     if delimiter is None:
         say("How are the columns separated in the file? (This is never detected automatically.)")
         delimiter = _pick(
-            ask, say, "Delimiter", [(",", "comma  ,"), (";", "semicolon  ;")], DEFAULT_DELIMITER
+            ask,
+            say,
+            "Delimiter",
+            [(",", "comma  ,"), (";", "semicolon  ;"), ("\t", "tab")],
+            DEFAULT_DELIMITER,
         )
     if encoding is None:
         encoding = _text(

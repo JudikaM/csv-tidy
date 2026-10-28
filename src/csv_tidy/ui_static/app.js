@@ -242,7 +242,9 @@ function applyProfile(profile, name) {
   const output = profile.output || {};
   let reread = false;
   if (source.delimiter && source.delimiter !== currentDelimiter()) {
-    document.querySelector(`input[name="delimiter"][value="${source.delimiter === ";" ? ";" : ","}"]`).checked = true;
+    for (const radio of document.querySelectorAll('input[name="delimiter"]')) {
+      radio.checked = radio.value === source.delimiter;
+    }
     reread = true;
   }
   if (source.encoding && source.encoding !== currentEncoding()) {

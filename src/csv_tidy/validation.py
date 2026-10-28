@@ -19,7 +19,7 @@ from .formats import (
     parse_number,
 )
 from .reader import Record, Table
-from .schema import ColumnSpec, Settings
+from .schema import DELIMITERS, ColumnSpec, Settings
 
 ERROR = "error"
 WARNING = "warning"
@@ -177,8 +177,10 @@ def _header_issues(table: Table, settings: Settings, stage: str) -> list[Issue]:
                 )
             )
     if len(header) == 1 and settings.source.delimiter not in header[0]:
-        other = ";" if settings.source.delimiter == "," else ","
-        if other in header[0]:
+        found = [d for d in DELIMITERS if d != settings.source.delimiter and d in header[0]]
+        if found:
+            other = found[0]
+            option = "--delimiter tab" if other == "\t" else "--delimiter"
             issues.append(
                 Issue(
                     "possible_wrong_delimiter",
@@ -186,7 +188,7 @@ def _header_issues(table: Table, settings: Settings, stage: str) -> list[Issue]:
                     f"The header is a single column containing {other!r}; "
                     f"the file may use {other!r} as delimiter "
                     f"instead of {settings.source.delimiter!r}.",
-                    f"Set the delimiter to {other!r} with --delimiter "
+                    f"Set the delimiter to {other!r} with {option} "
                     "or in the profile [source] table.",
                     stage,
                     line_start=line,

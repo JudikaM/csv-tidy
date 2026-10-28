@@ -143,6 +143,15 @@ def test_preview_shows_rows_and_never_guesses_the_delimiter(ui):
     assert data["report"]["source"]["path"] == "transactions_fixable.csv"
 
 
+def test_preview_reads_tab_separated_files(ui, tmp_path):
+    tsv = tmp_path / "people.tsv"
+    tsv.write_text("id\tname\n1\tAda\n", encoding="utf-8")
+    loaded = ui.upload(tsv)
+    status, data = ui.post("/api/preview", {"file_id": loaded["file_id"], "delimiter": "\t"})
+    assert status == 200 and data["header"] == ["id", "name"]
+    assert data["rows"][0]["fields"] == ["1", "Ada"]
+
+
 def test_check_and_clean_match_the_library_results(ui):
     loaded = ui.upload(FIXABLE)
     body = {"file_id": loaded["file_id"], "profile": profile_dict()}

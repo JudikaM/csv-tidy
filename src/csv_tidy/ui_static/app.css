@@ -235,6 +235,8 @@ h3 { font-size: 0.9375rem; font-weight: 650; }
 .setup .field { max-width: none; min-width: 0; }
 .options { display: grid; gap: 0.75rem; }
 .options.two { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 44rem; }
+/* Three choices in a narrow column: two per row, the third on its own row. */
+.options.three { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 44rem; }
 .option {
   display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0.875rem; cursor: pointer;
   background: var(--input); border: 1px solid var(--line); border-radius: var(--radius); font-weight: 400;
@@ -418,7 +420,7 @@ dialog p { color: var(--ink-2); }
 }
 @media (max-width: 44rem) {
   .wrap { padding-inline: 1rem; }
-  .setup, .options.two { grid-template-columns: 1fr; }
+  .setup, .options.two, .options.three { grid-template-columns: 1fr; }
   .card { padding: 1.125rem; }
   .scroll { max-height: 22rem; }
 }

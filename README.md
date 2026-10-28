@@ -49,7 +49,7 @@ There are three ways to use the same engine:
 
 ## Features
 
-- Strict CSV reading: comma or semicolon, UTF-8 with or without BOM (or an explicit
+- Strict CSV reading: comma, semicolon, or tab, UTF-8 with or without BOM (or an explicit
   encoding), quoted fields with delimiters, quotes and line breaks, LF/CRLF. Undecodable
   bytes and malformed quoting stop the scan instead of being skipped.
 - Structure checks: empty file, header-only file, blank lines, empty/duplicate headers, and
@@ -357,7 +357,7 @@ program, or from a command line:
 This starts a small web server **on this computer only** and opens a page in your browser:
 
 1. Choose **one file** or **several files with the same rules**, then the separator (comma
-   or semicolon) and the encoding.
+   semicolon, or tab) and the encoding.
 2. Look at the first rows exactly as they are stored (with several files, pick which one).
 3. Describe the columns with drop-downs and checkboxes, or load a profile.
 4. Check: problems are listed with record, file line, column, and what to do. With several
@@ -489,7 +489,8 @@ in [examples/api_example.py](examples/api_example.py). See
 - Dates: numeric formats built from `YYYY`, `MM`/`M`, `DD`/`D` and `-`, `/`, `.` separators,
   or without separators from `YYYY`, `MM`, `DD` (for example `YYYYMMDD`). No month names or
   times.
-- The header row is required. Delimiters are `,` or `;` and are never auto-detected.
+- The header row is required. Delimiters are `,`, `;`, or tab (`--delimiter tab`, `"\t"` in
+  profiles) and are never auto-detected.
 - Files are processed in memory, one file at a time. Duplicate detection memory grows with
   distinct rows/keys. The default field limit is 131,072 characters (`max_field_chars`).
   Measured times and memory for up to 500,000 rows are in

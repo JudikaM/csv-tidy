@@ -12,6 +12,10 @@ All notable changes are documented here. The format follows
   and output dates in profiles, options, and the local interface (which lists `YYYYMMDD`).
   They may use only the fixed-width tokens `YYYY`, `MM`, and `DD`; `YYYYMD` and mixed formats
   such as `YYYY-MMDD` are rejected with an explanation.
+- Tab-separated files: `delimiter = "\t"` in profiles, `--delimiter tab` and
+  `--output-delimiter tab` (a tab character or `\t` also works), a Tab choice in the local
+  interface, and tab in the guided `profile init`. The single-column hint also recognizes
+  tabs, and next-step commands spell the option as `--delimiter tab`.
 - README: status badges, quick links, and screenshots of the local interface in its dark and
   light themes (`docs/images/`).
 - A code of conduct (Contributor Covenant 2.1), linked from the README and CONTRIBUTING.md and

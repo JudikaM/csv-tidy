@@ -13,7 +13,7 @@ inconsistent settings are rejected with an error (exit code 2); nothing is silen
 schema_version = 1            # required; only 1 is supported
 
 [source]                      # how to read the input
-delimiter = ";"               # "," or ";"                         default ","
+delimiter = ";"               # ",", ";" or "\t" (tab)              default ","
 encoding = "utf-8"            # a Python text encoding              default "utf-8"
 number_format = "id"          # "id", "us" or "canonical"           default "canonical"
 date_format = "DD/MM/YYYY"    # see "Date formats"                  default "YYYY-MM-DD"
@@ -141,7 +141,10 @@ guesses which one you meant. Month names, times, and time zones are not supporte
 - The first non-blank row is the header; a header is required.
 - Fields are always text. Quoted fields may contain delimiters, doubled quotes (`""`), and
   line breaks; such records span several physical lines and are reported with a line range.
-- Comma and semicolon delimiters, LF and CRLF line endings, UTF-8 with or without BOM.
+- Comma, semicolon, and tab delimiters, LF and CRLF line endings, UTF-8 with or without BOM.
+  A tab is written `"\t"` in profiles and `tab` in options (`--delimiter tab`,
+  `--output-delimiter tab`; a tab character or `\t` is accepted too). Excel's "Unicode Text"
+  export is tab-separated UTF-16: use `--delimiter tab --encoding utf-16`.
   Line numbers count LF, CRLF, and lone CR line breaks, as Python's `csv` module does.
   With `encoding = "utf-8"` a UTF-8 BOM is accepted and removed from the header.
 - Decoding is strict: undecodable bytes stop the scan with a fatal `decode_error`; nothing is
@@ -164,7 +167,7 @@ guesses which one you meant. Month names, times, and time zones are not supporte
 | Empty / whitespace-only header | `empty_header` error |
 | Duplicate header | `duplicate_header` error (values are never overwritten) |
 | Header with surrounding spaces | `header_whitespace` warning |
-| Single-column header containing the other delimiter | `possible_wrong_delimiter` warning |
+| Single-column header containing another supported delimiter | `possible_wrong_delimiter` warning |
 | Too few / too many fields | `inconsistent_columns` error; the record is not checked further, never transformed or removed |
 | Malformed quoting (unterminated quoted field, text after a closing quote) | fatal `malformed_csv`; scan incomplete |
 | Field longer than `max_field_chars` | fatal `field_too_large`; scan incomplete |
