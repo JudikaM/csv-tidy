@@ -74,6 +74,7 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | RG | After a decoding error `physical_lines` stayed 0 and readable records were not counted | AC-05, AC-21 | `test_rg_*` (every newline, a file larger than one read buffer, earlier malformed quoting, open quoted field) |
 | RH | Overlapping reads shared the process-wide field limit, so a 50-character field passed a limit of 10 | AC-05 | `test_rh_overlapping_reads_each_keep_their_own_field_limit` (both orders), `test_rh_field_limit_boundary_is_unchanged`, `test_rh_global_field_limit_is_restored_after_failures` |
 | RI | `export_clean` on an incomplete result said "0 output error(s) remain" | AC-20 | `test_ri_*` |
+| RJ | A refused request to the local interface could reset the connection before the answer arrived (issue #23) | AC-33 | `integration/test_ui.py`: `test_refused_requests_with_a_body_still_get_their_answer` |
 | — | Parsing contract: a quote inside an unquoted field is kept literally | AC-05 | `test_quote_inside_unquoted_field_follows_python_csv_and_is_kept_literally` |
 
 ## Fixture expectations
