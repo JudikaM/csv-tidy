@@ -6,11 +6,12 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
-Project presentation only. The CLI, profiles, reports, exit codes, the local interface, and the
-Python API are unchanged.
-
 ### Added
 
+- Date formats without separators, such as `YYYYMMDD` (`20261231`) and `DDMMYYYY`, for source
+  and output dates in profiles, options, and the local interface (which lists `YYYYMMDD`).
+  They may use only the fixed-width tokens `YYYY`, `MM`, and `DD`; `YYYYMD` and mixed formats
+  such as `YYYY-MMDD` are rejected with an explanation.
 - README: status badges, quick links, and screenshots of the local interface in its dark and
   light themes (`docs/images/`).
 - A code of conduct (Contributor Covenant 2.1), linked from the README and CONTRIBUTING.md and

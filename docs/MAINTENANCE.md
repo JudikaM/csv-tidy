@@ -49,7 +49,7 @@ Candidates, to be prioritized by real user requests rather than built speculativ
 - Streaming processing for files larger than memory.
 - Additional number grammars (for example space or apostrophe grouping) and textual month
   names with explicit language selection.
-- Compact `YYYYMMDD` dates and date-time values.
+- Date-time values.
 - Opt-in delimiter detection with explicit confirmation.
 - Optional spreadsheet-formula neutralization as an explicit transformation.
 - `.xlsx` input, hosted or multi-user web access, database targets (deferred; not planned
