@@ -6,7 +6,7 @@ removed. Values that cannot be parsed are left unchanged so output validation re
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from .formats import compile_date_format, format_number, parse_number
@@ -99,7 +99,7 @@ def transform(
     original = {rec.index: rec for rec in records}
     changes = []
     for rec in kept:
-        for pos, steps in sorted(steps_by_record.get(rec.index, {}).items()):
+        for pos, field_steps in sorted(steps_by_record.get(rec.index, {}).items()):
             before = original[rec.index].fields[pos]
             if rec.fields[pos] != before:
                 changes.append(
@@ -109,7 +109,7 @@ def transform(
                         header[pos],
                         before,
                         rec.fields[pos],
-                        tuple(steps),
+                        tuple(field_steps),
                     )
                 )
     kept_ids = {rec.index for rec in kept}
@@ -117,10 +117,12 @@ def transform(
     return TransformResult(kept, changes, removed, failed)
 
 
-def _deduplicate(records: list[Record], settings: Settings, index: dict[str, int], width: int):
+def _deduplicate(
+    records: list[Record], settings: Settings, index: dict[str, int], width: int
+) -> tuple[list[Record], list[RemovedRecord]]:
     if settings.deduplicate == "off":
         return records, []
-    keys = []
+    keys: list[tuple[tuple[str, ...], list[int]]] = []
     if settings.deduplicate == "keys":
         keys = [
             (key, [index[n] for n in key])
@@ -161,7 +163,7 @@ def _deduplicate(records: list[Record], settings: Settings, index: dict[str, int
     return kept, removed
 
 
-def _number_converter(source_fmt: str, output_fmt: str):
+def _number_converter(source_fmt: str, output_fmt: str) -> Callable[[str], str | None]:
     def convert(value: str) -> str | None:
         parsed = parse_number(value, source_fmt)
         return None if parsed is None else format_number(parsed, output_fmt)
@@ -169,7 +171,7 @@ def _number_converter(source_fmt: str, output_fmt: str):
     return convert
 
 
-def _date_converter(source_fmt: str, output_fmt: str):
+def _date_converter(source_fmt: str, output_fmt: str) -> Callable[[str], str | None]:
     source, output = compile_date_format(source_fmt), compile_date_format(output_fmt)
 
     def convert(value: str) -> str | None:

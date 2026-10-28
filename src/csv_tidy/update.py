@@ -16,6 +16,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from . import __version__
 from .errors import CsvTidyError
@@ -39,7 +40,7 @@ class Release:
     sha256: str
 
 
-def fetch_json(url: str) -> dict:
+def fetch_json(url: str) -> dict[str, Any]:
     """GET ``url`` from the GitHub API. Replaced by test doubles in the tests."""
     request = urllib.request.Request(
         url,
@@ -49,7 +50,8 @@ def fetch_json(url: str) -> dict:
         },
     )
     with urllib.request.urlopen(request, timeout=30) as response:
-        return json.loads(response.read().decode("utf-8"))
+        data: dict[str, Any] = json.loads(response.read().decode("utf-8"))
+    return data
 
 
 def run_pip(command: Sequence[str]) -> int:

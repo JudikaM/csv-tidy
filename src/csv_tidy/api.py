@@ -242,7 +242,7 @@ def clean_file(
     changes: list[FieldChange] = []
     removed: list[RemovedRecord] = []
     rows: tuple[tuple[str, ...], ...] = ()
-    if not table.complete:
+    if table.fatal is not None:  # the scan is incomplete
         source_issues.append(_fatal_issue(table.fatal, "source"))
         output_issues: list[Issue] = []
     elif table.header is None:
@@ -337,7 +337,7 @@ def export_clean(
         encode_text(result.output_profile_toml(), "utf-8", "output profile") if schema else None
     )
     outcomes = [write_artifact(output, csv_bytes, overwrite, "output CSV")]
-    if schema is not None:
+    if schema is not None and schema_bytes is not None:
         try:
             outcomes.append(write_artifact(schema, schema_bytes, overwrite, "output profile"))
         except OutputError as exc:

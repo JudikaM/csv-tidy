@@ -27,7 +27,7 @@ def _issue_dict(issue: Issue) -> dict[str, Any]:
         "line_start": issue.line_start,
         "line_end": issue.line_end,
         "column": issue.column,
-        "value": value[:VALUE_LIMIT] if truncated else value,
+        "value": value[:VALUE_LIMIT] if value is not None and truncated else value,
         "value_truncated": truncated,
         "message": issue.message,
         "suggestion": issue.suggestion,
@@ -259,6 +259,8 @@ def _transformations(settings: Settings) -> dict[str, Any]:
     normalize = []
     for name in settings.normalize:
         column = settings.column(name)
+        if column is None:  # unreachable: resolve_settings rejects undeclared columns
+            continue
         normalize.append(
             {
                 "column": name,
