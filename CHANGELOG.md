@@ -22,6 +22,8 @@ Python API are unchanged.
 
 - Security reports now go through GitHub private vulnerability reporting instead of a
   detail-free contact-request issue (SECURITY.md).
+- Release process: `main` is protected, so a release commit reaches it through a pull request
+  with passing CI, and the tag points to the resulting `main` commit (docs/RELEASE.md).
 - Package metadata: Documentation, Source, and Releases links.
 
 ## [0.4.1] - 2026-10-14
