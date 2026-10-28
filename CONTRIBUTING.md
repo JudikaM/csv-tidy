@@ -45,7 +45,9 @@ CI also audits the packages pinned in `constraints-dev.txt` for known vulnerabil
 every pull request and weekly. To run the audit yourself, install `pip-audit` in a separate
 environment (so that `constraints-dev.txt` can still be regenerated from the development
 environment) and run
-`pip-audit --requirement constraints-dev.txt --no-deps --disable-pip`.
+`pip-audit --requirement constraints-dev.txt --no-deps --disable-pip`. CodeQL analyzes the
+Python code and the local interface's JavaScript on pull requests and weekly; its findings
+appear in the repository's Security tab.
 
 ## Adding tests, fixtures, and regressions
 

@@ -34,6 +34,8 @@ Python API are unchanged.
   92%.
 - A dependency audit (pip-audit) checks every package pinned for development and CI against
   published vulnerabilities, on pull requests, on `main`, and weekly.
+- CodeQL analyzes the Python code and the local interface's JavaScript with the
+  `security-extended` queries, on pull requests, on `main`, and weekly.
 - Package metadata: Documentation, Source, and Releases links.
 
 ## [0.4.1] - 2026-10-14
