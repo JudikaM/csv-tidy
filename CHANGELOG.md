@@ -30,6 +30,8 @@ Python API are unchanged.
 - CI tests every supported Python version (3.11 to 3.15) on Linux, and Python 3.11 and 3.15 on
   Windows and macOS. On macOS the distribution smoke test checks that `csv-tidy shortcut
   install` refuses with exit code 2, since shortcuts are made on Windows and Linux only.
+- CI measures line and branch coverage of the tests (94% when this was added) and fails below
+  92%.
 - Package metadata: Documentation, Source, and Releases links.
 
 ## [0.4.1] - 2026-10-14

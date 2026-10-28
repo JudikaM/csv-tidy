@@ -31,7 +31,7 @@ python3 -m venv .venv
 python -m ruff check .
 python -m ruff format --check .
 python -m mypy
-python -m pytest
+python -m pytest --cov --cov-report=term-missing
 python -m build
 python scripts/smoke_dist.py dist
 ```
