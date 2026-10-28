@@ -6,6 +6,24 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+Project presentation only. The CLI, profiles, reports, exit codes, the local interface, and the
+Python API are unchanged.
+
+### Added
+
+- README: status badges, quick links, and screenshots of the local interface in its dark and
+  light themes (`docs/images/`).
+- A code of conduct (Contributor Covenant 2.1), linked from the README and CONTRIBUTING.md and
+  included in the source distribution.
+- The new-issue page links questions to Discussions and security reports to private
+  vulnerability reporting; blank issues stay available for contact requests.
+
+### Changed
+
+- Security reports now go through GitHub private vulnerability reporting instead of a
+  detail-free contact-request issue (SECURITY.md).
+- Package metadata: Documentation, Source, and Releases links.
+
 ## [0.4.1] - 2026-10-14
 
 A new look for the local interface, and a port fix on Windows. The CLI, profiles, reports,

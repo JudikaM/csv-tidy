@@ -1,0 +1,10 @@
+# Blank issues stay enabled: CODE_OF_CONDUCT.md asks for a detail-free
+# "contact request" issue until a private channel is arranged.
+blank_issues_enabled: true
+contact_links:
+  - name: Question or idea
+    url: https://github.com/JudikaM/csv-tidy/discussions
+    about: Ask how to describe a file, or discuss an idea before it becomes a request.
+  - name: Security vulnerability
+    url: https://github.com/JudikaM/csv-tidy/security/advisories/new
+    about: Report it privately; never in a public issue. See SECURITY.md for the scope.

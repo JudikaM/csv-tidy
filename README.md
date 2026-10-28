@@ -1,7 +1,31 @@
+<div align="center">
+
 # CSV Tidy
 
-A Python CLI, library, and local browser interface for validating and cleaning CSV files with
-explicit number and date formats.
+**Validate and explicitly clean CSV files: numbers and dates in the formats you declare,
+nothing guessed.**
+
+A Python CLI, library, and local browser interface. Offline, typed, and MIT licensed.
+
+[![CI](https://github.com/JudikaM/csv-tidy/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JudikaM/csv-tidy/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/JudikaM/csv-tidy?label=release&color=6d5dfc)](https://github.com/JudikaM/csv-tidy/releases/latest)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](#installation)
+[![Typed](https://img.shields.io/badge/typing-typed-2f855a)](src/csv_tidy/py.typed)
+[![License: MIT](https://img.shields.io/github/license/JudikaM/csv-tidy?color=blue)](LICENSE)
+
+[Quick start](#quick-start) ·
+[Local interface](#local-interface-for-people-who-prefer-forms) ·
+[Profiles](#create-a-profile) ·
+[Library](#library) ·
+[Configuration](docs/CONFIGURATION.md) ·
+[Changelog](CHANGELOG.md)
+
+</div>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/interface-dark.png">
+  <img src="docs/images/interface-light.png" alt="The CSV Tidy local interface with a semicolon-separated file loaded: the status bar says it is ready to save 4 rows with 9 values changed, and the data preview shows Indonesian-format amounts and DD/MM/YYYY dates.">
+</picture>
 
 CSV Tidy helps you find, understand, and explicitly repair CSV data problems before importing
 the data elsewhere: inconsistent field counts, missing required values, duplicate records and
@@ -347,6 +371,11 @@ This starts a small web server **on this computer only** and opens a page in you
    ready file, a report for every file, and a batch summary. Files that are blocked or could
    not be read are never exported; they are in the ZIP as reports only.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/interface-preview-dark.png">
+  <img src="docs/images/interface-preview-light.png" alt="Step 5 of the local interface: the cleaned copy has no problems, a table lists every changed value before and after with the repair that changed it, and the cleaned rows are shown with changed values highlighted.">
+</picture>
+
 The page has a dark and a light theme (switch in the header), and files can be dropped onto
 the file area. Dates are chosen from a list of common formats (with an example such as `31/12/2026`), and
 **Other…** accepts any supported format. Suggestions name the page's own controls, for
@@ -486,4 +515,5 @@ lists in [docs/USER_TESTING.md](docs/USER_TESTING.md) and the questions in
 ## Contributing and license
 
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and
-[CHANGELOG.md](CHANGELOG.md). CSV Tidy is released under the [MIT License](LICENSE).
+[CHANGELOG.md](CHANGELOG.md). Everyone taking part is expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). CSV Tidy is released under the [MIT License](LICENSE).

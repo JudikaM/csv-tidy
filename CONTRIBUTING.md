@@ -1,6 +1,9 @@
 # Contributing to CSV Tidy
 
 Thank you for helping. Bug reports with a small synthetic reproducer are as valuable as code.
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md);
+questions and early ideas are welcome in
+[Discussions](https://github.com/JudikaM/csv-tidy/discussions).
 
 ## Development setup
 
