@@ -22,7 +22,7 @@ from .errors import ProfileError
 from .formats import NUMBER_FORMATS, compile_date_format
 
 SCHEMA_VERSION = 1
-DELIMITERS = (",", ";")
+DELIMITERS = (",", ";", "\t")
 COLUMN_TYPES = ("text", "decimal", "date")
 LINE_ENDINGS = ("crlf", "lf")
 DUPLICATE_ROW_POLICIES = ("warn", "ignore")
@@ -34,6 +34,12 @@ DEFAULT_NUMBER_FORMAT = "canonical"
 DEFAULT_DATE_FORMAT = "YYYY-MM-DD"
 DEFAULT_MAX_FIELD_CHARS = 131072
 MAX_FIELD_CHARS_LIMIT = 100_000_000
+
+
+def delimiter_option(delimiter: str) -> str:
+    """The delimiter as a command-line value: ``tab`` for a tab, the character otherwise."""
+    return "tab" if delimiter == "\t" else delimiter
+
 
 _TOP_KEYS = ("schema_version", "source", "output", "columns", "duplicates", "transform")
 _SOURCE_KEYS = ("delimiter", "encoding", "number_format", "date_format", "max_field_chars")

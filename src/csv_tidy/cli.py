@@ -158,10 +158,23 @@ columns). Output settings default to the resolved source settings.
 """
 
 
+def _delimiter(text: str) -> str:
+    """Delimiter option values: ',', ';', and tab (also given as a tab character or as \\t)."""
+    value = "\t" if text in ("tab", "\t", "\\t") else text
+    if value not in DELIMITERS:
+        raise argparse.ArgumentTypeError(f"invalid delimiter {text!r}; use ',', ';' or tab")
+    return value
+
+
 def _source_options(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("source options (override the profile)")
     group.add_argument("--schema", metavar="PROFILE", help="TOML profile (schema_version = 1)")
-    group.add_argument("--delimiter", choices=DELIMITERS, help="source delimiter (default ',')")
+    group.add_argument(
+        "--delimiter",
+        type=_delimiter,
+        metavar="DELIMITER",
+        help="source delimiter: ',', ';' or tab (default ',')",
+    )
     group.add_argument(
         "--encoding", help="source encoding (default utf-8; a UTF-8 BOM is accepted)"
     )
@@ -202,7 +215,9 @@ def _report_options(parser: argparse.ArgumentParser) -> None:
 
 def _transform_options(clean: argparse.ArgumentParser) -> None:
     out = clean.add_argument_group("output options (default: follow the resolved source settings)")
-    out.add_argument("--output-delimiter", choices=DELIMITERS)
+    out.add_argument(
+        "--output-delimiter", type=_delimiter, metavar="DELIMITER", help="',', ';' or tab"
+    )
     out.add_argument("--output-encoding", metavar="ENCODING")
     out.add_argument("--output-number-format", choices=NUMBER_FORMATS)
     out.add_argument("--output-date-format", metavar="FORMAT")
@@ -482,7 +497,12 @@ def _profile_parser(sub: _Subparsers) -> None:
         help="answer guided questions instead of (or in addition to) the options below",
     )
     src = init.add_argument_group("how to read the file (written into the profile)")
-    src.add_argument("--delimiter", choices=DELIMITERS, help="delimiter (default ',')")
+    src.add_argument(
+        "--delimiter",
+        type=_delimiter,
+        metavar="DELIMITER",
+        help="delimiter: ',', ';' or tab (default ',')",
+    )
     src.add_argument("--encoding", help="encoding (default utf-8)")
     src.add_argument(
         "--number-format",

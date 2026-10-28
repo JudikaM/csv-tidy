@@ -9,7 +9,7 @@ from typing import Any
 from . import __version__
 from .api import CheckResult, CleanResult, ScanInfo
 from .output import ArtifactOutcome
-from .schema import DEFAULT_DELIMITER, DEFAULT_ENCODING, Settings
+from .schema import DEFAULT_DELIMITER, DEFAULT_ENCODING, Settings, delimiter_option
 from .validation import ERROR, FATAL, WARNING, Issue
 
 REPORT_SCHEMA_VERSION = 1
@@ -121,7 +121,7 @@ def _command(action: str, source: dict[str, Any], *extra: str) -> str:
         parts += ["--schema", shown_arg(source["profile"])]
     else:
         if source["delimiter"] != DEFAULT_DELIMITER:
-            parts += ["--delimiter", shown_arg(source["delimiter"])]
+            parts += ["--delimiter", shown_arg(delimiter_option(source["delimiter"]))]
         if source["encoding"] != DEFAULT_ENCODING:
             parts += ["--encoding", shown_arg(source["encoding"])]
     return " ".join([*parts, *extra])

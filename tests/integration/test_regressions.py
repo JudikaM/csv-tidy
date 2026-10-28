@@ -245,7 +245,7 @@ def test_r5_text_encodings_still_work(write):
     ("profile", "fragment"),
     [
         (Profile(source_delimiter="|"), "delimiter"),
-        (Profile(output_delimiter="\t"), "delimiter"),
+        (Profile(output_delimiter=":"), "delimiter"),
         (Profile(columns=(ColumnSpec("amount", type="unknown"),)), "type"),
         (
             Profile(columns=(ColumnSpec("amount", type="decimal", number_format="bogus"),)),
