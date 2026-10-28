@@ -127,10 +127,14 @@ These are data grammars, not interface languages or a claim of full locale cover
 A date format combines exactly one year, month, and day token with single separators `-`, `/`
 or `.` between them: `YYYY` (4 digits), `MM`/`DD` (exactly 2 digits), `M`/`D` (1-2 digits).
 Examples: `YYYY-MM-DD`, `DD/MM/YYYY`, `MM/DD/YYYY`, `D.M.YYYY`. Tokens are uppercase.
+
+A format may also have no separators at all, as in `YYYYMMDD` (`20261231`) or `DDMMYYYY`. It
+must then use only the fixed-width tokens `YYYY`, `MM`, and `DD`, because with `M` or `D` a
+value such as `2026111` could be 1 November or 11 January. Separators are used between every
+two tokens or not at all; `YYYY-MMDD` is rejected.
 Calendar validity is checked (`31/02/2026` and `29/02/2025` are invalid; `29/02/2024` is valid).
 `01/02/2026` is 1 February with `DD/MM/YYYY` and 2 January with `MM/DD/YYYY`; CSV Tidy never
-guesses which one you meant. Month names, times, time zones, and compact `YYYYMMDD` are not
-supported.
+guesses which one you meant. Month names, times, and time zones are not supported.
 
 ## Reading rules
 

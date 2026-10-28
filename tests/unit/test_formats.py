@@ -139,7 +139,7 @@ def test_date_formatting_and_padding():
         "yyyy-mm-dd",
         "YYYY-MM",
         "YYYY-MM-DD-DD",
-        "YYYYMMDD",
+        "YYYYMMDDDD",
         "%Y-%m-%d",
         "DD MMM YYYY",
         "YYYY-MM-",
@@ -149,4 +149,45 @@ def test_date_formatting_and_padding():
 )
 def test_invalid_date_directives_are_rejected(fmt):
     with pytest.raises(ValueError):
+        compile_date_format(fmt)
+
+
+@pytest.mark.parametrize(
+    ("fmt", "text", "expected"),
+    [
+        ("YYYYMMDD", "20260201", dt.date(2026, 2, 1)),
+        ("DDMMYYYY", "01022026", dt.date(2026, 2, 1)),
+        ("MMDDYYYY", "01022026", dt.date(2026, 1, 2)),
+        ("YYYYMMDD", "20240229", dt.date(2024, 2, 29)),
+    ],
+)
+def test_compact_dates_without_separators(fmt, text, expected):
+    assert compile_date_format(fmt).parse(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["20260230", "2026021", "202602011", "2026-02-01", "2026 0201", " 20260201", "20250229"],
+)
+def test_invalid_compact_dates_are_rejected(text):
+    assert compile_date_format("YYYYMMDD").parse(text) is None
+
+
+def test_compact_date_formatting():
+    assert compile_date_format("YYYYMMDD").format(dt.date(2026, 2, 1)) == "20260201"
+    assert compile_date_format("DDMMYYYY").format(dt.date(2026, 2, 1)) == "01022026"
+
+
+@pytest.mark.parametrize(
+    ("fmt", "reason"),
+    [
+        ("YYYYMD", "fixed width"),  # 2026111 could be 1 November or 11 January
+        ("DMYYYY", "fixed width"),
+        ("YYYY-MMDD", "or none at all"),  # separators must be used everywhere or nowhere
+        ("YYYYMM-DD", "or none at all"),
+        ("YYYY_MM_DD", "separator"),
+    ],
+)
+def test_ambiguous_or_mixed_compact_formats_are_explained(fmt, reason):
+    with pytest.raises(ValueError, match=reason):
         compile_date_format(fmt)

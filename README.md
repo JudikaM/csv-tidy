@@ -486,8 +486,9 @@ in [examples/api_example.py](examples/api_example.py). See
 
 - Number grammars: `id` (`1.250,50`), `us` (`1,250.50`), `canonical` (`1250.50`). Optional
   leading `+`/`-`. No currency symbols, scientific notation, NaN/Infinity, or other locales.
-- Dates: numeric formats built from `YYYY`, `MM`/`M`, `DD`/`D` and `-`, `/`, `.` separators.
-  No month names, times, or compact `YYYYMMDD`.
+- Dates: numeric formats built from `YYYY`, `MM`/`M`, `DD`/`D` and `-`, `/`, `.` separators,
+  or without separators from `YYYY`, `MM`, `DD` (for example `YYYYMMDD`). No month names or
+  times.
 - The header row is required. Delimiters are `,` or `;` and are never auto-detected.
 - Files are processed in memory, one file at a time. Duplicate detection memory grows with
   distinct rows/keys. The default field limit is 131,072 characters (`max_field_chars`).

@@ -16,6 +16,7 @@ const DATE_FORMATS = [
   ["DD-MM-YYYY", "31-12-2026"],
   ["DD.MM.YYYY", "31.12.2026"],
   ["YYYY/MM/DD", "2026/12/31"],
+  ["YYYYMMDD", "20261231"],
   ["D/M/YYYY", "31/12/2026, also 1/2/2026"],
   ["M/D/YYYY", "12/31/2026, also 2/1/2026"],
 ];

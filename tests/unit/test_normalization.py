@@ -60,6 +60,24 @@ def test_normalize_converts_valid_values_and_leaves_invalid_ones(write):
     assert not result.export_ready and result.exit_code == 1
 
 
+def test_normalize_writes_compact_dates(write):
+    path = write("c.csv", "id;amount;day;note\n1;1,5;01/02/2026;\n2;1,5;31/02/2026;\n")
+    text = PROFILE.replace('date_format = "YYYY-MM-DD"', 'date_format = "YYYYMMDD"')
+    profile = profile_from_dict(tomllib.loads(text + '[transform]\nnormalize = ["day"]'))
+    result = clean_file(path, profile)
+    assert result.rows == (("1", "1,5", "20260201", ""), ("2", "1,5", "31/02/2026", ""))
+    assert [(i.code, i.record) for i in result.output_issues] == [("invalid_date", 2)]
+
+
+def test_normalize_reads_compact_dates(write):
+    path = write("b.csv", "id;amount;day;note\n1;1,5;20260201;\n")
+    text = PROFILE.replace('date_format = "DD/MM/YYYY"', 'date_format = "YYYYMMDD"')
+    profile = profile_from_dict(tomllib.loads(text + '[transform]\nnormalize = ["day"]'))
+    result = clean_file(path, profile)
+    assert result.rows == (("1", "1,5", "2026-02-01", ""),)
+    assert result.export_ready
+
+
 def test_whitespace_is_not_silently_fixed_by_normalize(write):
     path = write("w.csv", "id;amount;day;note\n1; 7,5 ;01/02/2026;\n")
     without_trim = clean_file(path, prof('[transform]\nnormalize = ["amount"]'))

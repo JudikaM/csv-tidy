@@ -135,13 +135,22 @@ class DateFormat:
 
 
 def compile_date_format(text: str) -> DateFormat:
-    """Compile a date format or raise ``ValueError`` with an English explanation."""
+    """Compile a date format or raise ``ValueError`` with an English explanation.
+
+    Tokens are separated by one separator each, or by none at all (``YYYYMMDD``). A format
+    without separators may only use fixed-width tokens, because ``M`` and ``D`` would make
+    values such as ``2026111`` ambiguous.
+    """
     parts: list[str] = []
     regex = ""
     seen: set[str] = set()
+    separated = adjacent = False
     i = 0
     expect_token = True
     while i < len(text):
+        if not expect_token and any(text.startswith(t, i) for t, _, _ in _DATE_TOKENS):
+            adjacent = True  # no separator between the previous token and this one
+            expect_token = True
         if expect_token:
             for token, field, digits in _DATE_TOKENS:
                 if text.startswith(token, i):
@@ -162,14 +171,26 @@ def compile_date_format(text: str) -> DateFormat:
         else:
             if text[i] not in _DATE_SEPARATORS:
                 raise ValueError(
-                    f"date format '{text}' needs one separator ('-', '/' or '.') between tokens"
+                    f"date format '{text}' needs one separator ('-', '/' or '.') between tokens, "
+                    "or none at all (for example YYYYMMDD)"
                 )
+            separated = True
             parts.append(text[i])
             regex += re.escape(text[i])
             i += 1
         expect_token = not expect_token
     if expect_token or seen != {"year", "month", "day"}:
         raise ValueError(f"date format '{text}' must contain exactly one year, month and day token")
+    if adjacent and separated:
+        raise ValueError(
+            f"date format '{text}' must use one separator ('-', '/' or '.') between every two "
+            "tokens, or none at all (for example YYYYMMDD)"
+        )
+    if adjacent and not set(parts) <= {"YYYY", "MM", "DD"}:
+        raise ValueError(
+            f"date format '{text}' has no separators, so every token needs a fixed width "
+            "(YYYY, MM, DD); with M or D a value such as 2026111 would be ambiguous"
+        )
     return DateFormat(text, tuple(parts), re.compile(regex, re.ASCII))
 
 
