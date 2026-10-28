@@ -127,6 +127,24 @@ def test_requests_without_the_key_or_from_other_origins_are_refused(ui):
     assert ui.post("/api/preview", body)[0] == 200
 
 
+def test_refused_requests_with_a_body_still_get_their_answer(ui):
+    """Regression for #23: a refusal closed the connection with the request body unread, and
+    the reset that this causes could reach the client before the answer."""
+    body = json.dumps({"padding": "x" * 200_000}).encode()
+    cases = [
+        ({"Content-Type": "application/json"}, 403),  # no session key
+        (
+            {"Content-Type": "application/json", TOKEN_HEADER: ui.token, "Origin": "http://x.test"},
+            403,
+        ),
+        ({"Content-Type": "text/plain", TOKEN_HEADER: ui.token}, 415),
+    ]
+    for _ in range(30):  # the reset is a race; repeat so that it would show
+        for headers, expected in cases:
+            status, _, data = ui.request("/api/preview", body, headers)
+            assert status == expected and "error" in json.loads(data)
+
+
 def test_preview_shows_rows_and_never_guesses_the_delimiter(ui):
     loaded = ui.upload(FIXABLE)
     status, wrong = ui.post("/api/preview", {"file_id": loaded["file_id"], "delimiter": ","})

@@ -46,6 +46,13 @@ All notable changes are documented here. The format follows
   `security-extended` queries, on pull requests, on `main`, and weekly.
 - Package metadata: Documentation, Source, and Releases links.
 
+### Fixed
+
+- Local interface: a refused request (another origin, a missing session key, or a body that
+  is not JSON) could reset the connection on Windows before the answer arrived, so the
+  client saw a network error instead of the refusal. The server now reads the rest of a
+  refused request's body (up to 1 MB) before it closes the connection.
+
 ## [0.4.1] - 2026-10-14
 
 A new look for the local interface, and a port fix on Windows. The CLI, profiles, reports,

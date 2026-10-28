@@ -64,6 +64,9 @@ TOKEN_HEADER = "X-CSV-Tidy-Token"
 PREVIEW_ROWS = 50
 DETAIL_LIMIT = 200
 MAX_JSON_BYTES = 5 * 1024 * 1024
+# A refused request's unread body is read and dropped up to this size before the connection
+# is closed (see Handler._discard_body).
+DISCARD_BYTES = 1024 * 1024
 DEFAULT_MAX_FILE_MB = 200
 # Without a console window nobody can press Ctrl+C, so the server stops by itself this
 # long after the page last contacted it. The page checks in every minute while open.
@@ -592,6 +595,7 @@ class Handler(BaseHTTPRequestHandler):
     sys_version = ""
     protocol_version = "HTTP/1.1"
     session: Session  # set on the subclass made by ``create_server``
+    _body_read = False  # whether the current request's body was read
 
     def log_message(self, format: str, *args: Any) -> None:
         return  # request lines would include file names; keep the console quiet
@@ -618,7 +622,24 @@ class Handler(BaseHTTPRequestHandler):
 
     def _refuse(self, status: HTTPStatus, message: str) -> None:
         self.close_connection = True
+        self._discard_body()
         self._json(status, {"error": message})
+
+    def _discard_body(self) -> None:
+        """Read and drop the unread body of a refused request (up to ``DISCARD_BYTES``).
+
+        Closing a connection that still holds unread data makes the operating system reset
+        it, and on Windows the reset can reach the client before the answer does.
+        """
+        if self._body_read:
+            return
+        self._body_read = True
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return
+        if 0 < length <= DISCARD_BYTES:
+            self.rfile.read(length)
 
     def _origins(self) -> tuple[str, ...]:
         # The server listens on an IPv4 loopback address, so its address is (host, port).
@@ -646,6 +667,7 @@ class Handler(BaseHTTPRequestHandler):
                 HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
                 f"This is larger than the limit of {limit // (1024 * 1024)} MB.",
             )
+        self._body_read = True
         return self.rfile.read(length)
 
     # ----------------------------------------------------------------- routes
@@ -675,6 +697,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.OK, "text/html; charset=utf-8", page)
 
     def do_POST(self) -> None:
+        self._body_read = False
         url = urlsplit(self.path)
         if not self._local() or not self._token_ok(self.headers.get(TOKEN_HEADER)):
             self._refuse(HTTPStatus.FORBIDDEN, "This request was not sent by the CSV Tidy page.")
