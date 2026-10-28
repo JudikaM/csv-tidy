@@ -32,6 +32,8 @@ Python API are unchanged.
   install` refuses with exit code 2, since shortcuts are made on Windows and Linux only.
 - CI measures line and branch coverage of the tests (94% when this was added) and fails below
   92%.
+- A dependency audit (pip-audit) checks every package pinned for development and CI against
+  published vulnerabilities, on pull requests, on `main`, and weekly.
 - Package metadata: Documentation, Source, and Releases links.
 
 ## [0.4.1] - 2026-10-14
