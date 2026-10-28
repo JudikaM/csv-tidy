@@ -8,16 +8,18 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import TypedDict
 
 from .formats import (
     NUMBER_EXAMPLES,
+    DateFormat,
     compile_date_format,
     explain_invalid_date,
     explain_invalid_number,
     parse_number,
 )
 from .reader import Record, Table
-from .schema import Settings
+from .schema import ColumnSpec, Settings
 
 ERROR = "error"
 WARNING = "warning"
@@ -52,6 +54,15 @@ class Issue:
     status: str | None = None
     introduced: bool | None = None
     remedy: str | None = None
+
+
+class _Where(TypedDict):
+    """Location fields shared by every issue about one record."""
+
+    stage: str
+    record: int
+    line_start: int
+    line_end: int
 
 
 def _quote(value: str, limit: int = 60) -> str:
@@ -209,10 +220,12 @@ def _record_issues(
     stage: str,
     unconverted: frozenset[tuple[int, str]],
 ) -> list[Issue]:
-    index = {}
+    index: dict[str, int] = {}
     for position, name in enumerate(header):
         index.setdefault(name, position)
-    rules = []
+    # The format is the number grammar (str) for decimal columns, the compiled date format
+    # for date columns, and None for text columns.
+    rules: list[tuple[ColumnSpec, int, str | DateFormat | None]] = []
     for column in settings.columns:
         if column.name not in index:
             continue
@@ -237,9 +250,12 @@ def _record_issues(
     seen_keys: list[dict[tuple[str, ...], Record]] = [{} for _ in keys]
     width = len(header)
     for rec in records:
-        where = dict(
-            stage=stage, record=rec.index, line_start=rec.line_start, line_end=rec.line_end
-        )
+        where: _Where = {
+            "stage": stage,
+            "record": rec.index,
+            "line_start": rec.line_start,
+            "line_end": rec.line_end,
+        }
         if len(rec.fields) != width:
             issues.append(
                 Issue(
@@ -276,7 +292,7 @@ def _record_issues(
             # output format, and it is explained in source terms.
             failed = (rec.index, column.name) in unconverted
             normalized = stage == "output" and column.name in settings.normalize
-            if column.type == "decimal" and (failed or parse_number(value, fmt) is None):
+            if isinstance(fmt, str) and (failed or parse_number(value, fmt) is None):
                 why_fmt = settings.source_format(column) if normalized else fmt
                 why = explain_invalid_number(value, why_fmt)
                 if normalized:
@@ -293,9 +309,11 @@ def _record_issues(
                         **where,
                     )
                 )
-            elif column.type == "date" and (failed or fmt.parse(value) is None):
-                why_fmt = compile_date_format(settings.source_format(column)) if normalized else fmt
-                why = explain_invalid_date(value, why_fmt)
+            elif isinstance(fmt, DateFormat) and (failed or fmt.parse(value) is None):
+                why_date = (
+                    compile_date_format(settings.source_format(column)) if normalized else fmt
+                )
+                why = explain_invalid_date(value, why_date)
                 if normalized:
                     why = f"it could not be normalized because {why}"
                 issues.append(
@@ -303,10 +321,10 @@ def _record_issues(
                         "invalid_date",
                         ERROR,
                         f"{_quote(value)} is not a valid date: {why}.",
-                        _date_suggestion(value, why_fmt.text, column.name, settings, stage),
+                        _date_suggestion(value, why_date.text, column.name, settings, stage),
                         column=column.name,
                         value=value,
-                        remedy=_date_remedy(value, why_fmt.text),
+                        remedy=_date_remedy(value, why_date.text),
                         **where,
                     )
                 )
@@ -357,7 +375,7 @@ def _record_issues(
 
 
 def _oversized_fields(
-    header: Sequence[str], rec: Record, settings: Settings, where: dict
+    header: Sequence[str], rec: Record, settings: Settings, where: _Where
 ) -> list[Issue]:
     """Output fields must stay readable with the same ``max_field_chars`` limit, which the
     generated output profile keeps; normalization can make values longer."""
@@ -419,7 +437,7 @@ def _date_suggestion(value: str, fmt_text: str, column: str, settings: Settings,
 def _sorted(issues: list[Issue], header: Sequence[str]) -> list[Issue]:
     positions = {name: i for i, name in reversed(list(enumerate(header)))}
 
-    def key(issue: Issue) -> tuple:
+    def key(issue: Issue) -> tuple[bool, int, int, int, str]:
         column_pos = positions.get(issue.column or "", len(header))
         return (
             issue.record is not None,

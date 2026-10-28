@@ -5,8 +5,9 @@ from __future__ import annotations
 import argparse
 import contextlib
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from . import __version__, batch, profile_init, update
 from .api import check_file, clean_file, export_clean
@@ -31,6 +32,11 @@ from .schema import (
     load_profile,
     resolve_settings,
 )
+
+if TYPE_CHECKING:
+    _Subparsers = argparse._SubParsersAction[argparse.ArgumentParser]
+    # Builds a report from the artifact outcomes and the final exit code.
+    _ReportBuilder = Callable[[list[ArtifactOutcome], int], dict[str, Any]]
 
 MAIN_EPILOG = """\
 examples:
@@ -391,7 +397,7 @@ def _positive(text: str) -> int:
     return value
 
 
-def _batch_parser(sub) -> None:
+def _batch_parser(sub: _Subparsers) -> None:
     parent = sub.add_parser(
         "batch",
         help="check or clean many files with one profile",
@@ -452,7 +458,7 @@ def _batch_parser(sub) -> None:
         _report_options(cmd)
 
 
-def _profile_parser(sub) -> None:
+def _profile_parser(sub: _Subparsers) -> None:
     profile = sub.add_parser(
         "profile",
         help="create a starting profile from a CSV header",
@@ -515,7 +521,9 @@ def _list_option(args: argparse.Namespace, name: str) -> tuple[str, ...] | None:
 
 
 def _overrides(args: argparse.Namespace) -> Overrides:
-    get = lambda name: getattr(args, name, None)  # noqa: E731
+    def get(name: str) -> Any:
+        return getattr(args, name, None)
+
     return Overrides(
         delimiter=args.delimiter,
         encoding=args.encoding,
@@ -539,14 +547,20 @@ def _protected(args: argparse.Namespace) -> dict[str, Path]:
     return protected
 
 
-def _publish(build, render, args: argparse.Namespace, outcomes: list, exit_code: int) -> int:
+def _publish(
+    build: _ReportBuilder,
+    render: Callable[[dict[str, Any]], str],
+    args: argparse.Namespace,
+    outcomes: list[ArtifactOutcome],
+    exit_code: int,
+) -> int:
     """Save the requested report first, then print the final report to stdout.
 
     The printed (and saved) report lists every artifact outcome and the final exit code, so a
     failed report write is never hidden behind a successful-looking summary.
     """
 
-    def text_for(items: list, code: int) -> str:
+    def text_for(items: list[ArtifactOutcome], code: int) -> str:
         report = build(items, code)
         return to_json(report) if args.format == "json" else render(report)
 
@@ -577,7 +591,7 @@ def run_check(args: argparse.Namespace) -> int:
     profile = load_profile(args.schema) if args.schema else None
     result = check_file(args.input, profile, overrides=_overrides(args))
 
-    def build(items: list, code: int) -> dict:
+    def build(items: list[ArtifactOutcome], code: int) -> dict[str, Any]:
         return check_report(result, args.max_details, items, code)
 
     return _publish(build, render_check_text, args, [], result.exit_code)
@@ -637,7 +651,7 @@ def run_clean(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     if failure is not None:
         print(f"csv-tidy: error: {failure}", file=sys.stderr)
 
-    def build(items: list, code: int) -> dict:
+    def build(items: list[ArtifactOutcome], code: int) -> dict[str, Any]:
         return clean_report(result, mode, args.max_details, args.max_examples, items, code)
 
     return _publish(build, render_clean_text, args, outcomes, exit_code)
@@ -678,7 +692,7 @@ def run_batch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
         extra_artifacts={"batch report": Path(args.report)} if args.report else None,
     )
 
-    def build(items: list, code: int) -> dict:
+    def build(items: list[ArtifactOutcome], code: int) -> dict[str, Any]:
         return batch.batch_report(result, items, code)
 
     return _publish(build, batch.render_batch_text, args, [], result.exit_code)

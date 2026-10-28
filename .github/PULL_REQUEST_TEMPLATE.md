@@ -11,7 +11,7 @@
 
 <!-- Paste the commands you ran and their results. -->
 
-- [ ] `python -m ruff check .` and `python -m ruff format --check .`
+- [ ] `python -m ruff check .`, `python -m ruff format --check .`, and `python -m mypy`
 - [ ] `python -m pytest`
 - [ ] `python -m build` and `python scripts/smoke_dist.py dist` (for packaging changes)
 - [ ] New or changed behavior has tests; bug fixes include a regression test

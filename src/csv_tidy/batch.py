@@ -16,10 +16,10 @@ import os
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from . import __version__
-from .api import check_file, clean_file, export_clean
+from .api import CheckResult, CleanResult, check_file, clean_file, export_clean
 from .errors import CsvTidyError, InputError, OutputError
 from .output import ArtifactOutcome, encode_text, write_artifact
 from .reporting import (
@@ -121,13 +121,14 @@ def select_inputs(
     if not chosen:
         raise InputError("no input files were given")
     seen: dict[str, Path] = {}
-    for item in chosen:
-        key = _key(item.path)
+    for selected in chosen:
+        key = _key(selected.path)
         if key in seen:
             raise InputError(
-                f"{item.path} is selected more than once (also as {seen[key]}); list each file once"
+                f"{selected.path} is selected more than once (also as {seen[key]}); "
+                "list each file once"
             )
-        seen[key] = item.path
+        seen[key] = selected.path
     return chosen
 
 
@@ -278,6 +279,16 @@ def run_batch(
     return BatchResult(action, mode, loaded.path if loaded else None, tuple(outcomes))
 
 
+class _Facts(TypedDict, total=False):
+    """Counts of one file's result that go into its ``FileOutcome``."""
+
+    errors: int
+    warnings: int
+    output_errors: int | None
+    changed_fields: int
+    removed_records: int
+
+
 def _one(
     action: str,
     item: BatchInput,
@@ -292,28 +303,32 @@ def _one(
 ) -> FileOutcome:
     artifacts: list[ArtifactOutcome] = []
     error = None
+    result: CheckResult | CleanResult
+    facts: _Facts
     if action == "check":
-        result = check_file(item.path, profile, overrides=overrides)
+        checked = check_file(item.path, profile, overrides=overrides)
         if item.label:
-            result = replace(result, source_path=item.label)
-        status = "valid" if result.exit_code == 0 else "invalid"
-        facts = {"errors": result.errors, "warnings": result.warnings}
+            checked = replace(checked, source_path=item.label)
+        result = checked
+        status = "valid" if checked.exit_code == 0 else "invalid"
+        facts = {"errors": checked.errors, "warnings": checked.warnings}
     else:
-        result = clean_file(item.path, profile, overrides=overrides)
+        cleaned = clean_file(item.path, profile, overrides=overrides)
         if item.label:
-            result = replace(result, source_path=item.label)
-        status = "ready" if result.export_ready else "blocked"
+            cleaned = replace(cleaned, source_path=item.label)
+        result = cleaned
+        status = "ready" if cleaned.export_ready else "blocked"
         facts = {
-            "errors": sum(i.severity == "error" for i in result.source_issues),
-            "warnings": sum(i.severity == "warning" for i in result.output_issues),
-            "output_errors": result.output_errors,
-            "changed_fields": len(result.changes),
-            "removed_records": len(result.removed),
+            "errors": sum(i.severity == "error" for i in cleaned.source_issues),
+            "warnings": sum(i.severity == "warning" for i in cleaned.output_issues),
+            "output_errors": cleaned.output_errors,
+            "changed_fields": len(cleaned.changes),
+            "removed_records": len(cleaned.removed),
         }
-        if apply and result.export_ready:
+        if apply and cleaned.export_ready:
             try:
                 artifacts += export_clean(
-                    result,
+                    cleaned,
                     plan["output CSV"],
                     output_schema=plan.get("output profile"),
                     overwrite=overwrite,
@@ -334,15 +349,16 @@ def _one(
     if not result.scan.complete:
         status = "incomplete"
         fatal = result.scan.fatal
-        where = f" at line {fatal.line}" if fatal.line is not None else ""
-        error = error or f"the scan stopped{where} ({fatal.code}): {fatal.message}"
+        if fatal is not None:  # an incomplete scan always records why it stopped
+            where = f" at line {fatal.line}" if fatal.line is not None else ""
+            error = error or f"the scan stopped{where} ({fatal.code}): {fatal.message}"
 
     if "report" in plan:
         target = plan["report"]
 
         def text_for(report_outcome: ArtifactOutcome, code: int) -> str:
             listed = [*artifacts, report_outcome]
-            if action == "check":
+            if isinstance(result, CheckResult):
                 report = check_report(result, max_details, listed, code)
                 return to_json(report) if report_format == "json" else render_check_text(report)
             mode = "apply" if apply else "dry-run"
@@ -404,9 +420,12 @@ def batch_report(
                 ],
             }
         )
-    decisive = (
-        (lambda o: o.errors) if result.action == "check" else (lambda o: o.output_errors or 0)
-    )
+
+    def decisive(outcome: FileOutcome) -> int:
+        if result.action == "check":
+            return outcome.errors
+        return outcome.output_errors or 0
+
     totals = {
         "files": len(result.files),
         "ok": sum(o.exit_code == 0 for o in result.files),

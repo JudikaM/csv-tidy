@@ -375,12 +375,12 @@ def validate_profile(profile: Profile) -> None:
     if not isinstance(keys, (list, tuple)) or not all(isinstance(k, (list, tuple)) for k in keys):
         raise ProfileError(f"{where} [duplicates] keys: must be a sequence of column lists")
     _keys([list(k) for k in keys], f"{where} [duplicates] keys")
-    for label, value in (("trim", profile.trim), ("normalize", profile.normalize)):
-        if value is None:
+    for label, listed in (("trim", profile.trim), ("normalize", profile.normalize)):
+        if listed is None:
             continue
-        if not isinstance(value, (list, tuple)):
+        if not isinstance(listed, (list, tuple)):
             raise ProfileError(f"{where} [transform] {label}: must be a list of column names")
-        _names(list(value), f"{where} [transform] {label}")
+        _names(list(listed), f"{where} [transform] {label}")
 
 
 def _validate_overrides(o: Overrides) -> None:
@@ -404,12 +404,12 @@ def _validate_overrides(o: Overrides) -> None:
     ):
         if value is not None:
             check_date_format(value, f"{where} {name}")
-    for name, value in (("--trim", o.trim), ("--normalize", o.normalize)):
-        if value is None:
+    for name, names in (("--trim", o.trim), ("--normalize", o.normalize)):
+        if names is None:
             continue
-        if not isinstance(value, (list, tuple)):
+        if not isinstance(names, (list, tuple)):
             raise ProfileError(f"{where} {name}: must be a list of column names")
-        _names(list(value), f"{where} {name}")
+        _names(list(names), f"{where} {name}")
 
 
 # --------------------------------------------------------------------------- output profile
@@ -624,7 +624,7 @@ def _opt_max_field(table: Mapping[str, Any], where: str) -> int | None:
         raise ProfileError(
             f"{where} max_field_chars: must be an integer from 1 to {MAX_FIELD_CHARS_LIMIT}"
         )
-    return value
+    return int(value)
 
 
 def _names(value: Any, where: str) -> tuple[str, ...]:

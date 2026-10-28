@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .output import ArtifactOutcome
+
 
 class CsvTidyError(Exception):
     """Base class for CSV Tidy errors that are reported without a traceback."""
@@ -22,6 +27,6 @@ class OutputError(CsvTidyError):
     some artifacts were already finalized.
     """
 
-    def __init__(self, message: str, outcomes: tuple = ()) -> None:
+    def __init__(self, message: str, outcomes: tuple[ArtifactOutcome, ...] = ()) -> None:
         super().__init__(message)
         self.outcomes = outcomes

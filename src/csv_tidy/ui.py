@@ -30,12 +30,13 @@ import time
 import tomllib
 import webbrowser
 import zipfile
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar, cast
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 from . import __version__
@@ -239,7 +240,8 @@ class Session:
 
     def remove_file(self, body: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
-            loaded = self._files.pop(body.get("file_id"), None)
+            file_id = body.get("file_id")
+            loaded = self._files.pop(file_id, None) if isinstance(file_id, int) else None
             if loaded is not None:
                 self._check = self._clean = self._batch = None
         if loaded is not None:
@@ -331,10 +333,14 @@ class Session:
         stem = Path(loaded.name).stem
         result = stored.result
         details, examples = limits.max_details, limits.max_examples
-        if kind == "check-report-text":
-            text = render_check_text(check_report(result, details))
-            return f"{stem}.check-report.txt", "text/plain; charset=utf-8", text.encode("utf-8")
-        if kind == "check-report-json":
+        if isinstance(result, CheckResult):  # the check-report kinds read the latest check
+            if kind == "check-report-text":
+                text = render_check_text(check_report(result, details))
+                return (
+                    f"{stem}.check-report.txt",
+                    "text/plain; charset=utf-8",
+                    text.encode("utf-8"),
+                )
             text = to_json(check_report(result, details))
             return f"{stem}.check-report.json", "application/json", text.encode("utf-8")
         if kind == "report-text":
@@ -429,20 +435,31 @@ class Session:
             )
         return stored
 
-    def _batch_file(self, stored: StoredBatch, file_id: Any):
+    @staticmethod
+    def _batch_member(stored: StoredBatch, file_id: Any) -> LoadedFile:
         loaded = next((f for f in stored.files if f.id == file_id), None)
         if loaded is None:
             raise ApiError(HTTPStatus.BAD_REQUEST, "That file is not part of this result.")
-        run = check_file if stored.action == "check" else clean_file
-        return loaded, _named(run(loaded.path, stored.profile), loaded.name, stored.profile_name)
+        return loaded
+
+    def _batch_check(self, stored: StoredBatch, file_id: Any) -> tuple[LoadedFile, CheckResult]:
+        loaded = self._batch_member(stored, file_id)
+        result = check_file(loaded.path, stored.profile)
+        return loaded, _named(result, loaded.name, stored.profile_name)
+
+    def _batch_clean(self, stored: StoredBatch, file_id: Any) -> tuple[LoadedFile, CleanResult]:
+        loaded = self._batch_member(stored, file_id)
+        result = clean_file(loaded.path, stored.profile)
+        return loaded, _named(result, loaded.name, stored.profile_name)
 
     def batch_file(self, body: dict[str, Any]) -> dict[str, Any]:
         """Full details of one file of the latest batch, computed by the single-file functions."""
         stored = self._stored_batch(body)
-        _, result = self._batch_file(stored, body.get("file_id"))
         if stored.action == "check":
-            return {"action": "check", "report": check_report(result, stored.limits.max_details)}
-        return {"action": "clean", **_clean_view(result, stored.limits)}
+            _, checked = self._batch_check(stored, body.get("file_id"))
+            return {"action": "check", "report": check_report(checked, stored.limits.max_details)}
+        _, cleaned = self._batch_clean(stored, body.get("file_id"))
+        return {"action": "clean", **_clean_view(cleaned, stored.limits)}
 
     def _batch_download(self, kind: str, body: dict[str, Any]) -> tuple[str, str, bytes]:
         stored = self._stored_batch(body)
@@ -456,26 +473,27 @@ class Session:
         if kind == "batch-csv":
             if stored.action != "clean":
                 raise ApiError(HTTPStatus.BAD_REQUEST, "Run Preview cleaning first.")
-            loaded, result = self._batch_file(stored, body.get("file_id"))
+            loaded, cleaned = self._batch_clean(stored, body.get("file_id"))
             stem = Path(loaded.name).stem
-            return f"{stem}.clean.csv", "text/csv", self._export(result, stem, stored.id)[0]
+            return f"{stem}.clean.csv", "text/csv", self._export(cleaned, stem, stored.id)[0]
         if kind != "batch-zip":
             raise ApiError(HTTPStatus.BAD_REQUEST, "Unknown download.")
         entries: list[tuple[str, bytes]] = []
         for loaded, outcome in zip(stored.files, stored.result.files, strict=True):
             stem = Path(loaded.name).stem
-            _, result = self._batch_file(stored, loaded.id)
             if stored.action == "check":
-                report = check_report(result, limits.max_details)
+                _, checked = self._batch_check(stored, loaded.id)
+                report = check_report(checked, limits.max_details)
             else:
-                ready = result.export_ready
+                _, cleaned = self._batch_clean(stored, loaded.id)
+                ready = cleaned.export_ready
                 if ready != (outcome.status == "ready"):
                     raise ApiError(HTTPStatus.CONFLICT, "A file changed; run the preview again.")
                 if ready:
-                    csv_bytes, profile_bytes = self._export(result, stem, stored.id)
+                    csv_bytes, profile_bytes = self._export(cleaned, stem, stored.id)
                     entries.append((f"{stem}.clean.csv", csv_bytes))
                     entries.append((f"{stem}.output.toml", profile_bytes))
-                report = clean_report(result, "dry-run", limits.max_details, limits.max_examples)
+                report = clean_report(cleaned, "dry-run", limits.max_details, limits.max_examples)
             entries.append((f"{stem}.report.json", to_json(report).encode("utf-8")))
         summary = batch_report(stored.result)
         entries.append(("batch-summary.json", to_json(summary).encode("utf-8")))
@@ -525,7 +543,10 @@ def _shown_profile(profile_name: Any) -> str | None:
     return _safe_name(profile_name) if isinstance(profile_name, str) and profile_name else None
 
 
-def _named(result, name: str, profile_name: Any):
+_Result = TypeVar("_Result", CheckResult, CleanResult)
+
+
+def _named(result: _Result, name: str, profile_name: Any) -> _Result:
     """Show the file's own name in reports instead of the private temporary path."""
     return replace(result, source_path=name, profile_path=_shown_profile(profile_name))
 
@@ -577,7 +598,13 @@ class Handler(BaseHTTPRequestHandler):
 
     # ----------------------------------------------------------------- helpers
 
-    def _send(self, status: HTTPStatus, content_type: str, body: bytes, extra=()) -> None:
+    def _send(
+        self,
+        status: HTTPStatus,
+        content_type: str,
+        body: bytes,
+        extra: Iterable[tuple[str, str]] = (),
+    ) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
@@ -594,7 +621,8 @@ class Handler(BaseHTTPRequestHandler):
         self._json(status, {"error": message})
 
     def _origins(self) -> tuple[str, ...]:
-        port = self.server.server_address[1]
+        # The server listens on an IPv4 loopback address, so its address is (host, port).
+        port = cast("tuple[str, int]", self.server.server_address)[1]
         return (f"{LOOPBACK}:{port}", f"localhost:{port}")
 
     def _local(self) -> bool:

@@ -30,6 +30,7 @@ python3 -m venv .venv
 ```bash
 python -m ruff check .
 python -m ruff format --check .
+python -m mypy
 python -m pytest
 python -m build
 python scripts/smoke_dist.py dist

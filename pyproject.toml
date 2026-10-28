@@ -31,7 +31,7 @@ classifiers = [
 dependencies = ["tomli-w>=1.0"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.15", "build>=1.2"]
+dev = ["pytest>=8.0", "ruff>=0.15", "mypy>=2.4", "build>=1.2"]
 
 [project.scripts]
 csv-tidy = "csv_tidy.cli:main"
@@ -78,6 +78,11 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+files = ["src/csv_tidy"]
+python_version = "3.11"
+strict = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
