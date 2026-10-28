@@ -65,6 +65,9 @@ class Choices:
     deduplicate: str | None = None
     output_number_format: str | None = None
     output_date_format: str | None = None
+    # (column, format) pairs that override number_format/date_format for one column.
+    column_number_formats: tuple[tuple[str, str], ...] = ()
+    column_date_formats: tuple[tuple[str, str], ...] = ()
 
 
 def read_header(path: str | Path, delimiter: str, encoding: str) -> Header:
@@ -117,6 +120,8 @@ def build_profile(header: Header, choices: Choices | None = None) -> Profile:
         ("--key", tuple(name for key in choices.keys for name in key)),
         ("--trim", choices.trim),
         ("--normalize", choices.normalize),
+        ("--column-number-format", tuple(name for name, _ in choices.column_number_formats)),
+        ("--column-date-format", tuple(name for name, _ in choices.column_date_formats)),
     ):
         for name in names:
             if name not in known:
@@ -130,11 +135,34 @@ def build_profile(header: Header, choices: Choices | None = None) -> Profile:
         raise ProfileError(
             f"column {both[0]!r} is selected with both --decimal and --date; choose one type"
         )
+    number_formats = _per_column(choices.column_number_formats, "--column-number-format")
+    for name, fmt in number_formats.items():
+        if name not in choices.decimal:
+            raise ProfileError(
+                f"--column-number-format: column {name!r} is not a decimal column; "
+                f"add --decimal {name} or remove its number format"
+            )
+        if fmt not in NUMBER_FORMATS:
+            expected = ", ".join(repr(f) for f in NUMBER_FORMATS)
+            raise ProfileError(
+                f"--column-number-format {name}: invalid number format {fmt!r}; "
+                f"expected one of {expected}"
+            )
+    date_formats = _per_column(choices.column_date_formats, "--column-date-format")
+    for name, fmt in date_formats.items():
+        if name not in choices.date:
+            raise ProfileError(
+                f"--column-date-format: column {name!r} is not a date column; "
+                f"add --date {name} or remove its date format"
+            )
+        check_date_format(fmt, f"--column-date-format {name}")
     columns = tuple(
         ColumnSpec(
             name,
             "decimal" if name in choices.decimal else "date" if name in choices.date else "text",
             name in choices.required,
+            number_format=number_formats.get(name),
+            date_format=date_formats.get(name),
         )
         for name in header.columns
     )
@@ -154,6 +182,15 @@ def build_profile(header: Header, choices: Choices | None = None) -> Profile:
     )
     resolve_settings(profile)  # the same cross-checks as a profile loaded from TOML
     return profile
+
+
+def _per_column(pairs: tuple[tuple[str, str], ...], option: str) -> dict[str, str]:
+    formats: dict[str, str] = {}
+    for name, fmt in pairs:
+        if name in formats:
+            raise ProfileError(f"{option}: column {name!r} is given more than once")
+        formats[name] = fmt
+    return formats
 
 
 def render_profile(profile: Profile, source_name: str) -> str:

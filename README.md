@@ -338,6 +338,9 @@ column is text**. It never guesses types from values or column names; you choose
 .\.venv\Scripts\csv-tidy.exe profile init examples\transactions_fixable.csv --delimiter ";" --output output\my-profile.toml --decimal amount --date date --number-format id --date-format DD/MM/YYYY --required transaction_id --key transaction_id --trim amount --trim date --normalize amount --normalize date --output-number-format canonical --output-date-format YYYY-MM-DD
 ```
 
+A column whose format differs from the rest of the file gets its own with
+`--column-number-format amount=us` or `--column-date-format due=MM/DD/YYYY`.
+
 The delimiter and encoding you give are written into the profile. An existing profile file is
 refused unless `--overwrite` is given, the input can never be the output, unknown column
 names and inconsistent choices are rejected before anything is written, and the guided mode

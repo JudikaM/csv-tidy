@@ -63,8 +63,11 @@ a generated profile is always a valid profile.
 - **Options (non-interactive).** `--decimal COLUMN`, `--date COLUMN`, `--required COLUMN`,
   `--trim COLUMN`, `--normalize COLUMN` (each repeatable), `--key COLUMN [COLUMN ...]`
   (repeatable; several columns after one `--key` form a combined key), `--deduplicate`,
-  `--output-number-format`, `--output-date-format`. Per-column formats are added by editing
-  the file.
+  `--output-number-format`, `--output-date-format`, and per-column formats:
+  `--column-number-format COLUMN=FORMAT` for a decimal column and
+  `--column-date-format COLUMN=FORMAT` for a date column (each repeatable), written as the
+  column's `number_format`/`date_format`. The value is split at its last `=`, so column names
+  may contain `=`. They also work together with `--interactive`.
 - **Never waits for input by default.** Without `--interactive` the command does not prompt
   and does not read standard input.
 - **Guided mode.** `--interactive` asks for the delimiter and encoding (unless given as
@@ -79,7 +82,9 @@ a generated profile is always a valid profile.
   `PROFILE` being the input file; a file without a header row or whose start cannot be
   decoded; an empty or duplicate header name; a header that is a single column containing the
   other delimiter (pass the right `--delimiter`); a column name that is not in the header; a
-  column selected as both decimal and date; and every inconsistency a profile would be
+  column selected as both decimal and date; a per-column format for a column that is not a
+  decimal (or date) column, an invalid format, or one column given twice; and every
+  inconsistency a profile would be
   rejected for (for example normalizing a text column).
 - Header names with spaces, dots, quotes, brackets, or non-ASCII letters are written as quoted
   TOML keys and read back unchanged.

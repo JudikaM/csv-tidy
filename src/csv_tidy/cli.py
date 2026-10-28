@@ -166,6 +166,14 @@ def _delimiter(text: str) -> str:
     return value
 
 
+def _column_format(text: str) -> tuple[str, str]:
+    """COLUMN=FORMAT, split at the last '=' (formats never contain one; names may)."""
+    name, equals, fmt = text.rpartition("=")
+    if not equals or not name or not fmt:
+        raise argparse.ArgumentTypeError(f"expected COLUMN=FORMAT, got {text!r}")
+    return name, fmt
+
+
 def _source_options(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("source options (override the profile)")
     group.add_argument("--schema", metavar="PROFILE", help="TOML profile (schema_version = 1)")
@@ -517,6 +525,23 @@ def _profile_parser(sub: _Subparsers) -> None:
     cols.add_argument("--date", action="append", default=[], metavar="COLUMN")
     cols.add_argument("--required", action="append", default=[], metavar="COLUMN")
     cols.add_argument(
+        "--column-number-format",
+        action="append",
+        default=[],
+        type=_column_format,
+        metavar="COLUMN=FORMAT",
+        help="number format (id, us or canonical) of one decimal column, overriding "
+        "--number-format",
+    )
+    cols.add_argument(
+        "--column-date-format",
+        action="append",
+        default=[],
+        type=_column_format,
+        metavar="COLUMN=FORMAT",
+        help="date format of one date column, overriding --date-format",
+    )
+    cols.add_argument(
         "--key",
         action="append",
         default=[],
@@ -817,6 +842,8 @@ def run_profile_init(args: argparse.Namespace) -> int:
         deduplicate=args.deduplicate,
         output_number_format=args.output_number_format,
         output_date_format=args.output_date_format,
+        column_number_formats=tuple(args.column_number_format),
+        column_date_formats=tuple(args.column_date_format),
     )
     try:
         if args.interactive:

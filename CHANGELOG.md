@@ -16,6 +16,9 @@ All notable changes are documented here. The format follows
   `--output-delimiter tab` (a tab character or `\t` also works), a Tab choice in the local
   interface, and tab in the guided `profile init`. The single-column hint also recognizes
   tabs, and next-step commands spell the option as `--delimiter tab`.
+- `profile init` options for per-column formats: `--column-number-format COLUMN=FORMAT` and
+  `--column-date-format COLUMN=FORMAT`, for files whose columns use different number or date
+  formats. They are checked before anything is written.
 - README: status badges, quick links, and screenshots of the local interface in its dark and
   light themes (`docs/images/`).
 - A code of conduct (Contributor Covenant 2.1), linked from the README and CONTRIBUTING.md and
