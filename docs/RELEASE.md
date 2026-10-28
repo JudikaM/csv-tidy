@@ -16,9 +16,12 @@ by a new patch version.
 2. Update the version in `src/csv_tidy/__init__.py`.
 3. Locally, from a clean checkout: `python -m ruff check .`, `python -m ruff format --check .`,
    `python -m pytest`, `python -m build`, `python scripts/smoke_dist.py dist`.
-4. Push the release commit to `main` and wait for the CI workflow to pass on **that exact
-   commit** (Linux and Windows, Python 3.11 and 3.15).
-5. Create an annotated tag `vX.Y.Z` pointing to that commit, and a GitHub release from the tag.
+4. Merge the release commit into `main` through a pull request, then wait for the CI workflow
+   to pass on **the resulting `main` commit** (Linux and Windows, Python 3.11 and 3.15).
+   `main` is protected by a ruleset: changes need a pull request whose four CI jobs passed,
+   and force pushes and deleting the branch are refused.
+5. Create an annotated tag `vX.Y.Z` pointing to that `main` commit, and a GitHub release from
+   the tag.
 6. Attach the wheel and sdist built from the tagged commit. The release notes are the
    changelog section for that version and describe only what is implemented.
 7. Smoke-test from the tag in a fresh environment, for example:
