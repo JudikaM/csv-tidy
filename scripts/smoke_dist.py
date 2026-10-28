@@ -268,12 +268,18 @@ def main() -> None:
         if not gui.exists():
             sys.exit(f"the csv-tidy-ui program is missing from {bin_dir}")
         icons = work / "icons"
-        made = run([str(cli), "shortcut", "install", "--folder", str(icons)], work, 0)
-        if made.count("created: ") != 2 or len(list(icons.iterdir())) != 2:
-            sys.exit(f"shortcut install did not create two shortcuts:\n{made}")
-        gone = run([str(cli), "shortcut", "remove", "--folder", str(icons)], work, 0)
-        if gone.count("removed: ") != 2 or any(icons.iterdir()):
-            sys.exit(f"shortcut remove did not remove the shortcuts:\n{gone}")
+        if sys.platform == "darwin":
+            # Shortcuts are made on Windows and Linux; macOS gets a refusal (exit code 2).
+            run([str(cli), "shortcut", "install", "--folder", str(icons)], work, 2)
+            if icons.exists():
+                sys.exit("shortcut install wrote into the folder although it refused")
+        else:
+            made = run([str(cli), "shortcut", "install", "--folder", str(icons)], work, 0)
+            if made.count("created: ") != 2 or len(list(icons.iterdir())) != 2:
+                sys.exit(f"shortcut install did not create two shortcuts:\n{made}")
+            gone = run([str(cli), "shortcut", "remove", "--folder", str(icons)], work, 0)
+            if gone.count("removed: ") != 2 or any(icons.iterdir()):
+                sys.exit(f"shortcut remove did not remove the shortcuts:\n{gone}")
         run([str(cli), "update", "--help"], work, 0)
         api = run([str(python), "-I", "examples/api_example.py"], work, 0)
         if "clean: export ready = True" not in api:

@@ -119,6 +119,12 @@ def test_windows_shortcuts_point_to_the_programs(tmp_path):
     assert not (tmp_path / "CSV Tidy.lnk").exists()
 
 
+MADE_HERE = pytest.mark.skipif(
+    sys.platform == "darwin", reason="shortcuts are made on Windows and Linux; macOS refuses"
+)
+
+
+@MADE_HERE
 def test_cli_reports_each_shortcut(tmp_path):
     result = run_cli("shortcut", "install", "--folder", str(tmp_path))
     assert result.code == 0, result.err
@@ -127,6 +133,15 @@ def test_cli_reports_each_shortcut(tmp_path):
     assert removed.code == 0 and removed.out.count("removed: ") == 2
 
 
+@pytest.mark.skipif(sys.platform != "darwin", reason="the macOS refusal")
+def test_cli_refuses_shortcuts_on_macos_and_writes_nothing(tmp_path):
+    folder = tmp_path / "icons"
+    result = run_cli("shortcut", "install", "--folder", str(folder))
+    assert result.code == 2 and "csv-tidy-ui program" in result.err
+    assert not folder.exists()
+
+
+@MADE_HERE
 def test_cli_explains_a_missing_interface_program(tmp_path, monkeypatch):
     def missing():
         raise CsvTidyError("the csv-tidy-ui program was not found next to this Python")
