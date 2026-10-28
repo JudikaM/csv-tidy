@@ -6,6 +6,18 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-29
+
+Dates without separators, tab-separated files, per-column formats in `profile init`,
+protection against formulas in exported files, a fix for the local interface, and tooling that
+checks what the project claims: types, every supported Python version on Linux, Windows, and
+macOS, test coverage, dependency vulnerabilities, and code scanning.
+
+**Upgrade notes.** Profiles, CLI options, exit codes, and the Python API of 0.4 keep working
+unchanged; everything new is opt-in. JSON reports gain `transformations.neutralize_formulas`
+(an empty list when unused). A profile written by 0.5 is still read by 0.4 unless it uses a
+tab delimiter, a date format without separators, or `neutralize_formulas`.
+
 ### Added
 
 - Date formats without separators, such as `YYYYMMDD` (`20261231`) and `DDMMYYYY`, for source
