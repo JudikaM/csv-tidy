@@ -31,4 +31,5 @@ file other than the verified release wheel; shortcuts changing files they did no
 overwriting input files, crashes or unbounded resource use on crafted input beyond the
 documented limits, and data being silently changed. Spreadsheet formula injection in CSV
 content is a known property of the CSV format (see the README); CSV Tidy reports values as
-they are and does not neutralize formulas.
+they are and neutralizes formulas only in the text columns selected for it. A formula-like
+value that the selected neutralization leaves unchanged is a relevant issue.

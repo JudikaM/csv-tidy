@@ -152,6 +152,7 @@ const defaultRule = () => ({
   unique: false,
   trim: false,
   normalize: false,
+  neutralize: false,
 });
 
 function syncColumns() {
@@ -218,6 +219,7 @@ function buildProfile() {
   const keys = [];
   const trim = [];
   const normalize = [];
+  const neutralize = [];
   for (const [name, rule] of state.columns) {
     const spec = { type: rule.type, required: rule.required };
     if (rule.type === "decimal" && rule.numberFormat) spec.number_format = rule.numberFormat;
@@ -226,14 +228,18 @@ function buildProfile() {
     if (rule.unique) keys.push([name]);
     if (rule.trim) trim.push(name);
     if (rule.normalize && rule.type !== "text") normalize.push(name);
+    if (rule.neutralize && rule.type === "text") neutralize.push(name);
   }
+  const transform = { trim, normalize, deduplicate: $("dedupe").value };
+  // Only when used, so that saved profiles stay readable by earlier versions.
+  if (neutralize.length) transform.neutralize_formulas = neutralize;
   return {
     schema_version: 1,
     source,
     output,
     columns,
     duplicates: { rows: $("dup-rows").value, keys: [...keys, ...state.keys] },
-    transform: { trim, normalize, deduplicate: $("dedupe").value },
+    transform,
   };
 }
 
@@ -280,6 +286,7 @@ function applyProfile(profile, name) {
   }
   for (const column of transform.trim || []) rule(column).trim = true;
   for (const column of transform.normalize || []) rule(column).normalize = true;
+  for (const column of transform.neutralize_formulas || []) rule(column).neutralize = true;
   state.keys = [];
   for (const key of duplicates.keys || []) {
     if (key.length === 1) rule(key[0]).unique = true;
@@ -381,7 +388,8 @@ function renderRules() {
       tick("required", "Must not be empty"),
       tick("unique", "Must be unique"),
       tick("trim", "Trim spaces"),
-      tick("normalize", "Convert format", !typed)
+      tick("normalize", "Convert format", !typed),
+      tick("neutralize", "Protect formulas", typed)
     );
     if (!inFile.has(name)) {
       row.lastChild.append(
@@ -692,7 +700,7 @@ function fillClean(box, data) {
                 el("td", null, el("code", { text: c.column })),
                 el("td", null, valueNode(c.before)),
                 el("td", null, valueNode(c.after)),
-                el("td", null, c.steps.map((s) => ({ trim: "trim spaces", normalize: "convert format" })[s] || s).join(", "))
+                el("td", null, c.steps.map((s) => ({ trim: "trim spaces", normalize: "convert format", neutralize_formulas: "protect formulas" })[s] || s).join(", "))
               )
             )
           )
@@ -1264,6 +1272,7 @@ $("columns-body").addEventListener("change", (event) => {
     rule[field] = event.target.type === "checkbox" ? event.target.checked : event.target.value.trim();
   }
   if (rule.type === "text") rule.normalize = false;
+  else rule.neutralize = false;
   renderRules();
   invalidateResults("Rules changed.");
 });

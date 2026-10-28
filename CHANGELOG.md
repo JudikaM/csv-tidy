@@ -19,6 +19,15 @@ All notable changes are documented here. The format follows
 - `profile init` options for per-column formats: `--column-number-format COLUMN=FORMAT` and
   `--column-date-format COLUMN=FORMAT`, for files whose columns use different number or date
   formats. They are checked before anything is written.
+- Opt-in neutralization of spreadsheet formulas (CSV injection): values of selected text
+  columns that start with `=`, `+`, `-`, `@`, a tab, or a carriage return get a leading `'`,
+  as OWASP recommends. Select it with `neutralize_formulas` in `[transform]`,
+  `--neutralize-formulas COLUMN` (`--no-neutralize-formulas` clears it), or **Repair:
+  protect formulas** in the local interface; it works in batch processing and the Python
+  API (`Overrides.neutralize_formulas`). It runs after normalize and before deduplicate.
+  Number and date columns cannot be selected. JSON reports gain
+  `transformations.neutralize_formulas`; `order` and text reports name the step only when
+  it is selected, and generated profiles write the key only when it is used.
 - README: status badges, quick links, and screenshots of the local interface in its dark and
   light themes (`docs/images/`).
 - A code of conduct (Contributor Covenant 2.1), linked from the README and CONTRIBUTING.md and

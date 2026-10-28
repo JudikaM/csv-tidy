@@ -269,10 +269,13 @@ def _transformations(settings: Settings) -> dict[str, Any]:
                 "to": settings.output_format(column),
             }
         )
+    # The step appears in "order" only when selected, so reports without it are unchanged.
+    neutralize = ["neutralize_formulas"] if settings.neutralize_formulas else []
     return {
-        "order": ["trim", "normalize", "deduplicate"],
+        "order": ["trim", "normalize", *neutralize, "deduplicate"],
         "trim": list(settings.trim),
         "normalize": normalize,
+        "neutralize_formulas": list(settings.neutralize_formulas),
         "deduplicate": settings.deduplicate,
     }
 
@@ -507,6 +510,17 @@ def _coverage_lines(coverage: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _transformation_lines(t: dict[str, Any]) -> list[str]:
+    normalized = ", ".join(f"{n['column']} ({n['from']} -> {n['to']})" for n in t["normalize"])
+    described = {
+        "trim": f"trim: {', '.join(t['trim']) or 'none'}",
+        "normalize": f"normalize: {normalized or 'none'}",
+        "neutralize_formulas": f"neutralize formulas: {', '.join(t['neutralize_formulas'])}",
+        "deduplicate": f"deduplicate: {t['deduplicate']}",
+    }
+    return [f"  {number}. {described[step]}" for number, step in enumerate(t["order"], start=1)]
+
+
 def _step_lines(steps: list[str]) -> list[str]:
     return ["", "Next steps:", *(f"  - {step}" for step in steps)] if steps else []
 
@@ -586,12 +600,7 @@ def render_clean_text(report: dict[str, Any]) -> str:
         *_coverage_lines(report["coverage"]),
         "",
         "Transformations (applied in this order):",
-        f"  1. trim: {', '.join(t['trim']) or 'none'}",
-        "  2. normalize: "
-        + (
-            ", ".join(f"{n['column']} ({n['from']} -> {n['to']})" for n in t["normalize"]) or "none"
-        ),
-        f"  3. deduplicate: {t['deduplicate']}",
+        *_transformation_lines(t),
         "",
         f"Changes: {_n(c['changed_fields'], 'field')} changed "
         f"in {_n(c['changed_records'], 'record')}; "
@@ -601,7 +610,8 @@ def render_clean_text(report: dict[str, Any]) -> str:
     for ex in c["examples"]:
         lines.append(
             f"  record {ex['record']} (line {ex['line_start']}), {ex['column']!r}: "
-            f"{_show(ex['before'])} -> {_show(ex['after'])} [{', '.join(ex['steps'])}]"
+            f"{_show(ex['before'])} -> {_show(ex['after'])} "
+            f"[{', '.join(step.replace('_', ' ') for step in ex['steps'])}]"
         )
     for rm in c["removed"]:
         lines.append(

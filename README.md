@@ -59,7 +59,8 @@ There are three ways to use the same engine:
   starting profile from a file's header, with optional guided questions.
 - Identifiers such as `00123` and `081234567890` stay text; nothing is converted to numbers.
 - Explicit transformations: trim selected columns, normalize selected numbers/dates,
-  remove duplicates keeping the first record. Exact decimal arithmetic; no floats, no rounding.
+  neutralize spreadsheet formulas in selected text columns, remove duplicates keeping the
+  first record. Exact decimal arithmetic; no floats, no rounding.
 - Dry-run preview with before/after examples and complete counts.
 - Safe export: never overwrites the input (including symlink/hardlink aliases), refuses
   existing files unless `--overwrite`, and writes each file atomically.
@@ -454,6 +455,7 @@ replace the profile list (repeat for several columns); `--no-trim`/`--no-normali
 | `--delimiter`, `--encoding`, `--number-format`, `--date-format` | check, clean, batch, profile init | source settings |
 | `--output-delimiter`, `--output-encoding`, `--output-number-format`, `--output-date-format`, `--line-ending` | clean, batch clean | output settings (default: follow the source) |
 | `--trim COL`, `--normalize COL`, `--deduplicate off\|rows\|keys` | clean, batch clean, profile init | explicit transformations |
+| `--neutralize-formulas COL` | clean, batch clean | protect formula-like values in a text column |
 | `--dry-run` / `--apply`, `--output PATH`, `--output-schema PATH` | clean | preview (default) or write |
 | `--apply`, `--output-dir DIR`, `--output-schemas`, `--report-dir DIR`, `--pattern GLOB`, `--recursive` | batch | many files |
 | `--format text\|json`, `--report PATH`, `--max-details N`, `--max-examples N` | check, clean, batch | reports |
@@ -502,8 +504,10 @@ in [examples/api_example.py](examples/api_example.py). See
   CSV directly. Import the file instead and set identifier columns to Text (in Excel: Data >
   From Text/CSV > Transform Data, then change the column type to Text).
 - Cells starting with `=`, `+`, `-` or `@` may be interpreted as formulas by spreadsheet
-  programs. CSV Tidy does not alter such values; review untrusted data before opening it in a
-  spreadsheet.
+  programs (CSV injection). CSV Tidy changes such values only when you select
+  `--neutralize-formulas COLUMN` (or `neutralize_formulas` in the profile, or **Repair:
+  protect formulas** in the local interface): it then puts a `'` in front of them in text
+  columns. Otherwise review untrusted data before opening it in a spreadsheet.
 - Reports include source values. Keep them local if the data is private.
 - Not included: Excel (`.xlsx`) files, hosted or multi-user web access, accounts, databases,
   streaming for very large files, delimiter detection. See
