@@ -51,7 +51,6 @@ Candidates, to be prioritized by real user requests rather than built speculativ
   names with explicit language selection.
 - Date-time values.
 - Opt-in delimiter detection with explicit confirmation.
-- Optional spreadsheet-formula neutralization as an explicit transformation.
 - `.xlsx` input, hosted or multi-user web access, database targets (deferred; not planned
   for 0.x). The local, single-user interface (`csv-tidy ui`) exists; changes to it should
   come from sessions described in [USER_TESTING.md](USER_TESTING.md).

@@ -2,8 +2,8 @@
 
 Resolution order for every setting: explicit CLI/API override, then profile value, then the
 application default. Output settings that are not set explicitly follow the *resolved*
-source setting. List-valued transformation options (``trim``, ``normalize``) given as
-overrides replace the profile list; they are never merged.
+source setting. List-valued transformation options (``trim``, ``normalize``,
+``neutralize_formulas``) given as overrides replace the profile list; they are never merged.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ _SOURCE_KEYS = ("delimiter", "encoding", "number_format", "date_format", "max_fi
 _OUTPUT_KEYS = ("delimiter", "encoding", "number_format", "date_format", "line_ending")
 _COLUMN_KEYS = ("type", "required", "number_format", "date_format")
 _DUPLICATE_KEYS = ("rows", "keys")
-_TRANSFORM_KEYS = ("trim", "normalize", "deduplicate")
+_TRANSFORM_KEYS = ("trim", "normalize", "neutralize_formulas", "deduplicate")
 
 
 @dataclass(frozen=True)
@@ -83,6 +83,7 @@ class Profile:
     trim: tuple[str, ...] | None = None
     normalize: tuple[str, ...] | None = None
     deduplicate: str | None = None
+    neutralize_formulas: tuple[str, ...] | None = None
     path: str | None = field(default=None, compare=False)
     # Absolute path captured when the profile file was read (used to protect it from writes).
     resolved_path: str | None = field(default=None, compare=False)
@@ -104,6 +105,7 @@ class Overrides:
     trim: tuple[str, ...] | None = None
     normalize: tuple[str, ...] | None = None
     deduplicate: str | None = None
+    neutralize_formulas: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -136,6 +138,8 @@ class Settings:
     trim: tuple[str, ...]
     normalize: tuple[str, ...]
     deduplicate: str
+    # Text columns whose formula-like values get a leading single quote.
+    neutralize_formulas: tuple[str, ...] = ()
 
     def column(self, name: str) -> ColumnSpec | None:
         return next((c for c in self.columns if c.name == name), None)
@@ -156,7 +160,7 @@ class Settings:
 
     def referenced_columns(self) -> tuple[str, ...]:
         names = [c.name for c in self.columns]
-        names += list(self.trim) + list(self.normalize)
+        names += list(self.trim) + list(self.normalize) + list(self.neutralize_formulas)
         names += [name for key in self.duplicate_keys for name in key]
         return tuple(dict.fromkeys(names))
 
@@ -247,6 +251,11 @@ def profile_from_dict(data: Mapping[str, Any], source: str = "profile") -> Profi
         if "normalize" in tr
         else None,
         deduplicate=_opt_choice(tr, "deduplicate", DEDUPLICATE_MODES, f"{where} [transform]"),
+        neutralize_formulas=_names(
+            tr["neutralize_formulas"], f"{where} [transform] neutralize_formulas"
+        )
+        if "neutralize_formulas" in tr
+        else None,
         path=source if source != "profile" else None,
     )
     # Cross-reference checks that do not depend on overrides.
@@ -294,12 +303,21 @@ def resolve_settings(
         trim=tuple(_first(o.trim, p.trim, ())),
         normalize=tuple(_first(o.normalize, p.normalize, ())),
         deduplicate=_first(o.deduplicate, p.deduplicate, "off"),
+        neutralize_formulas=tuple(_first(o.neutralize_formulas, p.neutralize_formulas, ())),
     )
     for name in settings.normalize:
         column = settings.column(name)
         if column is None or column.type == "text":
             raise ProfileError(
                 f'cannot normalize column \'{name}\': declare it with type = "decimal" or "date"'
+            )
+    for name in settings.neutralize_formulas:
+        column = settings.column(name)
+        if column is not None and column.type != "text":
+            raise ProfileError(
+                f"cannot neutralize formulas in column '{name}': it is a {column.type} column; "
+                "only text columns can be neutralized, because a sign such as -75.25 is part "
+                "of the value"
             )
     if settings.deduplicate == "keys" and not settings.duplicate_keys:
         raise ProfileError('deduplicate = "keys" requires at least one key in [duplicates] keys')
@@ -320,6 +338,9 @@ def canonical_profile(profile: Profile) -> Profile:
         duplicate_keys=tuple(tuple(key) for key in profile.duplicate_keys),
         trim=None if profile.trim is None else tuple(profile.trim),
         normalize=None if profile.normalize is None else tuple(profile.normalize),
+        neutralize_formulas=None
+        if profile.neutralize_formulas is None
+        else tuple(profile.neutralize_formulas),
     )
 
 
@@ -381,7 +402,11 @@ def validate_profile(profile: Profile) -> None:
     if not isinstance(keys, (list, tuple)) or not all(isinstance(k, (list, tuple)) for k in keys):
         raise ProfileError(f"{where} [duplicates] keys: must be a sequence of column lists")
     _keys([list(k) for k in keys], f"{where} [duplicates] keys")
-    for label, listed in (("trim", profile.trim), ("normalize", profile.normalize)):
+    for label, listed in (
+        ("trim", profile.trim),
+        ("normalize", profile.normalize),
+        ("neutralize_formulas", profile.neutralize_formulas),
+    ):
         if listed is None:
             continue
         if not isinstance(listed, (list, tuple)):
@@ -410,7 +435,11 @@ def _validate_overrides(o: Overrides) -> None:
     ):
         if value is not None:
             check_date_format(value, f"{where} {name}")
-    for name, names in (("--trim", o.trim), ("--normalize", o.normalize)):
+    for name, names in (
+        ("--trim", o.trim),
+        ("--normalize", o.normalize),
+        ("--neutralize-formulas", o.neutralize_formulas),
+    ):
         if names is None:
             continue
         if not isinstance(names, (list, tuple)):
@@ -457,6 +486,8 @@ def output_profile(settings: Settings) -> Profile:
         trim=settings.trim,
         normalize=settings.normalize,
         deduplicate=settings.deduplicate,
+        # Omitted when unused, so that output profiles stay readable by earlier versions.
+        neutralize_formulas=settings.neutralize_formulas or None,
     )
 
 
@@ -519,6 +550,12 @@ def profile_to_dict(profile: Profile) -> dict[str, Any]:
         [
             ("trim", list(profile.trim) if profile.trim is not None else None),
             ("normalize", list(profile.normalize) if profile.normalize is not None else None),
+            (
+                "neutralize_formulas",
+                list(profile.neutralize_formulas)
+                if profile.neutralize_formulas is not None
+                else None,
+            ),
             ("deduplicate", profile.deduplicate),
         ]
     )

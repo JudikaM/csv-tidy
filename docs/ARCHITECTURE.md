@@ -13,7 +13,7 @@ input.csv ──► reader.read_csv ─► Table (header, records, lines, fatal)
                     │
                     ├─► validation.validate_table(stage="source") ─► source issues   (check stops here)
                     │
-                    └─► normalization.transform: trim → normalize → deduplicate
+                    └─► normalization.transform: trim → normalize → neutralize formulas → deduplicate
                               │
                               └─► validation.validate_table(stage="output") ─► output issues
                                         │

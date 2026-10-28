@@ -149,12 +149,14 @@ Stop it with the Quit button on the page or Ctrl+C in this window.
 
 CLEAN_EPILOG = """\
 clean applies only the transformations you select, in this order: trim, normalize,
-deduplicate (keep first). It is a dry run unless --apply is given; --apply requires --output.
+neutralize formulas, deduplicate (keep first). It is a dry run unless --apply is given;
+--apply requires --output.
 The exit code reflects errors that remain in the cleaned result. Source errors repaired by
 the selected transformations are reported as resolved.
 
---trim and --normalize replace the profile's lists when given (repeat them for several
-columns). Output settings default to the resolved source settings.
+--trim, --normalize, and --neutralize-formulas replace the profile's lists when given
+(repeat them for several columns). Output settings default to the resolved source
+settings.
 """
 
 
@@ -246,12 +248,24 @@ def _transform_options(clean: argparse.ArgumentParser) -> None:
         help="rewrite decimal/date COLUMN in the output format (repeatable)",
     )
     tr.add_argument(
+        "--neutralize-formulas",
+        action="append",
+        metavar="COLUMN",
+        help="prefix values of text COLUMN that start with = + - @ tab or CR with a single "
+        "quote, so that spreadsheet programs do not run them as formulas (repeatable)",
+    )
+    tr.add_argument(
         "--no-trim", action="store_true", help="disable the profile's trim list for this run"
     )
     tr.add_argument(
         "--no-normalize",
         action="store_true",
         help="disable the profile's normalize list for this run",
+    )
+    tr.add_argument(
+        "--no-neutralize-formulas",
+        action="store_true",
+        help="disable the profile's neutralize_formulas list for this run",
     )
     tr.add_argument(
         "--deduplicate",
@@ -582,6 +596,7 @@ def _overrides(args: argparse.Namespace) -> Overrides:
         trim=_list_option(args, "trim"),
         normalize=_list_option(args, "normalize"),
         deduplicate=get("deduplicate"),
+        neutralize_formulas=_list_option(args, "neutralize_formulas"),
     )
 
 
@@ -647,6 +662,8 @@ def run_clean(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
         parser.error("--trim cannot be combined with --no-trim")
     if args.normalize and args.no_normalize:
         parser.error("--normalize cannot be combined with --no-normalize")
+    if args.neutralize_formulas and args.no_neutralize_formulas:
+        parser.error("--neutralize-formulas cannot be combined with --no-neutralize-formulas")
     if args.apply and not args.output:
         parser.error("--apply requires --output PATH")
     if not args.apply and (args.output or args.output_schema):
@@ -712,6 +729,8 @@ def run_batch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
             parser.error("--trim cannot be combined with --no-trim")
         if args.normalize and args.no_normalize:
             parser.error("--normalize cannot be combined with --no-normalize")
+        if args.neutralize_formulas and args.no_neutralize_formulas:
+            parser.error("--neutralize-formulas cannot be combined with --no-neutralize-formulas")
         if apply and not output_dir:
             parser.error("--apply requires --output-dir DIR")
         if not apply and (output_dir or output_schemas):

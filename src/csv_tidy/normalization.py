@@ -1,4 +1,4 @@
-"""Explicit transformations in a fixed order: trim, normalize, deduplicate.
+"""Explicit transformations in a fixed order: trim, normalize, neutralize formulas, deduplicate.
 
 Only selected columns are touched. Records with a wrong field count are never modified or
 removed. Values that cannot be parsed are left unchanged so output validation reports them.
@@ -12,6 +12,10 @@ from dataclasses import dataclass
 from .formats import compile_date_format, format_number, parse_number
 from .reader import Record
 from .schema import Settings
+
+# A value starting with one of these can run as a formula when the file is opened in a
+# spreadsheet program (OWASP, "CSV Injection"). Neutralizing prefixes it with a single quote.
+FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
 
 
 @dataclass(frozen=True)
@@ -66,6 +70,7 @@ def transform(
             normalizers.append((name, index[name], _number_converter(source_fmt, output_fmt)))
         else:
             normalizers.append((name, index[name], _date_converter(source_fmt, output_fmt)))
+    neutralize_positions = [index[n] for n in settings.neutralize_formulas if n in index]
 
     transformed: list[Record] = []
     unconverted: set[tuple[int, str]] = set()
@@ -91,6 +96,10 @@ def transform(
             elif converted != value:
                 fields[pos] = converted
                 steps.setdefault(pos, []).append("normalize")
+        for pos in neutralize_positions:
+            if fields[pos].startswith(FORMULA_TRIGGERS):
+                fields[pos] = "'" + fields[pos]
+                steps.setdefault(pos, []).append("neutralize_formulas")
         transformed.append(Record(rec.index, rec.line_start, rec.line_end, tuple(fields)))
         steps_by_record[rec.index] = steps
 

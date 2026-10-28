@@ -187,6 +187,22 @@ def test_check_and_clean_match_the_library_results(ui):
     assert cleaned["rows"][1]["fields"][2] == "980.00" and cleaned["rows"][1]["changed"] == [2, 3]
 
 
+def test_interface_profiles_can_neutralize_formulas(ui, tmp_path):
+    source = tmp_path / "notes.csv"
+    source.write_text("id,note\n1,=HYPERLINK(1)\n2,plain\n", encoding="utf-8")
+    loaded = ui.upload(source)
+    profile = {
+        "schema_version": 1,
+        "source": {"delimiter": ","},
+        "transform": {"neutralize_formulas": ["note"]},
+    }
+    status, cleaned = ui.post("/api/clean", {"file_id": loaded["file_id"], "profile": profile})
+    assert status == 200, cleaned
+    assert cleaned["rows"][0]["fields"] == ["1", "'=HYPERLINK(1)"]
+    assert cleaned["rows"][0]["changed"] == [1]
+    assert cleaned["report"]["transformations"]["neutralize_formulas"] == ["note"]
+
+
 def test_downloads_equal_the_cli_export(ui, tmp_path):
     loaded = ui.upload(FIXABLE)
     profile = profile_dict()

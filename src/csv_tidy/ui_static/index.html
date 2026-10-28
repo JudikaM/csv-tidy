@@ -208,12 +208,13 @@
             <th scope="col">Must be unique</th>
             <th scope="col" class="repair">Repair: trim spaces</th>
             <th scope="col" class="repair">Repair: convert format</th>
+            <th scope="col" class="repair">Repair: protect formulas</th>
           </tr>
         </thead>
         <tbody id="columns-body"></tbody>
       </table>
     </div>
-    <p class="hint">"Repair" options change values only in the cleaned copy, and only in the columns you tick. Nothing else is touched.</p>
+    <p class="hint">"Repair" options change values only in the cleaned copy, and only in the columns you tick. Nothing else is touched. "Protect formulas" puts a <code>'</code> before text that starts with <code>=</code> <code>+</code> <code>-</code> or <code>@</code>, so that Excel shows it instead of running it as a formula.</p>
 
     <div class="row">
       <div class="field">

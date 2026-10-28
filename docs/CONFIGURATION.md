@@ -39,6 +39,7 @@ keys = [["transaction_id"], ["customer_id", "date"]]   # uniqueness keys   defau
 [transform]                   # nothing is transformed unless listed here or on the CLI
 trim = ["customer_id", "amount"]
 normalize = ["amount", "date"]  # decimal/date columns only
+neutralize_formulas = ["note"] # text columns only: protect formula-like values
 deduplicate = "off"           # "off", "rows" or "keys"             default "off"
 ```
 
@@ -100,8 +101,9 @@ For every setting: **explicit CLI option > profile value > application default**
 - `[output]` values that are not set explicitly follow the *resolved* source value, so
   `--delimiter ","` also changes the output delimiter unless `--output-delimiter` or
   `[output] delimiter` is set.
-- `--trim` and `--normalize` **replace** the profile's list (repeat the option for several
-  columns). `--no-trim` / `--no-normalize` clear the list for one run. Lists are never merged.
+- `--trim`, `--normalize`, and `--neutralize-formulas` **replace** the profile's list (repeat
+  the option for several columns). `--no-trim` / `--no-normalize` /
+  `--no-neutralize-formulas` clear the list for one run. Lists are never merged.
 - Undeclared columns are text. Text columns are never modified unless selected for trimming.
 - Declaring a type validates values but does not normalize them.
 - Optional empty values stay empty; `0` is a value; missing values are never invented.
@@ -203,10 +205,18 @@ Applied in this fixed order, only to selected columns of records with the correc
    error, **even if it happens to look valid in the output format** (for example `1.25` with
    source `id` and output `canonical`, or `12/31/2026` with source `DD/MM/YYYY` and output
    `MM/DD/YYYY`). Only a successful conversion repairs a value.
-3. **deduplicate** — `rows` removes later exact duplicate rows; `keys` also removes later
+3. **neutralize formulas** — a value of a selected text column that starts with `=`, `+`,
+   `-`, `@`, a tab, or a carriage return gets a leading single quote (`=SUM(A1)` becomes
+   `'=SUM(A1)`), as OWASP recommends against CSV injection: spreadsheet programs then show
+   the text instead of running it as a formula. Other values, including a value that already
+   starts with `'`, are unchanged, so a second clean changes nothing. Only text columns can be
+   selected (a decimal value such as `-75.25` would otherwise change). A value that starts
+   with a space is not changed; select **trim** for the same column to remove the space first.
+   Off unless selected; reports list this step only when it is selected.
+4. **deduplicate** — `rows` removes later exact duplicate rows; `keys` also removes later
    records whose configured key matches a kept record. The first record is always kept.
    Comparison uses the transformed values.
-4. **output validation** — the result is validated with output rules: normalized columns use
+5. **output validation** — the result is validated with output rules: normalized columns use
    the output format; other columns keep their source format. Every cleaned value must also
    fit `max_field_chars`; normalization can make values longer (`1000000` → `1,000,000`), and
    a longer value is reported as `field_too_large` and blocks the export, so an exported file
@@ -454,7 +464,9 @@ is unchanged (`valid`, `invalid`, `incomplete`).
 `schema_version` (currently 1), `tool`, `command`, `source`, `scan` (`complete`,
 `data_records`, `physical_lines`, `blank_lines`, `fatal_error`), `summary`, issue lists, and
 `details` (`limit`, totals, `shown`, `truncated`). `clean` adds `mode`, `output`,
-`transformations`, `changes` (counts and limited before/after examples), `source_issues`,
+`transformations` (`order`, `trim`, `normalize`, `neutralize_formulas`, `deduplicate`;
+`order` names `neutralize_formulas` only when it is selected), `changes` (counts and limited
+before/after examples, whose `steps` name the transformations), `source_issues`,
 `output_issues`, and `export.artifacts`; `check` lists `artifacts`. Artifact lists include the
 report itself (`written` or `failed`). `summary.exit_code` is the command's exit code: it is 2
 if saving the report (or another artifact) failed, even when the data are valid
