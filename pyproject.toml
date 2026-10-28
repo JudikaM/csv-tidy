@@ -31,7 +31,7 @@ classifiers = [
 dependencies = ["tomli-w>=1.0"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.15", "mypy>=2.4", "build>=1.2"]
+dev = ["pytest>=8.0", "pytest-cov>=7.0", "ruff>=0.15", "mypy>=2.4", "build>=1.2"]
 
 [project.scripts]
 csv-tidy = "csv_tidy.cli:main"
@@ -83,6 +83,17 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 files = ["src/csv_tidy"]
 python_version = "3.11"
 strict = true
+
+[tool.coverage.run]
+branch = true
+source = ["csv_tidy"]
+
+[tool.coverage.report]
+# Measured at 94% (lines and branches) when the floor was set; each platform runs its own
+# shortcut code, so the floor leaves a small margin below that.
+fail_under = 92
+show_missing = true
+skip_covered = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

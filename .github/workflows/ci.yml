@@ -46,8 +46,8 @@ jobs:
         run: python -m ruff format --check .
       - name: Type check
         run: python -m mypy
-      - name: Test
-        run: python -m pytest
+      - name: Test with coverage
+        run: python -m pytest --cov --cov-report=term-missing
       - name: Build wheel and sdist
         run: python -m build
       - name: Smoke-test the built wheel in a fresh environment
