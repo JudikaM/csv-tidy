@@ -9,11 +9,10 @@ only.
 
 Please do not put vulnerability details, exploit files, or real data in a public issue.
 
-GitHub private vulnerability reporting is **not enabled** for this repository yet. Until it is,
-open a [public issue](https://github.com/JudikaM/csv-tidy/issues/new) titled
-"Security contact request" **without any details**, and the maintainer will arrange a private
-way to share them. Once private reporting is enabled, use **Security > Report a vulnerability**
-on the repository page instead. This file will be updated when that happens.
+Report it privately through GitHub:
+[**Report a vulnerability**](https://github.com/JudikaM/csv-tidy/security/advisories/new)
+(also under **Security > Report a vulnerability** on the repository page). Only you and the
+maintainer can see the report, and a fix can be prepared before it becomes public.
 
 This is a volunteer-maintained project. There is no guaranteed response time, but reports are
 taken seriously and acknowledged as soon as possible.
