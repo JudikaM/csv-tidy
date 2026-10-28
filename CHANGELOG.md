@@ -27,6 +27,9 @@ Python API are unchanged.
 - Type annotations are checked with mypy in strict mode, locally and in every CI job. The
   check found imprecise annotations, which are corrected without any change in behavior; for
   example `OutputError.outcomes` is now declared as a tuple of `ArtifactOutcome`.
+- CI tests every supported Python version (3.11 to 3.15) on Linux, and Python 3.11 and 3.15 on
+  Windows and macOS. On macOS the distribution smoke test checks that `csv-tidy shortcut
+  install` refuses with exit code 2, since shortcuts are made on Windows and Linux only.
 - Package metadata: Documentation, Source, and Releases links.
 
 ## [0.4.1] - 2026-10-14
