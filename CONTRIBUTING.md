@@ -41,6 +41,12 @@ Use the virtual environment's interpreter (`.\.venv\Scripts\python.exe` or
 environment and runs the documented commands; delete old files in `dist/` first so that it
 finds exactly one wheel.
 
+CI also audits the packages pinned in `constraints-dev.txt` for known vulnerabilities, on
+every pull request and weekly. To run the audit yourself, install `pip-audit` in a separate
+environment (so that `constraints-dev.txt` can still be regenerated from the development
+environment) and run
+`pip-audit --requirement constraints-dev.txt --no-deps --disable-pip`.
+
 ## Adding tests, fixtures, and regressions
 
 - Test observable behavior: issue codes, counts, record/line locations, exit codes, and

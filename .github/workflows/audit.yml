@@ -1,0 +1,38 @@
+name: Dependency audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # New vulnerabilities are published without any change here, so also check weekly.
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install pip-audit
+        run: python -m pip install pip-audit==2.10.1
+      - name: Audit the pinned dependencies
+        # constraints-dev.txt pins every package that CI installs on any platform, including
+        # the runtime dependency, so this audits exactly what the tests run with.
+        run: >-
+          python -m pip_audit --requirement constraints-dev.txt --no-deps --disable-pip
+          --progress-spinner off
