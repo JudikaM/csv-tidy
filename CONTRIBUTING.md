@@ -52,7 +52,7 @@ appear in the repository's Security tab.
 ## Working on the local interface
 
 The interface is `src/csv_tidy/ui.py` (server) and `src/csv_tidy/ui_static/` (`index.html`,
-`app.css`, `theme.js`, `app.js`, `logo.png`). Its structure is described in
+`app.css`, `theme.js`, `app.js`, `logo.png`, `logo-mark.png`). Its structure is described in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-local-page) and its behavior in
 [docs/CONFIGURATION.md](docs/CONFIGURATION.md#local-interface).
 

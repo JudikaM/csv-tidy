@@ -78,6 +78,7 @@ STATIC = {
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/theme.js": ("theme.js", "text/javascript; charset=utf-8"),
     "/logo.png": ("logo.png", "image/png"),
+    "/logo-mark.png": ("logo-mark.png", "image/png"),
 }
 SECURITY_HEADERS = {
     "Content-Security-Policy": (

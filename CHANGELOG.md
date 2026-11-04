@@ -6,6 +6,23 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-04
+
+A small clean-up of the local interface.
+
+**Upgrade notes (from 1.0.0).** Profiles, CLI, reports, and the Python API are unchanged.
+
+### Changed
+
+- Interface: the side bar, the narrow-screen top bar, and the browser tab use a small logo
+  mark without text (`logo-mark.png`, 64 x 64 pixels), which stays readable at 24 to 32
+  pixels. The full logo (`logo.png`) is still served and packaged.
+
+### Removed
+
+- Interface: three unused style tokens, `--header`, `--status-bg`, and `--z-sticky`, from the
+  page's style sheet. Nothing used them, so the page looks the same.
+
 ## [1.0.0] - 2026-11-04
 
 The first stable release. [docs/STABILITY.md](docs/STABILITY.md) lists everything that 1.x

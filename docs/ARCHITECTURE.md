@@ -37,7 +37,7 @@ entry points that all call api.check_file / clean_file / export_clean:
 | `reporting.py` | Report dictionaries, JSON, and English text |
 | `profile_init.py` | Starting profiles from a header: explicit choices, guided questions through injected `ask`/`say` callables |
 | `batch.py` | Input selection, artifact planning and collision checks, per-file isolation, batch summary |
-| `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page: `index.html`, `app.css`, `theme.js` (theme and folded side bar before the first paint), `app.js`, `logo.png`; no dependencies (see "The local page" below) |
+| `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page: `index.html`, `app.css`, `theme.js` (theme and folded side bar before the first paint), `app.js`, `logo.png` (the full logo), `logo-mark.png` (the logo without its text, for the page icon and the side bar); no dependencies (see "The local page" below) |
 | `shortcuts.py` | Desktop and Start Menu shortcuts (Windows `.lnk` through PowerShell and the Windows Script Host, Linux desktop entries) |
 | `update.py` | `csv-tidy update`: GitHub release lookup, wheel and SHA-256 selection, the pip command; the only network access |
 | `cli.py` | Argument parsing, exit codes, stdout/stderr separation |

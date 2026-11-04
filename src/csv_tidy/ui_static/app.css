@@ -15,8 +15,6 @@
   --nebula-2: transparent;
   --nebula-3: transparent;
   --stars: 0;
-  --header: rgba(25, 25, 25, 0.96);
-  --status-bg: rgba(25, 25, 25, 0.97);
   --card: #1f1f1f;
   --subtle: #2b2b2b;
   --input: #313131;
@@ -67,8 +65,6 @@
   --nebula-2: transparent;
   --nebula-3: transparent;
   --stars: 0;
-  --header: rgba(232, 232, 232, 0.96);
-  --status-bg: rgba(243, 243, 243, 0.97);
   --card: #ffffff;
   --subtle: #f3f3f3;
   --input: #ffffff;
@@ -112,7 +108,6 @@
   --mono: "JetBrains Mono", "Cascadia Mono", Consolas, Menlo, monospace;
   --radius: 10px;
   --radius-card: 14px;
-  --z-sticky: 10;
   --z-overlay: 20;
   --z-toast: 30;
 }
