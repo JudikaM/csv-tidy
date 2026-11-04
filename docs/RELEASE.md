@@ -10,6 +10,11 @@ a migration note, and, for profiles or reports, a new `schema_version` with a do
 upgrade path. Existing release tags are never moved or overwritten; a broken release is fixed
 by a new patch version.
 
+From 1.0.0 the covered surface and the rules for major, minor, and patch releases are those
+in [STABILITY.md](STABILITY.md), which also lists that surface in full. Before a release,
+compare its changelog entries with that list: a change to a listed item in a minor or patch
+release must be a compatible addition.
+
 ## Gates (all required)
 
 1. `CHANGELOG.md`: move the Unreleased entries under the new version and date.

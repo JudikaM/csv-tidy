@@ -1,8 +1,9 @@
 """CSV Tidy: validate and explicitly clean CSV files with declared number and date formats.
 
-Public API::
+The public API is the set of names in ``__all__`` (see docs/STABILITY.md), mainly::
 
     from csv_tidy import check_file, clean_file, export_clean, load_profile
+    from csv_tidy import profile_to_toml, run_batch, select_inputs
 
 See docs/ARCHITECTURE.md for the result model and exceptions.
 """

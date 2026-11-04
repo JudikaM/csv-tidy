@@ -1,6 +1,6 @@
 # Configuration and data contracts
 
-This is the authoritative reference for CSV Tidy 0.4 profiles, options, defaults, and the
+This is the authoritative reference for CSV Tidy profiles, options, defaults, and the
 input/output contracts of `check`, `clean`, `profile init`, `batch`, `ui`, `shortcut`, and
 `update`.
 
@@ -450,16 +450,23 @@ Text reports are ordered for reading top-down:
 4. `Export:` state and artifacts (`clean`), `Next steps:`, and the `Status:` line.
 
 JSON keeps every earlier field and adds `verdict` (`state`, `headline`), `coverage` (`scope`:
-`structure_only` or `structure_and_values`, `declared_columns`, `undeclared_columns`,
-`unchecked_columns`, `unique_keys`, `duplicate_rows`, `header_columns`), and `next_steps` (a
+`structure_only` or `structure_and_values`, `structure` (always `true`: the file structure
+is always checked), `declared_columns`, `undeclared_columns`, `unchecked_columns`,
+`unique_keys`, `duplicate_rows`, `header_columns`), and `next_steps` (a
 list of sentences). Every issue in JSON also has `remedy`: the kind of repair its
 suggestion describes (`trim`, `number_format`, `date_format`, `deduplicate_rows`,
 `deduplicate_keys`, `delimiter`, `encoding`, `quoting`, `max_field_chars`), or `null` when
 only the source can be corrected. Text reports do not show it. Source issues keep their
 `severity` and `status` (`resolved`,
-`unresolved`, `removed`) in JSON; only the text layout separates them. `verdict.state` for
-`check` is `passed`, `passed_structure_only`, `failed`, or `incomplete`; `summary.status`
-is unchanged (`valid`, `invalid`, `incomplete`).
+`unresolved`, `removed`) in JSON; only the text layout separates them.
+
+`verdict.state` differs per report, and each set is fixed:
+
+| Report | `verdict.state` | `summary.status` |
+|--------|-----------------|------------------|
+| `check` | `passed`, `passed_structure_only`, `failed`, `incomplete` | `valid`, `invalid`, `incomplete` |
+| `clean` | `ready`, `blocked`, `incomplete` | the same as `verdict.state` |
+| `batch` | `ok`, `ok_structure_only`, `data_errors`, `failed` (a file failed or was not fully read) | none; `summary` has only `exit_code` |
 
 `--format text|json` selects the report format for stdout and `--report PATH`. JSON contains
 `schema_version` (currently 1), `tool`, `command`, `source`, `scan` (`complete`,
@@ -481,4 +488,4 @@ the same input and settings produce the same report. Status messages go to stder
 
 `schema_version` (profiles) and the report `schema_version` change only for incompatible
 changes; compatible additions keep the version. The Python API follows the package version.
-See [RELEASE.md](RELEASE.md).
+See [RELEASE.md](RELEASE.md), and [STABILITY.md](STABILITY.md) for what is covered from 1.0.0.

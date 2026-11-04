@@ -6,6 +6,15 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- [docs/STABILITY.md](docs/STABILITY.md): what Semantic Versioning will cover from 1.0.0
+  (profiles, command-line options, exit codes, issue codes, JSON reports, the Python API) and
+  what it does not (the look of the local interface, message wording, benchmark numbers), a
+  full inventory of that surface, and the decisions for 1.0, including the contract changes
+  planned for 0.7.0 (`--profile` with `--schema` as a deprecated alias, report
+  `schema_version` 2). A test keeps the inventory in step with the code. No behavior changes.
+
 ### Changed
 
 - Interface: the dark theme (still the default) uses the colors of VS Code's built-in "Dark
@@ -21,6 +30,10 @@ All notable changes are documented here. The format follows
 
 ### Fixed
 
+- Documentation: the README options table no longer lists `--max-examples` for `check`
+  (only `clean` and `batch clean` have it); CONFIGURATION.md no longer names version 0.4 as
+  its scope, and documents `coverage.structure` and the `verdict.state` values of the `clean`
+  and `batch` reports; the package docstring names `__all__` as the public API.
 - Interface: clicking a step in the step navigation (for example "2. Look") now marks that
   step; before, the mark stayed on the step the work had reached. The mark still moves on by
   itself when choosing a file, checking, or cleaning reaches a new step.

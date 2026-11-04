@@ -70,7 +70,8 @@ appear in the repository's Security tab.
 3. Run the checks above and describe how you verified the change in the PR template.
 4. Profile keys, report fields, issue codes, and exit codes are public contracts. Changing
    them needs a changelog entry and, for incompatible changes, a version plan
-   (see [docs/RELEASE.md](docs/RELEASE.md)).
+   (see [docs/RELEASE.md](docs/RELEASE.md)). [docs/STABILITY.md](docs/STABILITY.md) lists
+   the whole public surface; update it when you add to that surface.
 
 Review focuses on data integrity first (no silent changes, no guessing, no lost records),
 then clarity of messages, then code simplicity.
