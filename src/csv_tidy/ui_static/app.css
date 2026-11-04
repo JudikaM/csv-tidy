@@ -52,56 +52,55 @@
 }
 [data-theme="cosmos"] ::selection { background: #264f78; color: #ffffff; }
 
-/* Light follows the "PowerShell ISE" color theme of the VS Code PowerShell extension:
-   white editor, light blue chrome (#E1ECF9), navy keywords (#00008B), blue functions
-   (#0000FF), dark green comments (#006400), dark red strings (#8B0000), gray borders
-   (#A9A9A9), and light blue line highlight (#ADD8E6) and selection (#94C6F7). */
+/* Light follows VS Code's built-in "Light+" theme (light_vs.json and the workbench defaults
+   it builds on): white editor, #F3F3F3 side bar, #D4D4D4 borders, #333333 text, #007ACC
+   buttons and status bar, #0090F1 focus, #006AB1 links, #ADD6FF selection. */
 [data-theme="light"] {
   color-scheme: light;
-  --canvas: #e1ecf9;
-  --nebula-1: rgba(0, 0, 255, 0.04);
-  --nebula-2: rgba(148, 198, 247, 0.18);
-  --nebula-3: rgba(173, 216, 230, 0.16);
+  --canvas: #f3f3f3;
+  --nebula-1: transparent;
+  --nebula-2: transparent;
+  --nebula-3: transparent;
   --stars: 0;
-  --header: rgba(255, 255, 255, 0.92);
-  --status-bg: rgba(240, 245, 251, 0.96);
+  --header: rgba(232, 232, 232, 0.96);
+  --status-bg: rgba(243, 243, 243, 0.97);
   --card: #ffffff;
-  --subtle: #f0f5fb;
+  --subtle: #f3f3f3;
   --input: #ffffff;
-  --ink: #000000;
-  --ink-2: #2d2e45;
-  --ink-3: #555766;
-  --accent-ink: #00008b;
-  --line: #c9d6e8;
-  --line-soft: #e6edf6;
-  --line-strong: #a9a9a9;
-  --accent: #00008b;
-  --accent-2: #0000ff;
-  --bar-end: #94c6f7;
-  --focus: #0000ff;
-  --glow: rgba(0, 0, 139, 0.16);
+  --ink: #333333;
+  --ink-2: #616161;
+  --ink-3: #666666;
+  --accent-ink: #006ab1;
+  --line: #d4d4d4;
+  --line-soft: #e8e8e8;
+  --line-strong: #919191;
+  --accent: #007acc;
+  --accent-2: #0062a3;
+  --bar-end: #0090f1;
+  --focus: #0090f1;
+  --glow: rgba(0, 122, 204, 0.2);
   --btn-bg: #ffffff;
-  --btn-hover: #e1ecf9;
-  --btn-line: #a9a9a9;
-  --btn-ink: #000000;
-  --ok-bg: #eaf5ea;
-  --ok-line: #a8d5a8;
-  --ok-ink: #006400;
-  --warn-bg: #fff1e8;
-  --warn-line: #ffc7a8;
-  --warn-ink: #8b3a00;
-  --bad-bg: #fbeaea;
-  --bad-line: #e8b4b4;
-  --bad-ink: #8b0000;
-  --mark: #add8e6;
+  --btn-hover: #e8e8e8;
+  --btn-line: #cecece;
+  --btn-ink: #333333;
+  --ok-bg: #eaf4ea;
+  --ok-line: #b7ddb5;
+  --ok-ink: #2d7a2a;
+  --warn-bg: #fdf4e3;
+  --warn-line: #ebcb8b;
+  --warn-ink: #895503;
+  --bad-bg: #fbeae6;
+  --bad-line: #f0b9ac;
+  --bad-ink: #a1260d;
+  --mark: #add6ff;
   --mark-ink: #000000;
-  --shadow: 0 4px 20px -4px rgba(1, 36, 86, 0.1), 0 0 0 1px var(--line);
-  --badge: linear-gradient(135deg, #00008b 0%, #0000cd 100%);
-  --step-on: #a9a9a9;
-  --step-on-ink: #000000;
-  --scrim: rgba(1, 36, 86, 0.45);
+  --shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--line);
+  --badge: linear-gradient(135deg, #007acc 0%, #0062a3 100%);
+  --step-on: #c4c4c4;
+  --step-on-ink: #333333;
+  --scrim: rgba(0, 0, 0, 0.4);
 }
-[data-theme="light"] ::selection { background: #94c6f7; color: #000000; }
+[data-theme="light"] ::selection { background: #add6ff; color: #000000; }
 
 :root {
   --font: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;

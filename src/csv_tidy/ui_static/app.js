@@ -1413,7 +1413,7 @@ $("quit-confirm").addEventListener("click", () => {
 
 /* ------------------------------------------------------------------ look and feel */
 
-const THEMES = { cosmos: "Dark Modern", light: "PowerShell ISE light" };
+const THEMES = { cosmos: "Dark Modern", light: "Light+" };
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
