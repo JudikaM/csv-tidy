@@ -6,6 +6,27 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-04
+
+Small fixes to the look of the local interface.
+
+**Upgrade notes (from 1.1.0).** Profiles, CLI, reports, and the Python API are unchanged.
+
+### Changed
+
+- Interface: clicking a control in the file card with the mouse no longer draws blue lines
+  around it. The card keeps its border while a control in it has focus, and the file area and
+  the lists (such as **Encoding** and the lists of step 3) show their focus ring only when
+  they are reached with the keyboard. The ring around the chosen separator and file mode is
+  unchanged.
+- Interface: lists (such as **Encoding** and the lists of step 3) show the same chevron as
+  **How to use**, a little further from the edge than the browser's arrow, and it turns while
+  the list is open (at once when the system asks for reduced motion). The date list of a
+  column rule is slightly wider, so "Like the file (YYYY-MM-DD)" fits.
+- Interface: thin scroll bars (a 6-pixel rounded thumb without a track) for the page, the side
+  bar, the side panel (when the open **How to use** guide makes it taller than the window),
+  and tables, in both themes.
+
 ## [1.1.0] - 2026-11-04
 
 A short guide in the local interface.

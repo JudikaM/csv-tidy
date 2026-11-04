@@ -8,7 +8,7 @@ The public API is the set of names in ``__all__`` (see docs/STABILITY.md), mainl
 See docs/ARCHITECTURE.md for the result model and exceptions.
 """
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 from .api import CheckResult, CleanResult, ScanInfo, check_file, clean_file, export_clean
 from .batch import BatchInput, BatchResult, FileOutcome, run_batch, select_inputs

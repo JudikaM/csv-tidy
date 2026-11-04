@@ -120,13 +120,13 @@
     </div>
     <div class="seg">
       <label for="encoding" class="mini-label">Encoding</label>
-      <select id="encoding" class="compact">
+      <span class="select-wrap"><select id="encoding" class="compact">
         <option value="utf-8">UTF-8 (most common)</option>
         <option value="cp1252">Windows-1252 (older Excel, Western Europe)</option>
         <option value="latin-1">Latin-1 (ISO 8859-1)</option>
         <option value="utf-16">UTF-16 (Excel "Unicode Text")</option>
         <option value="other">Other…</option>
-      </select>
+      </select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
     </div>
     <div class="seg" role="radiogroup" aria-labelledby="mode-label">
       <span class="mini-label" id="mode-label">Files</span>
@@ -198,7 +198,7 @@
     <div class="row tight" id="preview-pick-wrap" hidden>
       <div class="field">
         <label for="preview-pick">File to preview</label>
-        <select id="preview-pick"></select>
+        <span class="select-wrap"><select id="preview-pick"></select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
     </div>
     <p class="facts" id="preview-facts"></p>
@@ -232,15 +232,15 @@
     <div class="row">
       <div class="field">
         <label for="src-number">Numbers in this file are written like</label>
-        <select id="src-number">
+        <span class="select-wrap"><select id="src-number">
           <option value="canonical">1250.50 (no thousands separator)</option>
           <option value="id">1.250,50 (dot for thousands, comma for decimals)</option>
           <option value="us">1,250.50 (comma for thousands, dot for decimals)</option>
-        </select>
+        </select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="field">
         <label for="src-date-pick">Dates in this file are written like</label>
-        <select id="src-date-pick" data-date-default="YYYY-MM-DD"></select>
+        <span class="select-wrap"><select id="src-date-pick" data-date-default="YYYY-MM-DD"></select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
         <div id="src-date-wrap" hidden>
           <label for="src-date">Other date format</label>
           <input type="text" id="src-date" autocomplete="off" spellcheck="false" placeholder="for example DD-MM-YYYY">
@@ -272,16 +272,16 @@
     <div class="row">
       <div class="field">
         <label for="out-number">In the cleaned copy, write converted numbers like</label>
-        <select id="out-number">
+        <span class="select-wrap"><select id="out-number">
           <option value="">Same as in this file</option>
           <option value="canonical">1250.50</option>
           <option value="id">1.250,50</option>
           <option value="us">1,250.50</option>
-        </select>
+        </select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="field">
         <label for="out-date-pick">In the cleaned copy, write converted dates like</label>
-        <select id="out-date-pick" data-date-default=""></select>
+        <span class="select-wrap"><select id="out-date-pick" data-date-default=""></select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
         <div id="out-date-wrap" hidden>
           <label for="out-date">Other date format</label>
           <input type="text" id="out-date" autocomplete="off" spellcheck="false" placeholder="for example YYYY.MM.DD">
@@ -289,11 +289,11 @@
       </div>
       <div class="field">
         <label for="dedupe">Duplicate rows in the cleaned copy</label>
-        <select id="dedupe">
+        <span class="select-wrap"><select id="dedupe">
           <option value="off">Keep every row</option>
           <option value="rows">Remove rows identical to an earlier row</option>
           <option value="keys">Also remove rows that repeat a unique value</option>
-        </select>
+        </select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
         <p class="hint">The first row is always the one that is kept.</p>
       </div>
     </div>
@@ -303,19 +303,19 @@
       <div class="row">
         <div class="field">
           <label for="dup-rows">Identical rows in the source file</label>
-          <select id="dup-rows">
+          <span class="select-wrap"><select id="dup-rows">
             <option value="warn">Report as a warning</option>
             <option value="ignore">Do not report</option>
-          </select>
+          </select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
         </div>
         <div class="field">
           <label for="out-delimiter">Separator of the cleaned copy</label>
-          <select id="out-delimiter">
+          <span class="select-wrap"><select id="out-delimiter">
             <option value="">Same as this file</option>
             <option value=",">Comma ,</option>
             <option value=";">Semicolon ;</option>
             <option value="&#9;">Tab</option>
-          </select>
+          </select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
         </div>
         <div class="field">
           <label for="out-encoding">Encoding of the cleaned copy</label>
@@ -323,10 +323,10 @@
         </div>
         <div class="field">
           <label for="line-ending">Line endings of the cleaned copy</label>
-          <select id="line-ending">
+          <span class="select-wrap"><select id="line-ending">
             <option value="crlf">Windows (CRLF)</option>
             <option value="lf">Unix (LF)</option>
-          </select>
+          </select><svg class="icon select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
         </div>
         <div class="field">
           <label for="max-field">Longest allowed value (characters)</label>

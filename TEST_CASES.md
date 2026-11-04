@@ -60,6 +60,9 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | AC-51 | Contract of 1.0.0: `--profile`, `--output-profile`, `--output-profiles` and the hidden deprecated aliases (stderr warning; old and new together refused), `export_clean(output_profile=...)` and `run_batch(output_profiles=...)` with deprecated aliases (`DeprecationWarning`, `TypeError` for both), report `schema_version` 2 with `dry_run`, `output_csv`/`output_profile`, and a top-level `artifacts` list in clean reports, `output_field_too_large`, `CleanResult.ok`/`source_errors`/`source_warnings`/`output_warnings`, and the new exports | `integration/test_contract_1_0.py`: all tests; `integration/test_regressions.py`: `test_r3_expanded_output_beyond_field_limit_blocks_export`; `unit/test_stability_inventory.py` |
 | AC-35 | Batch: deterministic output names, collisions and unsafe paths stop before writing, a failing file does not affect others, single-file commands unchanged | `integration/test_batch.py`: `test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files`, `test_output_name_collisions_stop_the_batch_before_writing`, `test_existing_outputs_and_inputs_are_protected`, `test_one_failed_write_does_not_undo_the_other_files`, `test_overrides_apply_to_every_file`, `test_library_entry_point_matches_the_command`, `test_single_file_commands_are_unchanged_and_help_lists_batch` |
 | AC-52 | **How to use** in the side panel: a native `<details>` after the rows and before the "Local only" footer, closed by default; opens and closes with Enter or Space; the open state is remembered under `csv-tidy-howto` (read and written inside try/catch, so blocked storage only means it starts closed); six step names (data-step 1–6, in order) that show their step like the step navigation; the tip about profiles; the chevron turns when open, without animation under reduced motion; the panel grows downward without changing its width or the main column at 1440, 1024, and 390 pixels. The unused background layer (`.backdrop`, `--nebula-1/2/3`, `--stars`) is gone | `integration/test_ui.py`: `test_side_panel_has_a_closed_how_to_use_guide`, `test_unused_background_layer_is_gone`; browser checks below |
+| AC-53 | Focus rings follow the keyboard: a mouse click on the file area, the **Encoding** list, or a list of step 3 draws no ring and the file card keeps its border; Tab to the file field, a separator, or a list shows the ring; the ring around the chosen separator and file mode stays | `integration/test_ui.py`: `test_focus_rings_follow_the_keyboard_not_mouse_clicks`; browser checks below |
+| AC-54 | Every single-choice list (10 in the page, the type, number, and date lists of each column rule) draws the chevron of **How to use** instead of the browser's arrow, 12 to 14 pixels from the right edge with room for the text; it turns 180 degrees while the list is open, at once under reduced motion; the multi-select list of combined keys keeps its box | `integration/test_ui.py`: `test_lists_use_the_how_to_use_chevron_which_turns_while_open`; browser checks below |
+| AC-55 | Thin scroll bars in both themes: the page, the side bar, the side panel, and tables scroll with a 6-pixel rounded thumb without a track (in the side panel clear of its round corners), at least 3:1 against the surface behind it; other browsers get `scrollbar-width: thin` | `integration/test_ui.py`: `test_scroll_bars_are_thin_in_both_themes`; browser checks below |
 
 ## Regression tests
 
@@ -268,6 +271,38 @@ Screenshots of both themes with and without text, before and after removing the 
 layer, have the same background colors; the only differences are anti-aliasing (text is now
 drawn with subpixel instead of grayscale smoothing, edges of rounded corners differ by at
 most 7 of 255).
+
+For the focus rings after a mouse click (1.1.1, 2026-11-04), 67 checks passed in
+headless Chrome 156 in both themes at 1440, 1024, and 390 pixels, and the earlier
+walk-throughs (192 guide, 58 logo-mark, 421 side-bar sections, 156 shell, 218 input-card,
+47 dark-color checks) passed again. New checks: a mouse click on **Encoding** (open and
+closed again), on **+** with a file chosen, on **Semicolon**, and on a list of step 3 draws
+no focus ring and no glow, and the file card keeps its border; the chosen separator keeps its
+ring; Tab to the file field, a separator, and **Encoding** shows the 3-pixel ring (and the
+glow on the list). Chrome counts a list opened with the mouse as keyboard focus
+(`:focus-visible`), which is why the page remembers whether it was last used with a pointer
+or the keyboard.
+
+For the chevron of the lists (1.1.1, 2026-11-04), 107 checks passed in headless Chrome
+156 in both themes at 1440, 1024, and 390 pixels, and the earlier walk-throughs (67 focus,
+192 guide, 58 logo-mark, 421 side-bar sections, 156 shell, 218 input-card, 47 dark-color
+checks) passed again. New checks: every shown single-choice list, on the start page and in
+step 3 with number and date rules and "More settings" open, has no browser arrow and the
+chevron 12 to 14 pixels from its right edge, centred, with the text stopping before it; a
+click opens **Encoding** and the chevron turns 180 degrees (150 ms; at once with reduced
+motion) and turns back when the list closes; the arrow keys still change the encoding; the
+chevron fades with a disabled list; the combined-key list keeps its box; no horizontal
+scrolling. Chevron contrast: 4.8:1 on the dark list background (#313131) and 6.19:1 on the
+light one (#FFFFFF). The date list of a column rule now has room for
+"Like the file (YYYY-MM-DD)" (it was cut off by a few pixels before).
+
+For the thin scroll bars (1.1.1, 2026-11-04), 19 checks passed in headless Chrome 156 with
+its scroll bars shown (`--hide-scrollbars` removed): in a 1440 x 460 window with the guide
+open, the page, the side panel, and the side bar each scroll with a 6-pixel bar; at 390
+pixels the rule table scrolls sideways with a 6-pixel bar and the page does not. Thumb
+contrast: dark #6E6E6E 3.23:1 on the panel and side bar (#1F1F1F) and 3.45:1 on the page
+(#191919); light #8A8A8A 3.45:1 on the panel (#FFFFFF) and 3.11:1 on the page and side bar
+(#F3F3F3); on hover 4.47 to 5.10:1.
 
 `csv-tidy update --check` was run once against the real GitHub API (release 0.3.0): the wheel
 and its digest were found and matched the published SHA-256. pip was shown to refuse a wheel

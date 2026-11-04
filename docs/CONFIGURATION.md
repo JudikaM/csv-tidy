@@ -361,7 +361,8 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   issue's `remedy` (see Reports); for other issues it shows the suggestion text.
 - **Look.** A dark theme (default, in the colors of VS Code's "Dark Modern") and a light theme
   (in the colors of VS Code's "Light+"), switched in the side bar and remembered
-  in the browser's local storage for this address. Quit asks for confirmation. Files can be
+  in the browser's local storage for this address. Lists show a chevron that turns while
+  they are open, and scroll bars are thin (a 6-pixel thumb). Quit asks for confirmation. Files can be
   dropped onto the file area. The page uses only its own style sheet and scripts
   (`app.css`, `theme.js`, `app.js`); no fonts or styles are loaded from elsewhere.
 - **Layout.** Three columns: a side bar (`nav`), the main column (`main`), centered in the
@@ -411,7 +412,8 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
 - **Accessibility.** One `h1`; the landmarks `nav`, `main`, `aside`, and `header` (narrow
   windows); a skip link to the main column as the first Tab stop; a name for every control,
   including icon-only buttons; `aria-expanded` and `aria-controls` on the buttons that show
-  or hide something (side bar, Find, file menu); a visible focus ring on every control; every
+  or hide something (side bar, Find, file menu); a visible focus ring on every control that is
+  reached with the keyboard (a mouse click on the file area or a list draws none); every
   action works with the keyboard alone; `prefers-reduced-motion` turns off animations and
   transitions; text contrast at least 4.5:1 and icons and focus rings at least 3:1 in both
   themes.

@@ -81,7 +81,7 @@ Requires Python 3.11 or newer. CSV Tidy is **not published on PyPI**. Published 
 installation files (a wheel and a source distribution) are listed on the
 [GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); a downloaded wheel
 installs with `python -m pip install <path-to-wheel>` inside a virtual environment. This
-README describes version 1.1.0; changes made after a release are listed under "Unreleased"
+README describes version 1.1.1; changes made after a release are listed under "Unreleased"
 in the [changelog](CHANGELOG.md). You can also install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's programs directly, so the
@@ -192,7 +192,7 @@ normalize = ["amount", "date"]
 ### 1. Check
 
 ```text
-CSV Tidy 1.1.0 - check
+CSV Tidy 1.1.1 - check
 Verdict: FAILED - 2 errors found in the source file.
 Source: examples\transactions_fixable.csv
 Profile: examples\profiles\transactions-id.toml
@@ -246,7 +246,7 @@ JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 ### 2. Preview a clean (dry run is the default)
 
 ```text
-CSV Tidy 1.1.0 - clean (dry run, nothing written)
+CSV Tidy 1.1.1 - clean (dry run, nothing written)
 Verdict: READY TO EXPORT - no errors remain in the cleaned result; 2 source problems repaired.
 ...
 Transformations (applied in this order):
@@ -444,7 +444,7 @@ step-by-step guide for first-time users is in
 ```
 
 ```text
-CSV Tidy 1.1.0 - batch clean (dry run, nothing written)
+CSV Tidy 1.1.1 - batch clean (dry run, nothing written)
 Verdict: 2 of 4 files need attention (2 with data errors).
 Profile: examples\profiles\transactions-id.toml
 

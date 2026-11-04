@@ -22,6 +22,11 @@ const DATE_FORMATS = [
 ];
 const PING_SECONDS = 60;
 
+/* Chrome counts a list (<select>) opened with the mouse as keyboard focus. Remember how the
+   page was used last, so that app.css draws the list's focus ring for the keyboard only. */
+document.addEventListener("pointerdown", () => { document.documentElement.dataset.input = "pointer"; }, true);
+document.addEventListener("keydown", () => { document.documentElement.dataset.input = "keyboard"; }, true);
+
 const DEFAULT_LIMITS = { max_details: 200, max_examples: 200, preview_rows: 50 };
 const LIMIT_RANGES = { max_details: [0, 10000], max_examples: [0, 10000], preview_rows: [1, 1000] };
 const STATUS_LABELS = {
@@ -354,6 +359,7 @@ function renderRules() {
         ...Object.entries(NUMBER_LABELS).map(([value, text]) => el("option", { value, text }))
       );
       format.value = rule.numberFormat;
+      format = withChevron(format);
     } else if (rule.type === "date") {
       const known = DATE_FORMATS.some(([value]) => value === rule.dateFormat);
       const other = rule.dateOther || (rule.dateFormat && !known);
@@ -365,7 +371,7 @@ function renderRules() {
         el("option", { value: "other", text: "Other…" })
       );
       pick.value = other ? "other" : rule.dateFormat;
-      format = el("div", { class: "date-pick" }, pick);
+      format = el("div", { class: "date-pick" }, withChevron(pick));
       if (other) {
         const custom = el("input", {
           type: "text",
@@ -394,7 +400,7 @@ function renderRules() {
         el("code", { text: name }),
         inFile.has(name) ? null : el("span", { class: "missing", text: "Not in this file (from the loaded profile)" })
       ),
-      el("td", null, type),
+      el("td", null, withChevron(type)),
       el("td", null, format),
       tick("required", "Must not be empty"),
       tick("unique", "Must be unique"),
@@ -1793,6 +1799,12 @@ const STATE_ICONS = {
     "M6.391 20.279a10 10 0 0 1-2.69-2.7",
   ].map((d) => ["path", { d }]),
 };
+
+/* A single-choice list with the chevron of "How to use", like the lists in index.html; app.css
+   turns it while the list is open. */
+function withChevron(select) {
+  return el("span", { class: "select-wrap" }, select, icon([["path", { d: "m6 9 6 6 6-6" }]], "select-chevron"));
+}
 
 function icon(shapes, extra) {
   const make = (tag, attrs) => {

@@ -394,6 +394,78 @@ def test_page_structure_supports_keyboard_and_screen_reader_use(ui):
     )
 
 
+def test_focus_rings_follow_the_keyboard_not_mouse_clicks(ui):
+    """AC-53: a click draws no focus ring on the file card; the keyboard always does."""
+    css = ui.request("/app.css")[2].decode("utf-8")
+    script = ui.request("/app.js")[2].decode("utf-8")
+    # The file card keeps its border while a control in it has focus.
+    assert ".input-card:focus-within" not in css
+    # The file area and the lists show a ring only for keyboard focus.
+    assert ".dropzone:focus-within" not in css
+    assert ".dropzone:has(input:focus-visible) { outline: 3px solid var(--focus);" in css
+    assert "select:focus {" not in css and "select:focus," not in css
+    assert "select:focus-visible { border-color: var(--focus);" in css
+    # Chrome treats a list opened with the mouse as keyboard focus: the page remembers how it
+    # was used last, and a list chosen with the mouse gets no ring until a key is pressed.
+    assert '[data-input="pointer"] select:focus-visible { outline: none;' in css
+    assert re.search(
+        r'addEventListener\("pointerdown", \(\) => \{ document\.documentElement\.dataset\.input'
+        r' = "pointer"; \}, true\)',
+        script,
+    )
+    assert re.search(
+        r'addEventListener\("keydown", \(\) => \{ document\.documentElement\.dataset\.input'
+        r' = "keyboard"; \}, true\)',
+        script,
+    )
+    # The chosen separator and file mode keep their own ring.
+    assert ".seg-opt:has(input:checked) {" in css
+
+
+def test_lists_use_the_how_to_use_chevron_which_turns_while_open(ui):
+    """AC-54: every single-choice list draws the guide's chevron instead of the browser's arrow."""
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    script = ui.request("/app.js")[2].decode("utf-8")
+    css = ui.request("/app.css")[2].decode("utf-8")
+    chevron = '<path d="m6 9 6 6 6-6"/></svg>'
+    selects = re.findall(r"(.{0,40})(<select[^>]*>).*?</select>(.{0,260})", page, re.S)
+    single = [(before, tag, after) for before, tag, after in selects if "multiple" not in tag]
+    assert len(single) == 10 and len(selects) == 11
+    for before, tag, after in single:
+        assert before.endswith('<span class="select-wrap">'), tag
+        assert after.startswith('<svg class="icon select-chevron"') and chevron in after, tag
+        assert 'aria-hidden="true"' in after.split("</svg>")[0], tag
+    # The same chevron as "How to use".
+    assert chevron in page[page.index('<summary class="howto-summary">') :]
+    # The lists the script draws in step 3 get the same wrapper.
+    assert '"select-chevron"' in script and '["path", { d: "m6 9 6 6 6-6" }]' in script
+    assert script.count("withChevron(") == 4  # the helper and three rule lists
+    # No browser arrow; the chevron turns while the list is open, at once with reduced motion.
+    assert ".select-wrap > select { appearance: none;" in css
+    assert ".select-wrap:has(> select:open) .select-chevron { transform: rotate(180deg); }" in css
+    assert (
+        "@media (prefers-reduced-motion: reduce) { .select-chevron { transition: none; } }" in css
+    )
+
+
+def test_scroll_bars_are_thin_in_both_themes(ui):
+    """AC-55: a 6 px rounded thumb without a track, with a thin fallback outside Chromium."""
+    css = ui.request("/app.css")[2].decode("utf-8")
+    assert "::-webkit-scrollbar { width: 6px; height: 6px; }" in css
+    assert (
+        "::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }" in css
+    )
+    assert (
+        "::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 999px; }"
+    ) in css
+    assert re.search(
+        r"@supports not selector\(::-webkit-scrollbar\) \{\s*\* \{ scrollbar-width: thin;", css
+    )
+    dark, light = css.split('[data-theme="light"] {')[0], css.split('[data-theme="light"] {')[1]
+    for theme in (dark, light):
+        assert "--scroll-thumb: #" in theme and "--scroll-thumb-hover: #" in theme
+
+
 def test_new_check_removes_the_loaded_files_from_the_session(ui, write):
     first = ui.upload(write("a.csv", b"id\n1\n"))
     assert ui.post("/api/file/remove", {"file_id": first})[0] == 200
