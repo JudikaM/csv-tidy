@@ -458,13 +458,16 @@ replace the profile list (repeat for several columns); `--no-trim`/`--no-normali
 | `--neutralize-formulas COL` | clean, batch clean | protect formula-like values in a text column |
 | `--dry-run` / `--apply`, `--output PATH`, `--output-schema PATH` | clean | preview (default) or write |
 | `--apply`, `--output-dir DIR`, `--output-schemas`, `--report-dir DIR`, `--pattern GLOB`, `--recursive` | batch | many files |
-| `--format text\|json`, `--report PATH`, `--max-details N`, `--max-examples N` | check, clean, batch | reports |
+| `--format text\|json`, `--report PATH`, `--max-details N` | check, clean, batch | reports |
+| `--max-examples N` | clean, batch clean | before/after examples listed in reports |
 | `--overwrite` | all writing commands | allow replacing existing output files (never inputs) |
 
 Exit codes: `0` no blocking errors (warnings allowed), `1` data errors (`check`: in the source;
 `clean`: remaining in the cleaned result), `2` usage, configuration, decoding/parsing, read or
 write failure, `130` cancelled by the user. Every command has `--help`. The full reference is
-in [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). What stays compatible from version 1.0
+(profiles, options, exit codes, issue codes, JSON reports, the Python API) is listed in
+[docs/STABILITY.md](docs/STABILITY.md).
 
 ## Library
 
@@ -485,7 +488,8 @@ else:
 
 Many files: `run_batch("clean", select_inputs(["exports/"]), profile)`. A runnable example is
 in [examples/api_example.py](examples/api_example.py). See
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for result types and exceptions.
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for result types and exceptions, and
+[docs/STABILITY.md](docs/STABILITY.md) for the names that form the public API.
 
 ## Supported conventions and limits
 
