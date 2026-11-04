@@ -1471,16 +1471,135 @@ function currentStep() {
    step (choosing a file, checking, cleaning), which then becomes the marked one. */
 const stepMark = { progress: 0, shown: 1 };
 
+const LAST_STEP = 6;
+
 function markStep(step) {
   stepMark.shown = step;
   for (const link of document.querySelectorAll(".steps a")) {
     if (Number(link.dataset.step) === step) link.setAttribute("aria-current", "step");
     else link.removeAttribute("aria-current");
   }
+  /* aria-disabled rather than disabled, so a button keeps its focus at the first or last step. */
+  $("step-back").setAttribute("aria-disabled", String(step <= 1));
+  $("step-forward").setAttribute("aria-disabled", String(step >= LAST_STEP));
 }
 
 for (const link of document.querySelectorAll(".steps a")) {
   link.addEventListener("click", () => markStep(Number(link.dataset.step)));
+}
+
+/* ------------------------------------------------------------------ side bar */
+
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const narrow = window.matchMedia("(max-width: 45rem)"); /* below 720 px: overlay */
+const nav = { opener: null };
+
+function showSection(target) {
+  target.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "start" });
+}
+
+/* Step back / forward move the step marker and show that step. */
+function moveStep(delta) {
+  const step = Math.min(LAST_STEP, Math.max(1, stepMark.shown + delta));
+  if (step === stepMark.shown) return;
+  markStep(step);
+  showSection($(`step-${step}`));
+}
+$("step-back").addEventListener("click", () => moveStep(-1));
+$("step-forward").addEventListener("click", () => moveStep(1));
+
+const navOpen = () => document.querySelector(".app").classList.contains("nav-open");
+const navCollapsed = () => document.documentElement.dataset.nav === "collapsed";
+
+function syncNavButtons() {
+  const shown = narrow.matches ? navOpen() : !navCollapsed();
+  $("nav-toggle").setAttribute("aria-expanded", String(shown));
+  $("nav-open").setAttribute("aria-expanded", String(narrow.matches && navOpen()));
+  $("nav-toggle").title = shown ? "Hide the side bar" : "Show the side bar";
+}
+
+/* The overlay is modal: the rest of the page cannot be reached while it is open. */
+function setOverlay(open) {
+  document.querySelector(".app").classList.toggle("nav-open", open);
+  $("nav-scrim").hidden = !open;
+  document.querySelector(".content").inert = open;
+  syncNavButtons();
+}
+
+function openNav(opener) {
+  nav.opener = opener;
+  setOverlay(true);
+  $("nav-toggle").focus();
+}
+
+function closeNav() {
+  if (!navOpen()) return;
+  setOverlay(false);
+  const opener = nav.opener || $("nav-open");
+  nav.opener = null;
+  if (narrow.matches) opener.focus();
+}
+
+$("nav-open").addEventListener("click", () => openNav($("nav-open")));
+$("nav-scrim").addEventListener("click", closeNav);
+$("nav-toggle").addEventListener("click", () => {
+  if (narrow.matches) {
+    closeNav();
+    return;
+  }
+  const collapsed = !navCollapsed();
+  document.documentElement.dataset.nav = collapsed ? "collapsed" : "expanded";
+  try {
+    window.localStorage.setItem("csv-tidy-nav", collapsed ? "collapsed" : "expanded");
+  } catch (error) {
+    /* the state is not remembered, which is fine */
+  }
+  syncNavButtons();
+});
+
+/* While the overlay is open, Tab stays inside it and Escape closes it. */
+$("sidebar").addEventListener("keydown", (event) => {
+  if (!narrow.matches || !navOpen()) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeNav();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const items = [...$("sidebar").querySelectorAll("a[href], button:not(:disabled)")];
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
+
+narrow.addEventListener("change", () => {
+  if (!narrow.matches && navOpen()) {
+    nav.opener = null;
+    setOverlay(false);
+  }
+  syncNavButtons();
+});
+
+/* Rows of the side bar lead to where each feature lives on the page. */
+for (const row of document.querySelectorAll(".nav-list a[data-step]")) {
+  row.addEventListener("click", (event) => {
+    markStep(Number(row.dataset.step));
+    if (row.id === "nav-settings" && !$("rules").hidden) {
+      event.preventDefault();
+      $("more").open = true;
+      showSection($("more"));
+    }
+    if (narrow.matches) {
+      nav.opener = null; /* focus follows the link, not back to the toggle */
+      setOverlay(false);
+    }
+  });
 }
 
 function refreshLook() {
@@ -1502,6 +1621,8 @@ function refreshLook() {
 }
 
 applyTheme(document.documentElement.dataset.theme === "light" ? "light" : "cosmos");
+syncNavButtons();
+markStep(stepMark.shown);
 fillDatePicks();
 renderRules();
 refreshButtons();

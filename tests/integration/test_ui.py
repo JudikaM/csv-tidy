@@ -8,6 +8,7 @@ import threading
 import urllib.error
 import urllib.request
 import zipfile
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
@@ -111,6 +112,80 @@ def test_dark_theme_is_the_default(ui):
     assert 'id="theme-label">Dark Modern<' in page
     script = ui.request("/theme.js")[2].decode("utf-8")
     assert 'let theme = "cosmos";' in script
+
+
+class _Elements(HTMLParser):
+    """Start tags of a page with their attributes and the ids of their open ancestors."""
+
+    def __init__(self):
+        super().__init__()
+        self.elements, self.open = [], []
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        self.elements.append((tag, attributes, [a.get("id") for _, a in self.open]))
+        if tag not in ("img", "input", "meta", "link", "br"):  # void elements never close
+            self.open.append((tag, attributes))
+
+    def handle_startendtag(self, tag, attrs):  # <path ... />: recorded, never opened
+        self.elements.append((tag, dict(attrs), [a.get("id") for _, a in self.open]))
+
+    def handle_endtag(self, tag):
+        while self.open and self.open.pop()[0] != tag:
+            pass
+
+    def find(self, tag=None, **attrs):
+        return [
+            (t, a, inside)
+            for t, a, inside in self.elements
+            if (tag is None or t == tag)
+            and all(a.get(k.rstrip("_")) == v for k, v in attrs.items())
+        ]
+
+
+def test_page_shell_has_side_bar_main_column_and_side_panel(ui):
+    """AC-46: one nav (side bar), one main, one aside, one h1, and a skip link."""
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    parsed = _Elements()
+    parsed.feed(page)
+    assert len(parsed.find("nav", id="sidebar")) == 1
+    assert len(parsed.find("main", id="main")) == 1 and len(parsed.find("aside")) == 1
+    assert len(parsed.find("h1")) == 1
+    controls = [(t, a) for t, a, _ in parsed.elements if t in ("a", "button", "input", "select")]
+    assert controls[0] == ("a", {"class": "skip", "href": "#main"})  # the first stop of Tab
+    # Both side-bar toggles name the side bar they control and say whether it is shown.
+    for toggle in ("nav-toggle", "nav-open"):
+        ((_, attrs, _),) = parsed.find("button", id=toggle)
+        assert attrs["aria-controls"] == "sidebar" and attrs["aria-expanded"] in ("true", "false")
+    # Icon-only buttons are named; the step buttons move between the workflow steps.
+    icon_buttons = [a for t, a, _ in parsed.find("button") if "icon-button" in a.get("class", "")]
+    assert len(icon_buttons) == 4 and all(a.get("aria-label") for a in icon_buttons)
+    assert {a["id"] for a in icon_buttons} >= {"step-back", "step-forward"}
+    # Theme switch, Quit, version, and the offline pill live in the side bar.
+    for element_id in ("theme-toggle", "quit"):
+        assert "sidebar" in parsed.find(id=element_id)[0][2]
+    rows = [a["href"] for _, a, _ in parsed.find("a") if "nav-row" in a.get("class", "")]
+    # Files, Profiles, Reports, Settings lead to where each feature lives for now.
+    assert rows == ["#step-1", "#step-3", "#step-6", "#step-3"]
+    assert "Local only — nothing leaves this computer" in page
+    assert 'id="footer-theme">Dark Modern<' in page
+
+
+def test_side_bar_state_is_remembered_only_where_storage_works(ui):
+    theme = ui.request("/theme.js")[2].decode("utf-8")
+    script = ui.request("/app.js")[2].decode("utf-8")
+    css = ui.request("/app.css")[2].decode("utf-8")
+    # Read before the page is drawn and written on toggle, both inside try/catch.
+    assert re.search(r'try \{[^}]*localStorage\.getItem\("csv-tidy-nav"\)', theme)
+    assert re.search(r'try \{\s*window\.localStorage\.setItem\("csv-tidy-nav"', script)
+    assert "document.documentElement.dataset.nav = nav;" in theme
+    # Collapsing applies to wide windows; below 720 px the side bar is a modal overlay.
+    assert '[data-nav="collapsed"] .app { --nav-w: 3.5rem; }' in css
+    assert "@media (max-width: 45rem)" in css and "@media (max-width: 68.75rem)" in css
+    assert 'matchMedia("(max-width: 45rem)")' in script
+    assert '.querySelector(".content").inert = open' in script
+    assert 'event.key === "Escape"' in script
+    assert "@media (prefers-reduced-motion: reduce)" in css
 
 
 def test_logo_is_served_as_a_png_without_the_key(ui):
