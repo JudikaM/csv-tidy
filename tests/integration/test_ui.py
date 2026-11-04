@@ -105,6 +105,14 @@ def test_page_is_self_contained_and_needs_the_key(ui):
     assert ui.request("/../pyproject.toml")[0] == 404
 
 
+def test_light_theme_is_the_default(ui):
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    assert '<html lang="en" data-theme="light">' in page
+    assert 'id="theme-label">Light<' in page
+    script = ui.request("/theme.js")[2].decode("utf-8")
+    assert 'let theme = "light";' in script
+
+
 def test_server_listens_on_loopback_only(ui):
     assert urlsplit(ui.base).hostname == "127.0.0.1"
 

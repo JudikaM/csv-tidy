@@ -6,6 +6,14 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Interface: the light theme is now the default; the dark "Cosmos" theme is one click away in
+  the header, and a theme chosen earlier is still remembered by the browser.
+- Interface: every icon is now an inline [Lucide](https://lucide.dev) icon (the set shadcn/ui
+  uses), including the theme switch (sun and moon) and the Tab separator; still no external
+  files or requests.
+
 ## [0.5.0] - 2026-10-29
 
 Dates without separators, tab-separated files, per-column formats in `profile init`,
