@@ -23,7 +23,7 @@ def test_valid_fixtures_pass_check(examples):
         ("customers_valid.csv", US),
         ("transactions_canonical.csv", "profiles/transactions-canonical.toml"),
     ]:
-        result = run_cli("check", str(examples / data), "--schema", str(examples / profile))
+        result = run_cli("check", str(examples / data), "--profile", str(examples / profile))
         assert result.code == 0, result.out
 
 
@@ -33,13 +33,13 @@ def test_transactions_fixable_full_chain(examples, monkeypatch):
     profile = examples / ID
     before = sha256(source), sha256(profile)
 
-    check = run_cli("check", "examples/transactions_fixable.csv", "--schema", "examples/" + ID)
+    check = run_cli("check", "examples/transactions_fixable.csv", "--profile", "examples/" + ID)
     assert check.code == 1
     assert "invalid_number (record 2, line 3, column 'amount')" in check.out
     assert "invalid_date (record 3, line 4, column 'date')" in check.out
 
     preview = run_cli(
-        "clean", "examples/transactions_fixable.csv", "--schema", "examples/" + ID, "--dry-run"
+        "clean", "examples/transactions_fixable.csv", "--profile", "examples/" + ID, "--dry-run"
     )
     assert preview.code == 0
     assert "Export: ready" in preview.out and "2 resolved" in preview.out
@@ -48,12 +48,12 @@ def test_transactions_fixable_full_chain(examples, monkeypatch):
     applied = run_cli(
         "clean",
         "examples/transactions_fixable.csv",
-        "--schema",
+        "--profile",
         "examples/" + ID,
         "--apply",
         "--output",
         "output/transactions_clean.csv",
-        "--output-schema",
+        "--output-profile",
         "output/transactions.output.toml",
     )
     assert applied.code == 0, applied.out + applied.err
@@ -67,13 +67,13 @@ def test_transactions_fixable_full_chain(examples, monkeypatch):
     ]
 
     recheck = run_cli(
-        "check", "output/transactions_clean.csv", "--schema", "output/transactions.output.toml"
+        "check", "output/transactions_clean.csv", "--profile", "output/transactions.output.toml"
     )
     assert recheck.code == 0, recheck.out
     again = run_cli(
         "clean",
         "output/transactions_clean.csv",
-        "--schema",
+        "--profile",
         "output/transactions.output.toml",
         "--dry-run",
         "--format",
@@ -91,7 +91,7 @@ def test_unfixable_transactions_block_export(examples, monkeypatch):
     check = run_cli(
         "check",
         "examples/transactions_unfixable.csv",
-        "--schema",
+        "--profile",
         "examples/" + ID,
         "--format",
         "json",
@@ -109,7 +109,7 @@ def test_unfixable_transactions_block_export(examples, monkeypatch):
     blocked = run_cli(
         "clean",
         "examples/transactions_unfixable.csv",
-        "--schema",
+        "--profile",
         "examples/" + ID,
         "--apply",
         "--output",
@@ -126,7 +126,7 @@ def test_customers_us_profile_preserves_identifiers(examples, tmp_path):
     result = run_cli(
         "clean",
         str(examples / "customers_fixable.csv"),
-        "--schema",
+        "--profile",
         str(examples / US),
         "--apply",
         "--output",
@@ -140,8 +140,8 @@ def test_customers_us_profile_preserves_identifiers(examples, tmp_path):
 
 def test_trim_introduced_duplicates_block_until_deduplicated(examples, tmp_path):
     source, profile = str(examples / "customers_trim_duplicates.csv"), str(examples / US)
-    assert run_cli("check", source, "--schema", profile).code == 0  # distinct before trimming
-    blocked = run_cli("clean", source, "--schema", profile, "--format", "json")
+    assert run_cli("check", source, "--profile", profile).code == 0  # distinct before trimming
+    blocked = run_cli("clean", source, "--profile", profile, "--format", "json")
     report = json.loads(blocked.out)
     assert blocked.code == 1
     assert [
@@ -150,14 +150,14 @@ def test_trim_introduced_duplicates_block_until_deduplicated(examples, tmp_path)
     fixed = run_cli(
         "clean",
         source,
-        "--schema",
+        "--profile",
         profile,
         "--deduplicate",
         "keys",
         "--apply",
         "--output",
         str(tmp_path / "dedup.csv"),
-        "--output-schema",
+        "--output-profile",
         str(tmp_path / "dedup.toml"),
     )
     assert fixed.code == 0, fixed.out
@@ -167,7 +167,7 @@ def test_trim_introduced_duplicates_block_until_deduplicated(examples, tmp_path)
     ]
     assert 'deduplicate = "keys"' in (tmp_path / "dedup.toml").read_text(encoding="utf-8")
     recheck = run_cli(
-        "check", str(tmp_path / "dedup.csv"), "--schema", str(tmp_path / "dedup.toml")
+        "check", str(tmp_path / "dedup.csv"), "--profile", str(tmp_path / "dedup.toml")
     )
     assert recheck.code == 0
 
@@ -177,7 +177,7 @@ def test_generated_profile_reflects_cli_overrides(examples, tmp_path):
     result = run_cli(
         "clean",
         str(examples / "transactions_fixable.csv"),
-        "--schema",
+        "--profile",
         str(examples / ID),
         "--output-delimiter",
         ",",
@@ -190,7 +190,7 @@ def test_generated_profile_reflects_cli_overrides(examples, tmp_path):
         "--apply",
         "--output",
         str(out),
-        "--output-schema",
+        "--output-profile",
         str(schema),
     )
     assert result.code == 0, result.out
@@ -203,6 +203,7 @@ def test_generated_profile_reflects_cli_overrides(examples, tmp_path):
         and 'number_format = "us"' in text
         and 'line_ending = "lf"' in text
     )
-    assert run_cli("check", str(out), "--schema", str(schema)).code == 0
-    second = json.loads(run_cli("clean", str(out), "--schema", str(schema), "--format", "json").out)
+    assert run_cli("check", str(out), "--profile", str(schema)).code == 0
+    again = run_cli("clean", str(out), "--profile", str(schema), "--format", "json")
+    second = json.loads(again.out)
     assert second["changes"]["changed_fields"] == 0

@@ -129,13 +129,13 @@ def test_every_remedy_value_is_listed():
 
 
 def test_every_json_report_field_is_listed(tmp_path):
-    text = section("JSON reports (`schema_version = 1`)")
+    text = section("JSON reports (`schema_version = 2`)")
     profile = EXAMPLES / "profiles" / "transactions-id.toml"
     data = EXAMPLES / "transactions_fixable.csv"
     clean = csv_tidy.clean_file(data, profile)
     reports = [
         check_report(csv_tidy.check_file(data, profile), 100),
-        clean_report(clean, "dry-run", 100, 10),
+        clean_report(clean, "dry_run", 100, 10),
     ]
     inputs = batch.select_inputs([data])
     reports.append(batch.batch_report(batch.run_batch("clean", inputs, profile)))

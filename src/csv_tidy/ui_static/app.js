@@ -47,7 +47,10 @@ const state = {
   check: null, // {id, report, profile, limits}
   clean: null, // {id, data, profile, limits}
   pending: null, // AbortController of the running request
+  queued: false, // the primary button was pressed while a request was running
   cleared: false, // results were dropped since the last run
+  restart: false, // New check cancelled the running request: no "Cancelled" message
+  rows: new Map(), // file id -> data rows, once the file was read
   stopped: false,
 };
 
@@ -126,11 +129,13 @@ async function run(working, action) {
   state.cleared = false;
   setStatus("idle", working, "please wait; large files take longer. You can cancel.");
   setBusy(true);
+  let done = false;
   try {
     await action(state.pending.signal);
+    done = true;
   } catch (error) {
     if (error.name === "AbortError") {
-      setStatus("warn", "Cancelled. Nothing was changed or saved.", "run the step again when you are ready.");
+      if (!state.restart) setStatus("warn", "Cancelled. Nothing was changed or saved.", "run the step again when you are ready.");
     } else if (error instanceof TypeError) {
       setStatus("bad", "CSV Tidy is not running any more.", "start it again from the CSV Tidy icon (it stops by itself after a while without an open page). Your files were not changed.");
     } else {
@@ -138,7 +143,13 @@ async function run(working, action) {
     }
   } finally {
     state.pending = null;
+    state.restart = false;
+    const queued = state.queued;
+    state.queued = false;
     setBusy(false);
+    /* The primary button was pressed while this ran (for example, a field that lost focus
+       to the button read the file again): do it now, unless this failed or was cancelled. */
+    if (queued && done && !state.stopped) primaryAction();
   }
 }
 
@@ -429,7 +440,7 @@ function invalidateResults(message) {
     setStatus(
       "warn",
       state.cleared ? `${message} Earlier results were cleared because they no longer match.` : message,
-      state.header.length ? `select ${$("run-check").textContent} (step 4).` : "choose a file that can be read (steps 1 and 2)."
+      state.header.length ? `select ${$("run-check").textContent} (step 4).` : "choose a file that can be read (the box at the top, and step 2)."
     );
   }
 }
@@ -483,11 +494,11 @@ function plainSuggestion(issue) {
     case "deduplicate_keys":
       return 'Correct the repeated value in your original file, or choose "Also remove rows that repeat a unique value" (step 3) to keep only the first row.';
     case "delimiter":
-      return 'Switch "Columns are separated by" in step 1.';
+      return 'Switch "Separator" in the box at the top.';
     case "encoding":
-      return "Choose another text encoding in step 1 (files from older Excel versions are often Windows-1252), or save the file again as UTF-8.";
+      return "Choose another encoding in the box at the top (files from older Excel versions are often Windows-1252), or save the file again as UTF-8.";
     case "quoting":
-      return 'Check the quote marks (") in that row of your original file, and the separator in step 1.';
+      return 'Check the quote marks (") in that row of your original file, and the separator in the box at the top.';
     case "max_field_chars":
       return 'Usually a quote mark (") is not closed in that row. Fix it in your original file, or raise "Longest allowed value" in More settings.';
     default:
@@ -839,6 +850,7 @@ function refreshButtons() {
   const loaded = Boolean(state.file) && state.header.length > 0;
   $("run-check").disabled = busy || !loaded;
   $("run-clean").disabled = busy || !loaded;
+  refreshPrimary(busy, loaded);
   const batchMode = state.mode === "batch";
   $("batch-actions").hidden = !batchMode;
   $("single-actions").hidden = batchMode;
@@ -885,6 +897,7 @@ async function loadPreview(signal, lead) {
   if (longest !== null) body.max_field_chars = longest;
   const response = await postJson("/api/preview", body, signal);
   state.preview = await response.json();
+  state.rows.set(state.file.id, state.preview.report.scan.data_records);
   state.header = state.preview.header ? [...new Set(state.preview.header)] : [];
   syncColumns();
   state.check = null;
@@ -900,9 +913,9 @@ async function loadPreview(signal, lead) {
   const errors = state.preview.report.summary.errors;
   const hint = state.preview.report.issues.find((issue) => issue.code === "possible_wrong_delimiter");
   if (!scan.complete) {
-    setStatus("bad", "This file could not be read to the end.", "check the separator and the encoding in step 1, or repair the file. Details are in step 2.");
+    setStatus("bad", "This file could not be read to the end.", "check the separator and the encoding in the box at the top, or repair the file. Details are in step 2.");
   } else if (hint) {
-    setStatus("warn", "The file loaded as one wide column.", "switch the separator in step 1; the file probably uses the other one.");
+    setStatus("warn", "The file loaded as one wide column.", "switch the separator in the box at the top; the file probably uses the other one.");
   } else if (errors) {
     setStatus("bad", `${lead} The file has ${count(errors, "structure problem")}.`, "see step 2, then set the rules (step 3) and select Check file.");
   } else if (state.mode === "batch") {
@@ -1036,7 +1049,7 @@ function removeBatchFile(id) {
     else {
       renderPreview();
       renderRules();
-      setStatus("idle", "No files chosen.", "choose the CSV files in step 1.");
+      setStatus("idle", "No files chosen.", "choose the CSV files in the box at the top.");
     }
   });
 }
@@ -1062,7 +1075,7 @@ function setMode(mode) {
   setStatus(
     "idle",
     mode === "batch" ? "Several files: the same rules are applied to every file." : "One file at a time.",
-    mode === "batch" ? "choose the CSV files in step 1 (you can choose several at once)." : "choose a CSV file in step 1."
+    mode === "batch" ? "choose the CSV files in the box at the top (you can choose several at once)." : "choose a CSV file in the box at the top."
   );
 }
 
@@ -1075,7 +1088,7 @@ function validateRulesLocally() {
   if ($("dedupe").value === "keys" && state.keys.length === 0 && ![...state.columns.values()].some((rule) => rule.unique)) {
     throw new Error('"Also remove rows that repeat a unique value" needs at least one column ticked "Must be unique" (step 3).');
   }
-  if (!currentEncoding()) throw new Error("Type the name of the encoding in step 1.");
+  if (!currentEncoding()) throw new Error("Type the name of the encoding under the box at the top.");
 }
 
 function runBatch(action) {
@@ -1141,7 +1154,7 @@ function runCheck() {
     const s = data.report.summary;
     const verdict = data.report.verdict.state;
     if (verdict === "incomplete") {
-      setStatus("bad", "The file could not be read to the end.", "check the separator and encoding in step 1, or repair the file.");
+      setStatus("bad", "The file could not be read to the end.", "check the separator and encoding in the box at the top, or repair the file.");
     } else if (verdict === "failed") {
       setStatus("bad", `${count(s.errors, "problem")} found.`, "fix them in your original file, or tick a repair in step 3 and select Preview cleaning.");
     } else if (verdict === "passed_structure_only") {
@@ -1174,7 +1187,7 @@ function runClean() {
         "review the changes in step 5, then select Save cleaned CSV (step 6)."
       );
     } else if (report.summary.status === "incomplete") {
-      setStatus("bad", "The file could not be read to the end; nothing can be saved.", "check the separator and encoding in step 1, or repair the file.");
+      setStatus("bad", "The file could not be read to the end; nothing can be saved.", "check the separator and encoding in the box at the top, or repair the file.");
     } else {
       setStatus("bad", `Saving is blocked: ${count(report.summary.output_errors, "problem")} remain.`, 'see "Still to fix" in step 5. Fix them in your original file or tick a repair in step 3, then preview again.');
     }
@@ -1361,13 +1374,13 @@ $("keys").addEventListener("click", (event) => {
   renderRules();
   invalidateResults("Rules changed.");
 });
-$("reset-rules").addEventListener("click", () => {
+/* Every column back to text, and every rule and output setting back to its default. */
+function resetRules() {
   state.columns = new Map();
   state.keys = [];
   state.profileName = null;
   $("max-field").value = "";
   $("profile-file").value = "";
-  $("profile-note").textContent = "All rules were reset: every column is text again.";
   for (const id of ["out-number", "out-delimiter", "out-encoding"]) $(id).value = "";
   setDate("out-date", "");
   $("src-number").value = "canonical";
@@ -1376,6 +1389,11 @@ $("reset-rules").addEventListener("click", () => {
   $("dup-rows").value = "warn";
   $("line-ending").value = "crlf";
   syncColumns();
+}
+
+$("reset-rules").addEventListener("click", () => {
+  resetRules();
+  $("profile-note").textContent = "All rules were reset: every column is text again.";
   renderRules();
   invalidateResults("Rules reset.");
 });
@@ -1387,7 +1405,10 @@ $("save-output-profile").addEventListener("click", () => download("output-profil
 $("save-report").addEventListener("click", () => saveReport(false));
 $("save-report-json").addEventListener("click", () => saveReport(true));
 $("save-profile").addEventListener("click", saveProfile);
-$("cancel").addEventListener("click", () => state.pending && state.pending.abort());
+$("cancel").addEventListener("click", () => {
+  state.queued = false;
+  if (state.pending) state.pending.abort();
+});
 async function quitNow() {
   if (state.pending) state.pending.abort();
   try {
@@ -1396,7 +1417,7 @@ async function quitNow() {
     /* already stopped */
   }
   state.stopped = true;
-  for (const control of document.querySelectorAll("main input, main select, main button, #quit")) control.disabled = true;
+  for (const control of document.querySelectorAll("main input, main select, main button, aside button, #quit, #new-check")) control.disabled = true;
   setStatus("idle", "CSV Tidy has stopped. Temporary copies were removed.", "close this tab. To use it again, start CSV Tidy from its icon or with csv-tidy ui.");
 }
 
@@ -1460,16 +1481,21 @@ dropzone.addEventListener("drop", (event) => {
 /* A file dropped anywhere else must not make the browser open it instead of the page. */
 for (const type of ["dragover", "drop"]) window.addEventListener(type, (event) => event.preventDefault());
 
+/* The step whose content shows the latest result: the preview after reading a file, the
+   check after checking, the changes after a cleaning preview. */
 function currentStep() {
-  if (!state.file || !state.header.length) return 1;
-  if (state.clean || (state.batch && state.batch.action === "clean")) return 6;
-  if (state.check || (state.batch && state.batch.action === "check")) return 5;
-  return 3;
+  if (!state.file || !state.preview) return 1;
+  if (!state.header.length) return 2; /* read, but not usable: step 2 says why */
+  if (state.clean || (state.batch && state.batch.action === "clean")) return 5;
+  if (state.check || (state.batch && state.batch.action === "check")) return 4;
+  return 2;
 }
 
-/* The step navigation marks one step: the one last clicked, until the work moves on to a new
-   step (choosing a file, checking, cleaning), which then becomes the marked one. */
-const stepMark = { progress: 0, shown: 1 };
+/* The step navigation marks one step, and only that step's content is shown: the step last
+   clicked, until the work moves on to a new step (a file read with new settings, a check,
+   a cleaning preview), which then becomes the marked one. Results that are cleared because
+   rules changed do not move the mark back. */
+const stepMark = { progress: 0, shown: 1, read: null };
 
 const LAST_STEP = 6;
 
@@ -1479,13 +1505,20 @@ function markStep(step) {
     if (Number(link.dataset.step) === step) link.setAttribute("aria-current", "step");
     else link.removeAttribute("aria-current");
   }
+  for (let n = 1; n <= LAST_STEP; n += 1) $(`step-${n}`).hidden = n !== step;
   /* aria-disabled rather than disabled, so a button keeps its focus at the first or last step. */
   $("step-back").setAttribute("aria-disabled", String(step <= 1));
   $("step-forward").setAttribute("aria-disabled", String(step >= LAST_STEP));
+  applyFind(); /* the count names the rows of the step that is shown */
 }
 
+/* The step content sits right under the navigation, so a click shows it without jumping. */
 for (const link of document.querySelectorAll(".steps a")) {
-  link.addEventListener("click", () => markStep(Number(link.dataset.step)));
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    markStep(Number(link.dataset.step));
+    $(`step-${link.dataset.step}`).scrollIntoView({ block: "nearest" });
+  });
 }
 
 /* ------------------------------------------------------------------ side bar */
@@ -1542,12 +1575,7 @@ function closeNav() {
 
 $("nav-open").addEventListener("click", () => openNav($("nav-open")));
 $("nav-scrim").addEventListener("click", closeNav);
-$("nav-toggle").addEventListener("click", () => {
-  if (narrow.matches) {
-    closeNav();
-    return;
-  }
-  const collapsed = !navCollapsed();
+function setCollapsed(collapsed) {
   document.documentElement.dataset.nav = collapsed ? "collapsed" : "expanded";
   try {
     window.localStorage.setItem("csv-tidy-nav", collapsed ? "collapsed" : "expanded");
@@ -1555,6 +1583,14 @@ $("nav-toggle").addEventListener("click", () => {
     /* the state is not remembered, which is fine */
   }
   syncNavButtons();
+}
+
+$("nav-toggle").addEventListener("click", () => {
+  if (narrow.matches) {
+    closeNav();
+    return;
+  }
+  setCollapsed(!navCollapsed());
 });
 
 /* While the overlay is open, Tab stays inside it and Escape closes it. */
@@ -1602,23 +1638,461 @@ for (const row of document.querySelectorAll(".nav-list a[data-step]")) {
   });
 }
 
+/* ------------------------------------------------------------------ side bar: new check */
+
+const PROFILE_NOTE = [...$("profile-note").childNodes].map((node) => node.cloneNode(true));
+
+const hasWork = () =>
+  Boolean(state.file || state.files.length || state.check || state.clean || state.batch || state.profileName || state.columns.size);
+
+/* Back to the start: no files, default reading settings, no rules, no results. The server's
+   temporary copies are removed too (a file chosen meanwhile would replace them anyway). */
+function startNewCheck() {
+  const ids = [...new Set([...state.files, state.file].filter(Boolean).map((file) => file.id))];
+  if (state.pending) {
+    state.restart = true;
+    state.queued = false;
+    state.pending.abort();
+  }
+  state.mode = "single";
+  for (const radio of document.querySelectorAll('input[name="mode"]')) radio.checked = radio.value === "single";
+  for (const radio of document.querySelectorAll('input[name="delimiter"]')) radio.checked = radio.value === ",";
+  $("encoding-other").value = "";
+  setEncoding("utf-8");
+  state.file = null;
+  state.files = [];
+  state.preview = null;
+  state.header = [];
+  state.rows = new Map();
+  state.check = state.clean = state.batch = state.detail = null;
+  state.cleared = false;
+  resetRules();
+  $("file").value = "";
+  $("file").multiple = false;
+  $("file-label").textContent = "CSV file";
+  $("file-note").textContent = "Your file is only read. It is never changed.";
+  $("profile-note").replaceChildren(...PROFILE_NOTE.map((node) => node.cloneNode(true)));
+  $("more").open = false;
+  setFind("");
+  renderBatchFiles();
+  renderPreview();
+  renderRules();
+  renderCheck();
+  renderClean();
+  stepMark.progress = 0;
+  stepMark.read = null;
+  refreshButtons();
+  markStep(1);
+  setStatus("idle", "New check: nothing is loaded.", "choose a CSV file in the box at the top.");
+  for (const id of ids) postJson("/api/file/remove", { file_id: id }).catch(() => {});
+  if (narrow.matches) {
+    nav.opener = null;
+    setOverlay(false);
+  }
+  $("file").focus();
+}
+
+/* Nothing to lose: start at once. Otherwise ask first, in a dialog on the page. */
+$("new-check").addEventListener("click", () => {
+  if (state.stopped) return;
+  if (hasWork()) $("new-dialog").showModal();
+  else startNewCheck();
+});
+$("new-cancel").addEventListener("click", () => $("new-dialog").close());
+$("new-confirm").addEventListener("click", () => {
+  $("new-dialog").close();
+  startNewCheck();
+});
+
+/* ------------------------------------------------------------------ side bar: find */
+
+/* The text of a table row to search: a rule row by its column name only (its lists hold the
+   names of every type), other rows without their buttons. */
+function rowText(row) {
+  if (row.dataset.column !== undefined) return row.dataset.column;
+  return [...row.cells]
+    .filter((cell) => !cell.querySelector("button"))
+    .map((cell) => cell.textContent)
+    .join(" ");
+}
+
+/* Find hides the table rows of the step area that do not contain the text. It runs again
+   whenever a table is drawn, so new results are filtered too. */
+function applyFind() {
+  const typed = $("find").value.trim();
+  const query = typed.toLowerCase();
+  const current = $(`step-${stepMark.shown}`);
+  let shown = 0;
+  let total = 0;
+  for (const row of document.querySelectorAll(".step-area tbody tr")) {
+    const match = !query || rowText(row).toLowerCase().includes(query);
+    row.hidden = !match;
+    if (current.contains(row)) {
+      total += 1;
+      if (match) shown += 1;
+    }
+  }
+  $("find-note").hidden = !query;
+  if (query) $("find-note-text").replaceChildren("Showing only the rows that contain ", el("b", { text: `“${typed}”` }), ".");
+  let said = "Shows only the table rows that contain this text.";
+  if (query) said = total ? `${shown} of ${count(total, "row")} in this step match.` : "This step has no table rows yet.";
+  if ($("find-count").textContent !== said) $("find-count").textContent = said;
+}
+
+function setFind(value) {
+  $("find").value = value;
+  applyFind();
+}
+
+function showFind(open) {
+  if (open && !narrow.matches && navCollapsed()) setCollapsed(false);
+  $("find-box").hidden = !open;
+  $("find-toggle").setAttribute("aria-expanded", String(open));
+  if (open) $("find").focus();
+  else setFind("");
+}
+
+$("find-toggle").addEventListener("click", () => showFind($("find-box").hidden));
+$("find").addEventListener("input", applyFind);
+$("find").addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  /* Escape first empties the field, then closes it; the overlay stays open. */
+  event.preventDefault();
+  event.stopPropagation();
+  if ($("find").value) setFind("");
+  else {
+    showFind(false);
+    $("find-toggle").focus();
+  }
+});
+$("find-clear").addEventListener("click", () => {
+  setFind("");
+  if (!$("find-box").hidden && !(narrow.matches && !navOpen())) $("find").focus();
+  else $("main").focus();
+});
+new MutationObserver(applyFind).observe(document.querySelector(".step-area"), { childList: true, subtree: true });
+
+/* ------------------------------------------------------------------ side bar: in this session */
+
+/* The SVG namespace, taken from an icon of the page (the script names no addresses). */
+const SVG = $("nav-toggle").querySelector("svg").namespaceURI;
+const circle = ["circle", { cx: "12", cy: "12", r: "10" }];
+/* Lucide circle-check, circle-alert, and circle-dashed. */
+const STATE_ICONS = {
+  ok: [circle, ["path", { d: "m9 12 2 2 4-4" }]],
+  bad: [circle, ["line", { x1: "12", x2: "12", y1: "8", y2: "12" }], ["line", { x1: "12", x2: "12.01", y1: "16", y2: "16" }]],
+  none: [
+    "M10.1 2.182a10 10 0 0 1 3.8 0",
+    "M13.9 21.818a10 10 0 0 1-3.8 0",
+    "M17.609 3.721a10 10 0 0 1 2.69 2.7",
+    "M2.182 13.9a10 10 0 0 1 0-3.8",
+    "M20.279 17.609a10 10 0 0 1-2.7 2.69",
+    "M21.818 10.1a10 10 0 0 1 0 3.8",
+    "M3.721 6.391a10 10 0 0 1 2.7-2.69",
+    "M6.391 20.279a10 10 0 0 1-2.69-2.7",
+  ].map((d) => ["path", { d }]),
+};
+
+function icon(shapes, extra) {
+  const make = (tag, attrs) => {
+    const node = document.createElementNS(SVG, tag);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+    return node;
+  };
+  const base = { class: `icon ${extra}`, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "aria-hidden": "true" };
+  const svg = make("svg", { ...base, "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" });
+  svg.append(...shapes.map(([tag, attrs]) => make(tag, attrs)));
+  return svg;
+}
+
+const batchEntry = (file) => {
+  if (state.mode !== "batch" || !state.batch) return null;
+  const index = state.batch.files.findIndex((f) => f.file_id === file.id);
+  return index >= 0 ? state.batch.report.files[index] : null;
+};
+
+/* Not checked, problems, or fine: from the latest result that covers the file. */
+function fileState(file) {
+  const entry = batchEntry(file);
+  if (entry) {
+    if (entry.status === "failed" || entry.status === "incomplete") return ["bad", "not fully read"];
+    if (entry.status === "invalid" || entry.status === "blocked") return ["bad", "problems found"];
+    if (entry.structure_only) return ["none", "values not checked"];
+    return ["ok", entry.status === "ready" ? "ready to save" : "no problems"];
+  }
+  if (!state.file || state.file.id !== file.id) return ["none", "not checked"];
+  if (state.clean) {
+    const status = state.clean.data.report.summary.status;
+    if (status === "ready") return ["ok", "ready to save"];
+    return ["bad", status === "incomplete" ? "not fully read" : "problems found"];
+  }
+  if (state.check) {
+    const verdict = state.check.report.verdict.state;
+    if (verdict === "passed") return ["ok", "no problems"];
+    if (verdict === "passed_structure_only") return ["none", "values not checked"];
+    return ["bad", verdict === "incomplete" ? "not fully read" : "problems found"];
+  }
+  if (state.preview) {
+    if (!state.preview.report.scan.complete) return ["bad", "not fully read"];
+    if (state.preview.report.summary.errors) return ["bad", "structure problems"];
+  }
+  return ["none", "not checked"];
+}
+
+function renderSession() {
+  const list = $("session-files");
+  const focused = document.activeElement && document.activeElement.dataset.sessionFile;
+  const files = loadedFiles();
+  /* The open file: the one whose details are shown, otherwise the one in the preview. */
+  const open = state.detail ? state.detail.fileId : state.file && state.file.id;
+  list.replaceChildren(
+    ...files.map((file) => {
+      const [kind, text] = fileState(file);
+      const entry = batchEntry(file);
+      const rows = entry ? entry.data_records : state.rows.get(file.id);
+      const meta = `${rows === undefined ? "not read yet" : count(rows, "row")} · ${text}`;
+      const current = open === file.id;
+      return el(
+        "li",
+        null,
+        el(
+          "button",
+          { type: "button", class: "session-row", "data-session-file": String(file.id), "aria-current": current ? "true" : null },
+          icon(STATE_ICONS[kind], `state-${kind}`),
+          el("span", { class: "session-name", text: file.name }),
+          el("span", { class: "session-meta", text: meta })
+        )
+      );
+    })
+  );
+  if (!files.length) list.append(el("li", { class: "nav-hint session-empty", text: "No files yet." }));
+  if (focused) {
+    const again = list.querySelector(`[data-session-file="${focused}"]`);
+    if (again) again.focus();
+  }
+}
+
+/* Opens a file at its latest result. In several-files mode with a result, that is the file's
+   details (reading it again would drop the result of every file). */
+function openFile(id) {
+  if (state.mode === "batch" && state.batch && state.batch.files.some((f) => f.file_id === id)) {
+    const step = state.batch.action === "check" ? 4 : 5;
+    markStep(step);
+    showSection($(`step-${step}`));
+    if (!state.detail || state.detail.fileId !== id) showBatchDetail(id);
+    return;
+  }
+  if (state.mode === "batch" && (!state.file || state.file.id !== id)) {
+    previewBatchFile(id);
+    return;
+  }
+  const step = currentStep();
+  markStep(step);
+  showSection($(`step-${step}`));
+}
+
+$("session-files").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-session-file]");
+  if (!button || state.pending || state.stopped) return;
+  if (narrow.matches) {
+    nav.opener = null;
+    setOverlay(false);
+    $("main").focus({ preventScroll: true });
+  }
+  openFile(Number(button.dataset.sessionFile));
+});
+
+/* ------------------------------------------------------------------ side panel rows */
+
+const DELIMITER_NAMES = { ",": "Comma", ";": "Semicolon", "\t": "Tab" };
+const ENCODING_NAMES = { "utf-8": "UTF-8", cp1252: "Windows-1252", "latin-1": "Latin-1", "utf-16": "UTF-16" };
+
+/* A column "has rules" when it is checked or repaired in any way. */
+const ruled = (rule) => rule.type !== "text" || rule.required || rule.unique || rule.trim || rule.normalize || rule.neutralize;
+
+function renderPanel() {
+  const loaded = Boolean(state.file) && state.header.length > 0;
+  $("panel-profile").textContent = state.profileName || "No profile";
+  $("panel-profile-save").disabled = state.stopped || !loaded;
+
+  const rules = [...state.columns.values()];
+  const total = state.columns.size;
+  const withRules = rules.filter(ruled).length;
+  $("panel-columns").textContent = total
+    ? `${withRules.toLocaleString("en-US")} of ${count(total, "column")} ${total === 1 ? "has" : "have"} rules`
+    : "No file yet";
+
+  const keys = [...[...state.columns].filter(([, rule]) => rule.unique).map(([name]) => [name]), ...state.keys];
+  $("panel-keys").textContent = keys.length ? keys.map((key) => key.join(" + ")).join("; ") : "None";
+
+  const delimiter = $("out-delimiter").value || currentDelimiter();
+  const encoding = $("out-encoding").value.trim() || currentEncoding() || "utf-8";
+  const protectedColumns = rules.filter((rule) => rule.neutralize && rule.type === "text").length;
+  const formulas = protectedColumns ? `formulas protected in ${count(protectedColumns, "column")}` : "formulas not protected";
+  $("panel-output").textContent =
+    `${DELIMITER_NAMES[delimiter] || delimiter}, ${ENCODING_NAMES[encoding.toLowerCase()] || encoding}, ` +
+    `${$("line-ending").value.toUpperCase()}; ${formulas}`;
+}
+
+/* The actions lead to the controls in step 3; the controls stay the only place to change. */
+function showRules(focusId, more) {
+  markStep(3);
+  const ready = !$("rules").hidden;
+  if (ready && more) $("more").open = true;
+  showSection(ready && more ? $("more") : $("step-3"));
+  const target = ready && (focusId ? $(focusId) : $("columns-body").querySelector("tr:not([hidden]) select"));
+  if (target) target.focus({ preventScroll: true });
+}
+
+$("panel-profile-load").addEventListener("click", () => {
+  if (state.pending || state.stopped) return;
+  markStep(3);
+  $("profile-file").click();
+});
+$("panel-profile-save").addEventListener("click", () => {
+  if (state.file && state.header.length) saveProfile();
+});
+$("panel-columns-edit").addEventListener("click", () => showRules(null, false));
+$("panel-keys-add").addEventListener("click", () => showRules("key-columns", true));
+$("panel-output-edit").addEventListener("click", () => showRules("out-delimiter", true));
+$("panel-theme").addEventListener("click", () => $("theme-toggle").click());
+
 function refreshLook() {
   const step = currentStep();
-  if (step !== stepMark.progress) {
-    stepMark.progress = step;
-    markStep(step);
-  } else {
-    markStep(stepMark.shown);
-  }
+  /* The file and the settings it was read with: reading again with others shows step 2. */
+  const read = state.preview && state.file ? `${state.file.id}|${currentDelimiter()}|${currentEncoding()}` : null;
+  const reread = step === 2 && read !== stepMark.read;
+  /* Without a file (new mode, last file removed) everything starts again at step 1. */
+  const restart = step === 1 && stepMark.progress > 1;
+  if (step > stepMark.progress || reread || restart) markStep(step);
+  else markStep(stepMark.shown);
+  stepMark.progress = step;
+  /* Remembered only once the preview is the latest result: while a new file is being read,
+     earlier results can still be present for a moment. */
+  if (step === 2) stepMark.read = read;
   const batchMode = state.mode === "batch";
   let name = "No file chosen";
   if (batchMode && state.files.length) name = count(state.files.length, "file") + " chosen";
   else if (!batchMode && state.file) name = state.file.name;
   $("file-name").textContent = name;
   $("dz-hint").textContent = batchMode
-    ? "Click to browse, or drop .csv files here (several at once)"
-    : "Click to browse, or drop a .csv file here";
+    ? "Click + to browse, or drop .csv files here (several at once)"
+    : "Click + to browse, or drop a .csv file here";
+  renderCrumbs();
+  renderSession();
+  renderPanel();
 }
+
+/* ------------------------------------------------------------------ breadcrumb and file menu */
+
+function loadedFiles() {
+  if (state.mode === "batch") return state.files;
+  return state.file ? [state.file] : [];
+}
+
+function renderCrumbs() {
+  const files = loadedFiles();
+  $("crumb-none").hidden = files.length > 0;
+  $("crumb-current").hidden = files.length === 0;
+  $("crumb-name").textContent = state.file ? state.file.name : "";
+  $("crumb-file").disabled = Boolean(state.pending) || state.stopped;
+  $("crumb-file").setAttribute("aria-label", state.file ? `${state.file.name}: choose the file to show` : "Choose the file to show");
+  let title = "Check and clean a CSV file";
+  if (state.mode === "batch" && files.length > 1) title = `${count(files.length, "file")} with the same rules`;
+  else if (state.file) title = state.file.name;
+  $("page-title").textContent = title;
+  if (!files.length) closeFileMenu(false);
+}
+
+function openFileMenu() {
+  const items = loadedFiles().map((file) =>
+    el(
+      "li",
+      null,
+      el("button", { type: "button", "data-menu-file": String(file.id), "aria-current": state.file && state.file.id === file.id ? "true" : null }, file.name)
+    )
+  );
+  items.push(
+    el("li", { class: "menu-sep" }, el("button", { type: "button", "data-menu-choose": "1" }, state.mode === "batch" ? "Add files…" : "Choose another file…"))
+  );
+  $("file-menu").replaceChildren(...items);
+  $("file-menu").hidden = false;
+  $("crumb-file").setAttribute("aria-expanded", "true");
+  $("file-menu").querySelector("button").focus();
+}
+
+function closeFileMenu(returnFocus) {
+  if ($("file-menu").hidden) return;
+  $("file-menu").hidden = true;
+  $("crumb-file").setAttribute("aria-expanded", "false");
+  if (returnFocus) $("crumb-file").focus();
+}
+
+$("crumb-file").addEventListener("click", () => {
+  if ($("file-menu").hidden) openFileMenu();
+  else closeFileMenu(true);
+});
+$("file-menu").addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  closeFileMenu(true);
+  if (button.dataset.menuChoose) {
+    $("file").click();
+  } else {
+    openFile(Number(button.dataset.menuFile));
+  }
+});
+$("file-menu").addEventListener("keydown", (event) => {
+  const buttons = [...$("file-menu").querySelectorAll("button")];
+  const at = buttons.indexOf(document.activeElement);
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeFileMenu(true);
+  } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    const next = (at + (event.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length;
+    buttons[next].focus();
+  }
+});
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".crumb-menu")) closeFileMenu(false);
+});
+$("crumb-files").addEventListener("click", () => markStep(1));
+
+/* ------------------------------------------------------------------ primary action */
+
+/* One button in the input card does the next thing: check, then preview the cleaning, then
+   show the ways to save. */
+function refreshPrimary(busy, loaded) {
+  const button = $("primary-action");
+  let next = "check";
+  if (state.clean || (state.batch && state.batch.action === "clean")) next = "save";
+  else if (state.check || (state.batch && state.batch.action === "check")) next = "clean";
+  button.dataset.next = next;
+  button.textContent = { check: "Check", clean: "Preview cleaning", save: "Save" }[next];
+  /* While something runs the button stays pressable (aria-disabled): a press waits for it. */
+  button.disabled = state.stopped || !loaded;
+  button.setAttribute("aria-disabled", String(busy));
+}
+
+function primaryAction() {
+  if (state.pending) {
+    state.queued = true;
+    return;
+  }
+  if (!state.file || !state.header.length) return;
+  const next = $("primary-action").dataset.next;
+  if (next === "check") runCheck();
+  else if (next === "clean") runClean();
+  else {
+    markStep(6);
+    showSection($("step-6"));
+    const first = $("step-6").querySelector("button:not(:disabled)");
+    if (first) first.focus({ preventScroll: true });
+  }
+}
+
+$("primary-action").addEventListener("click", primaryAction);
 
 applyTheme(document.documentElement.dataset.theme === "light" ? "light" : "cosmos");
 syncNavButtons();
@@ -1635,7 +2109,7 @@ setInterval(async () => {
     await postJson("/api/ping", {});
   } catch (error) {
     state.stopped = true;
-    for (const control of document.querySelectorAll("main input, main select, main button, #quit")) control.disabled = true;
+    for (const control of document.querySelectorAll("main input, main select, main button, aside button, #quit, #new-check")) control.disabled = true;
     setStatus("bad", "CSV Tidy is not running any more.", "start it again from the CSV Tidy icon. Your files were not changed.");
   }
 }, PING_SECONDS * 1000);

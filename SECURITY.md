@@ -2,8 +2,14 @@
 
 ## Supported versions
 
-CSV Tidy is in early development. Security fixes are made for the latest released version
-only.
+| Version | Security fixes |
+|---------|----------------|
+| 1.x | Yes: fixes go into the latest 1.x release (a patch release such as 1.0.1, or the next minor release) |
+| 0.x | No: upgrade to 1.x (see "Migrating from 0.x" in the README) |
+
+Fixes are made for the latest 1.x release only; upgrading within 1.x keeps profiles,
+options, and JSON reports compatible ([docs/STABILITY.md](docs/STABILITY.md)), so there are
+no separate fixes for older 1.x releases. `csv-tidy update` installs the latest release.
 
 ## Reporting a vulnerability
 
@@ -15,7 +21,15 @@ Report it privately through GitHub:
 maintainer can see the report, and a fix can be prepared before it becomes public.
 
 This is a volunteer-maintained project. There is no guaranteed response time, but reports are
-taken seriously and acknowledged as soon as possible.
+taken seriously and acknowledged as soon as possible. A confirmed vulnerability is fixed in a
+new release, and a GitHub security advisory describes it once the fix is available.
+
+## Automated checks on the repository
+
+Private vulnerability reporting (above), Dependabot alerts, and malware alerts are enabled
+for the repository. CI also audits the pinned development packages with `pip-audit`, and
+CodeQL analyzes the Python code and the interface's JavaScript; see
+[CONTRIBUTING.md](CONTRIBUTING.md#checks-the-same-commands-run-in-ci).
 
 ## Scope
 

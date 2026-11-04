@@ -67,7 +67,7 @@ def test_empty_and_repeated_selections_are_refused(data, tmp_path):
         select_inputs([empty])
     with pytest.raises(CsvTidyError, match="selected more than once"):
         select_inputs([data, data / "valid.csv"])
-    result = batch("check", str(empty), "--schema", ID_PROFILE)
+    result = batch("check", str(empty), "--profile", ID_PROFILE)
     assert result.code == 2 and "no files matching" in result.err
 
 
@@ -75,7 +75,7 @@ def test_empty_and_repeated_selections_are_refused(data, tmp_path):
 
 
 def test_batch_check_reports_each_file_and_totals(data):
-    result = batch("check", str(data), "--schema", ID_PROFILE, "--format", "json")
+    result = batch("check", str(data), "--profile", ID_PROFILE, "--format", "json")
     report = as_json(result)
     assert result.code == 1 and report["summary"]["exit_code"] == 1
     assert report["command"] == "batch" and report["action"] == "check"
@@ -100,14 +100,14 @@ def test_batch_check_reports_each_file_and_totals(data):
 
 def test_aggregate_exit_code_prefers_operational_failures(data, write):
     valid = str(data / "valid.csv")
-    assert batch("check", valid, "--schema", ID_PROFILE).code == 0
-    assert batch("check", valid, str(data / "fixable.csv"), "--schema", ID_PROFILE).code == 1
+    assert batch("check", valid, "--profile", ID_PROFILE).code == 0
+    assert batch("check", valid, str(data / "fixable.csv"), "--profile", ID_PROFILE).code == 1
     broken = write("in/broken.csv", b"transaction_id;customer_id;amount;date;note\n1;\xff\n")
-    result = batch("check", str(data / "fixable.csv"), str(broken), valid, "--schema", ID_PROFILE)
+    result = batch("check", str(data / "fixable.csv"), str(broken), valid, "--profile", ID_PROFILE)
     assert result.code == 2
     assert "INCOMPLETE" in result.out and "INVALID" in result.out and "OK" in result.out
     missing = batch(
-        "check", str(data / "none.csv"), valid, "--schema", ID_PROFILE, "--format", "json"
+        "check", str(data / "none.csv"), valid, "--profile", ID_PROFILE, "--format", "json"
     )
     report = as_json(missing)
     assert missing.code == 2
@@ -125,7 +125,7 @@ def test_batch_check_says_when_only_structure_was_checked(data):
 
 def test_configuration_errors_stop_the_batch_before_reading(data, write):
     bad = write("bad.toml", "schema_version = 1\n[source]\ndelimter = ';'\n")
-    result = batch("check", str(data), "--schema", str(bad))
+    result = batch("check", str(data), "--profile", str(bad))
     assert result.code == 2 and "did you mean 'delimiter'" in result.err and result.out == ""
 
 
@@ -134,14 +134,14 @@ def test_configuration_errors_stop_the_batch_before_reading(data, write):
 
 def test_batch_clean_is_a_preview_by_default(data, tmp_path):
     before = sorted(p.name for p in tmp_path.rglob("*"))
-    result = batch("clean", str(data), "--schema", ID_PROFILE)
+    result = batch("clean", str(data), "--profile", ID_PROFILE)
     assert result.code == 1  # unfixable.csv stays blocked
     assert "dry run, nothing written" in result.out
     assert "READY" in result.out and "BLOCKED" in result.out
     assert sorted(p.name for p in tmp_path.rglob("*")) == before
-    need = batch("clean", str(data), "--schema", ID_PROFILE, "--output-dir", str(tmp_path / "o"))
+    need = batch("clean", str(data), "--profile", ID_PROFILE, "--output-dir", str(tmp_path / "o"))
     assert need.code == 2 and "require --apply" in need.err
-    need = batch("clean", str(data), "--schema", ID_PROFILE, "--apply")
+    need = batch("clean", str(data), "--profile", ID_PROFILE, "--apply")
     assert need.code == 2 and "--apply requires --output-dir" in need.err
 
 
@@ -152,12 +152,12 @@ def test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files(dat
         "clean",
         str(data),
         "--recursive",
-        "--schema",
+        "--profile",
         ID_PROFILE,
         "--apply",
         "--output-dir",
         str(out),
-        "--output-schemas",
+        "--output-profiles",
         "--report-dir",
         str(reports),
         "--format",
@@ -185,7 +185,7 @@ def test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files(dat
     one = run_cli(
         "clean",
         str(data / "fixable.csv"),
-        "--schema",
+        "--profile",
         ID_PROFILE,
         "--apply",
         "--output",
@@ -193,7 +193,7 @@ def test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files(dat
     )
     assert one.code == 0 and (out / "fixable.clean.csv").read_bytes() == single.read_bytes()
     recheck = run_cli(
-        "check", str(out / "fixable.clean.csv"), "--schema", str(out / "fixable.output.toml")
+        "check", str(out / "fixable.clean.csv"), "--profile", str(out / "fixable.output.toml")
     )
     assert recheck.code == 0
     per_file = json.loads((reports / "unfixable.report.json").read_text(encoding="utf-8"))
@@ -204,7 +204,7 @@ def test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files(dat
 
 def test_overrides_apply_to_every_file(data):
     report = as_json(
-        batch("clean", str(data), "--schema", ID_PROFILE, "--no-trim", "--format", "json")
+        batch("clean", str(data), "--profile", ID_PROFILE, "--no-trim", "--format", "json")
     )
     by_name = {f["path"]: f for f in report["files"]}
     assert by_name[str(data / "fixable.csv")]["status"] == "blocked"
@@ -215,7 +215,7 @@ def test_output_name_collisions_stop_the_batch_before_writing(tmp_path):
         (tmp_path / folder).mkdir()
         shutil.copy(EXAMPLES / "transactions_valid.csv", tmp_path / folder / "data.csv")
     out = tmp_path / "out"
-    args = ["--schema", ID_PROFILE, "--apply", "--output-dir", str(out)]
+    args = ["--profile", ID_PROFILE, "--apply", "--output-dir", str(out)]
     result = batch(
         "clean", str(tmp_path / "a" / "data.csv"), str(tmp_path / "b" / "data.csv"), *args
     )
@@ -227,7 +227,7 @@ def test_existing_outputs_and_inputs_are_protected(data, tmp_path):
     out = tmp_path / "out"
     out.mkdir()
     (out / "valid.clean.csv").write_text("keep me", encoding="utf-8")
-    args = ["clean", str(data), "--schema", ID_PROFILE, "--apply", "--output-dir", str(out)]
+    args = ["clean", str(data), "--profile", ID_PROFILE, "--apply", "--output-dir", str(out)]
     refused = batch(*args)
     assert refused.code == 2 and "already exists" in refused.err
     assert [p.name for p in out.iterdir()] == ["valid.clean.csv"]  # nothing else was written
@@ -240,7 +240,7 @@ def test_existing_outputs_and_inputs_are_protected(data, tmp_path):
     onto_input = batch(
         "clean",
         str(data),
-        "--schema",
+        "--profile",
         ID_PROFILE,
         "--apply",
         "--output-dir",
@@ -268,7 +268,7 @@ def test_one_failed_write_does_not_undo_the_other_files(data, tmp_path, monkeypa
         str(data / "valid.csv"),
         str(data / "fixable.csv"),
         str(data / "sub" / "more.CSV"),
-        "--schema",
+        "--profile",
         ID_PROFILE,
         "--apply",
         "--output-dir",
@@ -285,7 +285,7 @@ def test_one_failed_write_does_not_undo_the_other_files(data, tmp_path, monkeypa
 
 def test_batch_report_file_and_text_summary(data, tmp_path):
     saved = tmp_path / "summary.txt"
-    result = batch("clean", str(data), "--schema", ID_PROFILE, "--report", str(saved))
+    result = batch("clean", str(data), "--profile", ID_PROFILE, "--report", str(saved))
     lines = result.out.splitlines()
     assert lines[1].startswith("Verdict: 1 of 3 files needs attention")
     assert any(
@@ -328,5 +328,5 @@ def test_single_file_commands_are_unchanged_and_help_lists_batch(data):
     assert "batch" in run_cli("--help").out
     text = batch("clean", "--help").out
     assert "--output-dir" in text and "--recursive" in text and "*.csv" in text
-    single = run_cli("check", str(data / "valid.csv"), "--schema", ID_PROFILE)
+    single = run_cli("check", str(data / "valid.csv"), "--profile", ID_PROFILE)
     assert single.code == 0 and "batch" not in single.out

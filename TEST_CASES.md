@@ -53,6 +53,11 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | AC-44 | Opt-in formula neutralization in selected text columns: OWASP triggers get a leading `'`, other values and numbers are unchanged, trimming first, text columns only, missing columns reported, output profile keeps it and a second clean is a no-op, unused selection not written, reports, CLI options, batch, interface | `integration/test_formula_neutralization.py`: all tests; `integration/test_ui.py`: `test_interface_profiles_can_neutralize_formulas` |
 | AC-45 | `docs/STABILITY.md` lists the whole covered surface: every command and long option, profile key and value, issue code (the same set as the code), `remedy` value, field of the `check`, `clean`, and `batch` JSON reports, and name in `csv_tidy.__all__` | `unit/test_stability_inventory.py`: all tests |
 | AC-46 | Interface shell: a side bar (`nav`), one main column (`main`) with the only `h1`, and a side panel (`aside`); a skip link as the first stop; side-bar toggles with `aria-controls` and `aria-expanded`; named icon-only buttons; theme switch and Quit in the side bar; the folded state read and written only inside try/catch; a modal overlay below 720 px (Escape, focus kept inside); the step marker follows the last clicked step and moves on with the work | `integration/test_ui.py`: `test_page_shell_has_side_bar_main_column_and_side_panel`, `test_side_bar_state_is_remembered_only_where_storage_works`; browser checks below |
+| AC-47 | Input card and step area: file, separator (radio group), encoding, mode (radio group), and the primary button in one card; the size limit from `--max-file-mb` described for the file input; breadcrumb with a file menu (`aria-controls`, `aria-expanded`, Escape, arrow keys); one step shown at a time, the mark moving to the step of the newest result and never back on its own; Check, then Preview cleaning, then Save; a press during a running request waits instead of being lost | `integration/test_ui.py`: `test_input_card_holds_the_file_controls_and_one_primary_button`, `test_step_area_shows_one_step_and_the_primary_button_waits_its_turn`; browser checks below |
+| AC-48 | Side-bar sections: **New check** (asks first when anything is loaded; removes the server copies), **Find** (a disclosure with `aria-controls`/`aria-expanded` and a search field that filters the table rows of the step area, also tables drawn later), and **In this session** (each loaded file with rows and a status in an icon and in words; a note that nothing is kept after Quit) | `integration/test_ui.py`: `test_side_bar_has_new_check_find_and_the_session_list`, `test_new_check_removes_the_loaded_files_from_the_session`; browser checks below |
+| AC-49 | Side-panel rows Profile, Columns, Unique keys, Output, and Theme, each with its value and a named action (Load/Save, Edit, Add, Edit, Switch) whose name starts with its visible word | `integration/test_ui.py`: `test_side_panel_rows_show_the_current_settings_with_an_action_each`; browser checks below |
+| AC-50 | Accessibility of the page: every ARIA and label reference resolves, every disclosure states `aria-expanded`, the landmarks `header`/`nav`/`main`/`aside`, icon-only buttons named, both dialogs labelled with the safe button focused first, a visible focus ring, reduced motion stopping every animation and transition | `integration/test_ui.py`: `test_page_structure_supports_keyboard_and_screen_reader_use`; browser checks below |
+| AC-51 | Contract of 1.0.0: `--profile`, `--output-profile`, `--output-profiles` and the hidden deprecated aliases (stderr warning; old and new together refused), `export_clean(output_profile=...)` and `run_batch(output_profiles=...)` with deprecated aliases (`DeprecationWarning`, `TypeError` for both), report `schema_version` 2 with `dry_run`, `output_csv`/`output_profile`, and a top-level `artifacts` list in clean reports, `output_field_too_large`, `CleanResult.ok`/`source_errors`/`source_warnings`/`output_warnings`, and the new exports | `integration/test_contract_1_0.py`: all tests; `integration/test_regressions.py`: `test_r3_expanded_output_beyond_field_limit_blocks_export`; `unit/test_stability_inventory.py` |
 | AC-35 | Batch: deterministic output names, collisions and unsafe paths stop before writing, a failing file does not affect others, single-file commands unchanged | `integration/test_batch.py`: `test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files`, `test_output_name_collisions_stop_the_batch_before_writing`, `test_existing_outputs_and_inputs_are_protected`, `test_one_failed_write_does_not_undo_the_other_files`, `test_overrides_apply_to_every_file`, `test_library_entry_point_matches_the_command`, `test_single_file_commands_are_unchanged_and_help_lists_batch` |
 
 ## Regression tests
@@ -176,6 +181,59 @@ main column. Lowest measured contrast of the new or moved colors: text 5.22:1 (d
 4.74:1 (light, the "Offline & local" pill), icons 6.55:1 (dark) and 5.58:1 (light). No
 external request and no script error. The first run found that the overlay could not take
 focus while it was still hidden; it is now visible as soon as it opens.
+
+For the input card and step area (1.0.0, 2026-11-04), 218 checks passed in headless
+Edge at the same three sizes in both themes, and the 152 side-bar checks passed again with
+their expectations updated to the new marking (2 after reading, 5 after cleaning). New checks:
+the start state (title, "No file chosen", only step 1, the size limit, the primary button
+disabled); separator chips with arrow keys and a visible focus ring; reading a file showing
+step 2 with the file name as title and breadcrumb; a click on a step not scrolling the page;
+**Check** showing step 4, **Preview cleaning** step 5, **Save** step 6 with focus on Save
+cleaned CSV; a rule change and a display-limit change keeping step 3; a separator change
+reading again and showing step 2; **Other…** encoding showing its field; switching to several
+files going back to step 1; three files titled "3 files with the same rules"; the file menu
+listing them and "Add files…", focus on its first item, Escape returning focus, the arrow
+keys and Enter previewing the second file; batch check and cleaning showing steps 4 and 5; no
+horizontal scrolling. Lowest contrast of the new colors: text 4.8:1 (dark, unselected
+separator and mode chips) and 5.17:1 (light, the size-limit note); icons 8.1:1 (dark) and
+11.39:1 (light); white on the primary button 4.53:1 (dark) and 4.51:1 (light).
+The run found two faults, both fixed: a press of the primary button was lost when a field that
+reads the file again lost focus to it, and a new separator did not bring back step 2 when
+results of the earlier reading were still present for a moment.
+
+For the dark side-bar colors (1.0.0, 2026-11-04), 46 checks passed in headless Edge in
+the dark theme at 1440, 1024 (side bar folded and unfolded), and 390 pixels (overlay open):
+side bar #1F1F1F, page #191919, a #303030 line beside the side bar, above its bottom block,
+and under the top bar at 390 pixels. Lowest contrast: text 4.8:1 (unselected chips on a
+card) and 6.09:1 on the page itself, icons 6.08:1, focus ring 3.64:1 on the side bar and
+3.88:1 on the page. The side-bar and input-card walk-throughs passed again in both themes.
+
+For the side-bar sections, the side panel, and the accessibility pass (1.0.0, 2026-11-04),
+421 checks passed in headless Edge in both themes at 1440, 1024, and 390 pixels, and the
+earlier walk-throughs (156 shell, 218 input-card, 47 dark-color checks) passed again. New
+checks: landmarks `nav`/`main`/`aside` and the `header` bar; every ARIA id reference resolves
+and every `aria-controls` button states `aria-expanded`; every visible control named; the
+whole page in Tab order (skip link, side bar or top bar, main column, side panel) with a
+visible focus ring at every stop; the skip link moving focus into `main`; the session list
+empty with its note, then one file with its row count and status (not checked, then problems
+found or no problems, icon and words agreeing); the panel defaults, **Load** opening the
+profile file chooser, the profile name, the column count, and the keys after loading; Find
+opening with focus in its field, filtering the problems of step 4 and the column rules of
+step 3 by name, saying how many rows match, Escape emptying and then closing it (the overlay
+staying open at 390 pixels), and **Show all rows**; **Add** opening "More settings" at the
+combined-key list, **Edit** (Output) focusing the output separator and the Output row
+following a change, **Edit** (Columns) focusing the first rule that Find shows; three files
+with a status each, a click on one showing its details while the other results stay; **New
+check** asking first (focus on **Keep working**, Escape returning focus to New check), then
+starting over (no files, default title, step 1, one-file mode, focus on the file field); the
+folded side bar hiding the session list and **Find** unfolding it; with reduced motion no
+side-bar slide, pulse, or icon turn; no horizontal scrolling. Lowest contrast of the new
+colors: text 5.12:1 (light, **Show all rows**) and 5.17:1 (light, the session note); icons
+4.82:1 (light, the "fine" state icon). These checks and the screenshots found four faults,
+all fixed: the grey meta text of a session row would have been 4.08:1 on the dark hover color
+(now on `--subtle`), the breadcrumb file button had no name before the script ran, **Edit**
+(Columns) focused a rule row that Find had hidden, and the session list marked the previewed
+file instead of the file whose details were open.
 
 `csv-tidy update --check` was run once against the real GitHub API (release 0.3.0): the wheel
 and its digest were found and matched the published SHA-256. pip was shown to refuse a wheel

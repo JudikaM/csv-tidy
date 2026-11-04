@@ -24,7 +24,7 @@ A Python CLI, library, and local browser interface. Offline, typed, and MIT lice
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/interface-dark.png">
-  <img src="docs/images/interface-light.png" alt="The CSV Tidy local interface with a semicolon-separated file loaded: the status bar says it is ready to save 4 rows with 9 values changed, and the data preview shows Indonesian-format amounts and DD/MM/YYYY dates.">
+  <img src="docs/images/interface-light.png" alt="The CSV Tidy local interface with a semicolon-separated file loaded: a side bar with New check, Find, and the file in this session marked ready to save; in the middle the file card with the Save button and the status line saying 4 rows are ready with 9 values changed; on the right a panel with the loaded profile, 4 of 5 columns with rules, the unique key, and the output settings.">
 </picture>
 
 CSV Tidy helps you find, understand, and explicitly repair CSV data problems before importing
@@ -34,10 +34,13 @@ and numeric dates such as `DD/MM/YYYY`. It never guesses: it repairs only what y
 reports everything else with record and line locations, and refuses to export a result that
 still has errors.
 
-**Status:** early alpha (0.x); interfaces may still change between minor versions, and
-changes are listed in [CHANGELOG.md](CHANGELOG.md). It works locally and offline, with no
-telemetry or AI services; only the explicit `csv-tidy update` command goes online. It has not yet been validated with external
-users. Feedback is welcome (see [Feedback](#feedback-and-bug-reports)).
+**Status:** 1.0. Profiles, command-line options, exit codes, issue codes, JSON reports, and
+the Python API follow Semantic Versioning; [docs/STABILITY.md](docs/STABILITY.md) lists
+exactly what stays compatible in 1.x. The look and layout of the local interface are not part
+of that promise. Coming from 0.x? See [Migrating from 0.x](#migrating-from-0x). It works
+locally and offline, with no telemetry or AI services; only the explicit `csv-tidy update`
+command goes online. It has not yet been tested in sessions with outside users; that is
+planned after 1.0, and feedback is welcome (see [Feedback](#feedback-and-bug-reports)).
 
 There are three ways to use the same engine:
 
@@ -78,7 +81,7 @@ Requires Python 3.11 or newer. CSV Tidy is **not published on PyPI**. Published 
 installation files (a wheel and a source distribution) are listed on the
 [GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); a downloaded wheel
 installs with `python -m pip install <path-to-wheel>` inside a virtual environment. This
-README describes version 0.5.0; changes made after a release are listed under "Unreleased"
+README describes version 1.0.0; changes made after a release are listed under "Unreleased"
 in the [changelog](CHANGELOG.md). You can also install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's programs directly, so the
@@ -135,16 +138,16 @@ re-check**.
 
 ```powershell
 # 1. Check: what is wrong? (exit code 1: two errors)
-.\.venv\Scripts\csv-tidy.exe check examples\transactions_fixable.csv --schema examples\profiles\transactions-id.toml
+.\.venv\Scripts\csv-tidy.exe check examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml
 
 # 2. Preview: what would the selected repairs change? (writes nothing)
-.\.venv\Scripts\csv-tidy.exe clean examples\transactions_fixable.csv --schema examples\profiles\transactions-id.toml
+.\.venv\Scripts\csv-tidy.exe clean examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml
 
 # 3. Apply: write the cleaned copy and a profile that describes it
-.\.venv\Scripts\csv-tidy.exe clean examples\transactions_fixable.csv --schema examples\profiles\transactions-id.toml --apply --output output\transactions_clean.csv --output-schema output\transactions.output.toml
+.\.venv\Scripts\csv-tidy.exe clean examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml --apply --output output\transactions_clean.csv --output-profile output\transactions.output.toml
 
 # 4. Re-check the result with its generated profile (exit code 0)
-.\.venv\Scripts\csv-tidy.exe check output\transactions_clean.csv --schema output\transactions.output.toml
+.\.venv\Scripts\csv-tidy.exe check output\transactions_clean.csv --profile output\transactions.output.toml
 ```
 
 The profile describes the source data and which repairs you allow
@@ -189,7 +192,7 @@ normalize = ["amount", "date"]
 ### 1. Check
 
 ```text
-CSV Tidy 0.5.0 - check
+CSV Tidy 1.0.0 - check
 Verdict: FAILED - 2 errors found in the source file.
 Source: examples\transactions_fixable.csv
 Profile: examples\profiles\transactions-id.toml
@@ -208,7 +211,7 @@ Issues (showing 2 of 2, errors first):
     Suggestion: Select trimming for 'date' (transform trim) or fix the source value.
 
 Next steps:
-  - Fix the listed values in the source file, or preview explicit repairs (a dry run that writes nothing): csv-tidy clean examples\transactions_fixable.csv --schema examples\profiles\transactions-id.toml
+  - Fix the listed values in the source file, or preview explicit repairs (a dry run that writes nothing): csv-tidy clean examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml
 
 Status: source validation failed (exit code 1)
 ```
@@ -237,13 +240,13 @@ profile declares `date` and `amount` (see [Create a profile](#create-a-profile))
 JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 
 ```powershell
-.\.venv\Scripts\csv-tidy.exe check examples\transactions_unfixable.csv --schema examples\profiles\transactions-id.toml --format json --report output\report.json
+.\.venv\Scripts\csv-tidy.exe check examples\transactions_unfixable.csv --profile examples\profiles\transactions-id.toml --format json --report output\report.json
 ```
 
 ### 2. Preview a clean (dry run is the default)
 
 ```text
-CSV Tidy 0.5.0 - clean (dry run, nothing written)
+CSV Tidy 1.0.0 - clean (dry run, nothing written)
 Verdict: READY TO EXPORT - no errors remain in the cleaned result; 2 source problems repaired.
 ...
 Transformations (applied in this order):
@@ -294,13 +297,13 @@ The generated output profile describes the cleaned file, so step 4 reports
 no changes:
 
 ```powershell
-.\.venv\Scripts\csv-tidy.exe clean output\transactions_clean.csv --schema output\transactions.output.toml
+.\.venv\Scripts\csv-tidy.exe clean output\transactions_clean.csv --profile output\transactions.output.toml
 ```
 
 ### Problems that cannot be repaired block the export
 
 ```powershell
-.\.venv\Scripts\csv-tidy.exe clean examples\transactions_unfixable.csv --schema examples\profiles\transactions-id.toml --apply --output output\invalid_result.csv
+.\.venv\Scripts\csv-tidy.exe clean examples\transactions_unfixable.csv --profile examples\profiles\transactions-id.toml --apply --output output\invalid_result.csv
 ```
 
 ```text
@@ -358,7 +361,26 @@ program, or from a command line:
 .\.venv\Scripts\csv-tidy.exe ui
 ```
 
-This starts a small web server **on this computer only** and opens a page in your browser:
+This starts a small web server **on this computer only** and opens a page in your browser.
+The page is laid out like a desktop application:
+
+- **Side bar** (left; it folds to a row of icons, and opens over the page in a phone-sized
+  window): **New check** (start again with nothing loaded), **Find** (show only the table rows
+  of the current step that contain a word: a column, a value, or a problem), **Files**,
+  **Profiles**, **Reports**, and **Settings** (each leads to where that part lives), and
+  **In this session**: every loaded file with its row count and whether it is not checked
+  yet, has problems, or is fine. Clicking a file opens its latest result. At the bottom: the
+  version, the theme switch (Dark Modern and Light+), and **Quit CSV Tidy**.
+- **Main column**: a card takes the file (drop it, or use **+**) with its separator,
+  encoding, and one file or several files, and one button that does the next thing:
+  **Check**, then **Preview cleaning**, then **Save**. Under it, the steps show one at a
+  time: the one you pick, or the one with the newest result.
+- **Side panel** (right; under the main column in narrower windows): the current
+  **Profile** (Load, Save), how many **Columns** have rules (Edit), the **Unique keys**
+  (Add), and the **Output** separator, encoding, line ending, and formula protection (Edit).
+  Each action leads to the control in step 3; nothing is changed from the panel itself.
+
+The steps:
 
 1. Choose **one file** or **several files with the same rules**, then the separator (comma
    semicolon, or tab) and the encoding.
@@ -380,13 +402,12 @@ This starts a small web server **on this computer only** and opens a page in you
   <img src="docs/images/interface-preview-light.png" alt="Step 5 of the local interface: the cleaned copy has no problems, a table lists every changed value before and after with the repair that changed it, and the cleaned rows are shown with changed values highlighted.">
 </picture>
 
-The page is laid out like a desktop application: a side bar on the left (it can be folded to
-a row of icons, and opens over the page on a phone-sized window), the steps in the middle, and
-a side panel on the right. The side bar holds the theme switch (dark and light), **Quit CSV
-Tidy**, and buttons that move to the previous or next step. Files can be dropped onto the file
-area. Dates are chosen from a list of common formats (with an example such as `31/12/2026`), and
+Dates are chosen from a list of common formats (with an example such as `31/12/2026`), and
 **Other…** accepts any supported format. Suggestions name the page's own controls, for
-example *Tick "Repair: trim spaces" for "amount" in step 3*.
+example *Tick "Repair: trim spaces" for "amount" in step 3*. Every control works with the
+keyboard alone, focus is always visible, the page follows the system's reduced-motion
+setting, and text keeps a contrast of at least 4.5:1 in both themes (checked automatically
+in a headless browser; a session with a screen reader is planned after 1.0).
 
 **More settings** also holds the longest allowed value (`max_field_chars`, saved in profiles)
 and how many problems, changed values, and preview rows are listed (counts stay complete;
@@ -404,7 +425,8 @@ when you select **Quit** (or press Ctrl+C in the window that started it). Starte
 without a console window, it also stops by itself 10 minutes after its page was closed
 (`csv-tidy ui --idle-minutes N` does the same from a command line). Your original files
 are never written to. Options: `--port N`, `--no-browser`, `--max-file-mb N` (largest file,
-and largest total of several files together; default 200). A
+and largest total of several files together; default 200). The limits of the interface are
+listed under [Supported conventions and limits](#supported-conventions-and-limits). A
 step-by-step guide for first-time users is in
 [docs/USER_TESTING.md](docs/USER_TESTING.md#guide-for-administrative-staff).
 
@@ -412,14 +434,14 @@ step-by-step guide for first-time users is in
 
 ```powershell
 # Preview every transactions_*.csv file directly inside examples\ with one profile
-.\.venv\Scripts\csv-tidy.exe batch clean examples --pattern "transactions_*.csv" --schema examples\profiles\transactions-id.toml
+.\.venv\Scripts\csv-tidy.exe batch clean examples --pattern "transactions_*.csv" --profile examples\profiles\transactions-id.toml
 
 # Write the files that are ready, their output profiles, and one report per file
-.\.venv\Scripts\csv-tidy.exe batch clean examples --pattern "transactions_*.csv" --schema examples\profiles\transactions-id.toml --apply --output-dir output\cleaned --output-schemas --report-dir output\reports --format json
+.\.venv\Scripts\csv-tidy.exe batch clean examples --pattern "transactions_*.csv" --profile examples\profiles\transactions-id.toml --apply --output-dir output\cleaned --output-profiles --report-dir output\reports --format json
 ```
 
 ```text
-CSV Tidy 0.5.0 - batch clean (dry run, nothing written)
+CSV Tidy 1.0.0 - batch clean (dry run, nothing written)
 Verdict: 2 of 4 files need attention (2 with data errors).
 Profile: examples\profiles\transactions-id.toml
 
@@ -454,13 +476,13 @@ replace the profile list (repeat for several columns); `--no-trim`/`--no-normali
 
 | Option | Commands | Meaning |
 |--------|----------|---------|
-| `--schema PROFILE` | check, clean, batch | TOML profile |
+| `--profile PROFILE` | check, clean, batch | TOML profile |
 | `--delimiter`, `--encoding`, `--number-format`, `--date-format` | check, clean, batch, profile init | source settings |
 | `--output-delimiter`, `--output-encoding`, `--output-number-format`, `--output-date-format`, `--line-ending` | clean, batch clean | output settings (default: follow the source) |
 | `--trim COL`, `--normalize COL`, `--deduplicate off\|rows\|keys` | clean, batch clean, profile init | explicit transformations |
 | `--neutralize-formulas COL` | clean, batch clean | protect formula-like values in a text column |
-| `--dry-run` / `--apply`, `--output PATH`, `--output-schema PATH` | clean | preview (default) or write |
-| `--apply`, `--output-dir DIR`, `--output-schemas`, `--report-dir DIR`, `--pattern GLOB`, `--recursive` | batch | many files |
+| `--dry-run` / `--apply`, `--output PATH`, `--output-profile PATH` | clean | preview (default) or write |
+| `--apply`, `--output-dir DIR`, `--output-profiles`, `--report-dir DIR`, `--pattern GLOB`, `--recursive` | batch | many files |
 | `--format text\|json`, `--report PATH`, `--max-details N` | check, clean, batch | reports |
 | `--max-examples N` | clean, batch clean | before/after examples listed in reports |
 | `--overwrite` | all writing commands | allow replacing existing output files (never inputs) |
@@ -468,9 +490,28 @@ replace the profile list (repeat for several columns); `--no-trim`/`--no-normali
 Exit codes: `0` no blocking errors (warnings allowed), `1` data errors (`check`: in the source;
 `clean`: remaining in the cleaned result), `2` usage, configuration, decoding/parsing, read or
 write failure, `130` cancelled by the user. Every command has `--help`. The full reference is
-in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). What stays compatible from version 1.0
-(profiles, options, exit codes, issue codes, JSON reports, the Python API) is listed in
+in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). What stays compatible in 1.x (profiles,
+options, exit codes, issue codes, JSON reports, the Python API) is listed in
 [docs/STABILITY.md](docs/STABILITY.md).
+
+The 0.x names `--schema`, `--output-schema`, and `--output-schemas` still work in 1.x but
+print a warning; they are removed in 2.0.0.
+
+## Migrating from 0.x
+
+Profiles need no change, and commands written for 0.x keep working. What differs:
+
+| 0.x | 1.0 |
+|-----|-----|
+| `--schema`, `--output-schema`, `--output-schemas` | `--profile`, `--output-profile`, `--output-profiles` (the old names warn) |
+| JSON reports: `schema_version: 1` | `schema_version: 2` |
+| `"mode": "dry-run"`; artifact kinds `"output CSV"`, `"output profile"` | `"mode": "dry_run"`; `"output_csv"`, `"output_profile"` |
+| a cleaned value longer than `max_field_chars`: code `field_too_large` | `output_field_too_large` (reading still stops with `field_too_large`) |
+| `export_clean(output_schema=...)`, `run_batch(output_schemas=...)` | `output_profile=...`, `output_profiles=...` (the old names raise `DeprecationWarning`) |
+
+Programs that read JSON reports should accept `schema_version` 2; clean reports also have a
+top-level `artifacts` list now. The full list, with the reasons, is in the
+[changelog](CHANGELOG.md#100---2026-11-04).
 
 ## Library
 
@@ -484,7 +525,7 @@ print(check.exit_code, [(i.code, i.record, i.column) for i in check.issues])
 
 result = clean_file("examples/transactions_fixable.csv", profile)
 if result.export_ready:
-    export_clean(result, "output/clean.csv", output_schema="output/clean.output.toml")
+    export_clean(result, "output/clean.csv", output_profile="output/clean.output.toml")
 else:
     print(result.export_blocked_reason)
 ```
@@ -515,6 +556,11 @@ in [examples/api_example.py](examples/api_example.py). See
   `--neutralize-formulas COLUMN` (or `neutralize_formulas` in the profile, or **Repair:
   protect formulas** in the local interface): it then puts a `'` in front of them in text
   columns. Otherwise review untrusted data before opening it in a spreadsheet.
+- The local interface serves one person on this computer, in one session: files and results
+  are kept in memory (and in a private temporary folder) only while it runs, nothing is kept
+  after **Quit**, and there is no list of recent files. Each file, or several files together,
+  may be up to 200 MB (`--max-file-mb N`). Larger or many files are better handled by
+  `csv-tidy batch`.
 - Reports include source values. Keep them local if the data is private.
 - Not included: Excel (`.xlsx`) files, hosted or multi-user web access, accounts, databases,
   streaming for very large files, delimiter detection. See

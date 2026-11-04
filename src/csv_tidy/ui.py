@@ -348,10 +348,10 @@ class Session:
             text = to_json(check_report(result, details))
             return f"{stem}.check-report.json", "application/json", text.encode("utf-8")
         if kind == "report-text":
-            text = render_clean_text(clean_report(result, "dry-run", details, examples))
+            text = render_clean_text(clean_report(result, "dry_run", details, examples))
             return f"{stem}.clean-report.txt", "text/plain; charset=utf-8", text.encode("utf-8")
         if kind == "report-json":
-            text = to_json(clean_report(result, "dry-run", details, examples))
+            text = to_json(clean_report(result, "dry_run", details, examples))
             return f"{stem}.clean-report.json", "application/json", text.encode("utf-8")
         if kind not in ("csv", "output-profile"):
             raise ApiError(HTTPStatus.BAD_REQUEST, "Unknown download.")
@@ -370,7 +370,7 @@ class Session:
         folder = self._dir / f"export-{number}-{secrets.token_hex(4)}"
         csv_path, profile_path = folder / f"{stem}.clean.csv", folder / f"{stem}.output.toml"
         try:
-            export_clean(result, csv_path, output_schema=profile_path, overwrite=True)
+            export_clean(result, csv_path, output_profile=profile_path, overwrite=True)
             return csv_path.read_bytes(), profile_path.read_bytes()
         finally:
             shutil.rmtree(folder, ignore_errors=True)
@@ -497,7 +497,7 @@ class Session:
                     csv_bytes, profile_bytes = self._export(cleaned, stem, stored.id)
                     entries.append((f"{stem}.clean.csv", csv_bytes))
                     entries.append((f"{stem}.output.toml", profile_bytes))
-                report = clean_report(cleaned, "dry-run", limits.max_details, limits.max_examples)
+                report = clean_report(cleaned, "dry_run", limits.max_details, limits.max_examples)
             entries.append((f"{stem}.report.json", to_json(report).encode("utf-8")))
         summary = batch_report(stored.result)
         entries.append(("batch-summary.json", to_json(summary).encode("utf-8")))
@@ -531,7 +531,7 @@ class Session:
         stem = Path(_safe_name(str(body.get("file_name") or "data.csv"))).stem
         header = (
             f"CSV Tidy profile saved from the local interface (csv-tidy {__version__}).\n"
-            "Reuse it with: csv-tidy check FILE --schema THIS_FILE"
+            "Reuse it with: csv-tidy check FILE --profile THIS_FILE"
         )
         text = profile_to_toml(profile, header)
         return f"{stem}.profile.toml", "application/toml", text.encode("utf-8")
@@ -562,7 +562,7 @@ def _sentence(reason: str | None) -> str | None:
 def _clean_view(result: CleanResult, limits: Limits) -> dict[str, Any]:
     changed = {(c.record, c.column) for c in result.changes}
     return {
-        "report": clean_report(result, "dry-run", limits.max_details, limits.max_examples),
+        "report": clean_report(result, "dry_run", limits.max_details, limits.max_examples),
         "header": list(result.header) if result.header is not None else None,
         "rows": _rows(result, changed, limits.preview_rows),
         "rows_total": len(result.rows),

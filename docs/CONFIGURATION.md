@@ -190,7 +190,7 @@ guesses which one you meant. Month names, times, and time zones are not supporte
 | `duplicate_record` | warning | whole row identical to an earlier row (`rows = "warn"`) |
 | `duplicate_key` | error | key values equal to an earlier record's; the earlier record is reported |
 | `missing_column` | error | referenced column not in the header |
-| `field_too_large` | error (output only) | a cleaned value is longer than `max_field_chars` (see below) |
+| `output_field_too_large` | error (output only) | a cleaned value is longer than `max_field_chars` (see below) |
 
 Duplicate comparison uses exact text (case-sensitive). A key with any empty part never forms
 an identity, so records with empty identifiers are not grouped together.
@@ -219,7 +219,7 @@ Applied in this fixed order, only to selected columns of records with the correc
 5. **output validation** — the result is validated with output rules: normalized columns use
    the output format; other columns keep their source format. Every cleaned value must also
    fit `max_field_chars`; normalization can make values longer (`1000000` → `1,000,000`), and
-   a longer value is reported as `field_too_large` and blocks the export, so an exported file
+   a longer value is reported as `output_field_too_large` and blocks the export, so an exported file
    can always be read back with its generated output profile. Raise `max_field_chars` if needed.
 
 Source issues are marked `resolved` (a selected transformation actually repaired the value),
@@ -236,8 +236,13 @@ duplicate keys that appear after trimming).
 
 - `check` validates source rules and never modifies files. Profile transformations are ignored.
 - `clean` is a dry run unless `--apply` is given. `--apply` requires `--output`; `--output` and
-  `--output-schema` require `--apply`; `--dry-run` and `--apply` cannot be combined. A dry run
+  `--output-profile` require `--apply`; `--dry-run` and `--apply` cannot be combined. A dry run
   may save a report with `--report` but never writes a CSV or output profile.
+- `--profile`, `--output-profile`, and `--output-profiles` were called `--schema`,
+  `--output-schema`, and `--output-schemas` before 1.0.0. The old names still work, are not
+  shown by `--help`, and print `csv-tidy: warning: --schema is deprecated and will be removed
+  in CSV Tidy 2.0.0; use --profile` (and so on) on stderr; they are removed in 2.0.0. Giving
+  an old name together with its new name is a usage error (exit code 2).
 - A fatal parsing error makes the scan incomplete: reports say so, counts cover only what was
   read, and the exit code is 2. A partially scanned file is never reported as valid.
 - `profile init` exits with 0 when the profile was written, 2 for the refusals listed under
@@ -312,13 +317,13 @@ set of options to several files through the same functions as the single-file co
   (default `*.csv`, case-insensitive), sorted by name without regard to case; `--recursive`
   also selects matching files in subfolders. Inputs are processed in the order given.
   Selecting no file (a folder without matches) or the same file twice is an error (exit 2).
-- **Same pipeline, explicitly.** `--schema` and all source, output, and transformation options
+- **Same pipeline, explicitly.** `--profile` and all source, output, and transformation options
   of `check`/`clean` are accepted and apply to every file. Without column rules only the
   structure is checked, and the summary says so.
 - **Preview by default.** `batch clean` writes no cleaned file unless `--apply` is given.
-  `--apply` requires `--output-dir DIR`; `--output-dir` and `--output-schemas` require
+  `--apply` requires `--output-dir DIR`; `--output-dir` and `--output-profiles` require
   `--apply`.
-- **Output names.** For an input `NAME.ext`: `DIR/NAME.clean.csv`, with `--output-schemas`
+- **Output names.** For an input `NAME.ext`: `DIR/NAME.clean.csv`, with `--output-profiles`
   also `DIR/NAME.output.toml`, and with `--report-dir RDIR` a full single-file report
   `RDIR/NAME.report.json` (`.txt` with `--format text`). A file found in a subfolder of a
   selected folder keeps that subfolder below `DIR`/`RDIR`. `--report PATH` saves the batch
@@ -359,14 +364,66 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   in the browser's local storage for this address. Quit asks for confirmation. Files can be
   dropped onto the file area. The page uses only its own style sheet and scripts
   (`app.css`, `theme.js`, `app.js`); no fonts or styles are loaded from elsewhere.
-- **Layout.** Three columns: a side bar (`nav`) with the previous/next step buttons, links to
-  the files, profile, report, and settings parts of the page, and at the bottom the version,
-  the theme switch, and Quit; the main column (`main`) with the status line, the step
-  navigation, and steps 1–6; and a side panel (`aside`). The side bar can be folded to a row
-  of icons; that choice is remembered like the theme (where the browser allows storage).
-  Below 1100 pixels the side panel moves under the main column. Below 720 pixels the side bar
-  opens over the page from the button at the top; while it is open, the keyboard stays inside
-  it, Escape closes it, and focus returns to that button.
+- **Layout.** Three columns: a side bar (`nav`), the main column (`main`), centered in the
+  space that is left, and a side panel (`aside`), a card at the right edge of the window. The
+  side bar can be folded to a row of icons; that choice is remembered like the theme (where
+  the browser allows storage). Below 1100 pixels the side panel moves under the main column.
+  Below 720 pixels the side bar opens over the page from the button in the bar at the top
+  (`header`); while it is open, the keyboard stays inside it, Escape closes it, and focus
+  returns to that button.
+- **Side bar.** From the top: the fold button and the previous/next step buttons; **New
+  check**; **Find**; **Files**, **Profiles**, **Reports**, and **Settings**, which lead to
+  where those parts live (steps 1, 3, 6, and "More settings"); the section **In this
+  session**; and at the bottom the version, the "Offline & local" note, the theme switch, and
+  Quit.
+  - **New check** clears the page: the loaded files (the server removes its temporary copies
+    of them), the separator and encoding, all rules (as **Reset all rules to text**), and the
+    results, and shows step 1 in one-file mode. When anything is loaded or set, a dialog asks
+    first; **Keep working** (the default button) or Escape changes nothing.
+  - **Find** opens a search field. Typing hides every table row of the step area that does
+    not contain the text (ignoring case): rows of the column rules by column name, other rows
+    by the text of their cells (without their buttons). It also applies to tables drawn
+    later, says how many rows of the shown step match, and a note above the steps offers
+    **Show all rows**. Escape first empties the field, then closes it; closing it shows every
+    row again. Find changes no rule and no result.
+  - **In this session** lists the files loaded now (one file, or every file of several-files
+    mode) with the number of data rows once a file was read, and its state as an icon and in
+    words: not checked, values not checked (no column rules), problems found, not fully read,
+    no problems, or ready to save, from the latest check or cleaning preview (per file in
+    several-files mode). Clicking a file shows its latest result; in several-files mode with
+    a result, that is the file's **Details**, and the results of the other files are kept. A
+    note says that nothing is kept after Quit, so there is no list of recent files. Folded,
+    the side bar shows icons only and hides this section.
+- **Side panel.** "About this page", then one row per setting with its current value and an
+  action: **Profile** (the loaded profile's name or "No profile"; **Load** opens the profile
+  file chooser of step 3, **Save** saves the rules like step 6), **Columns** (how many columns
+  have rules; **Edit** shows step 3), **Unique keys** (single-column and combined keys;
+  **Add** opens "More settings" at the combined-key list), **Output** (separator, encoding,
+  and line ending of the cleaned copy, and in how many columns formulas are protected;
+  **Edit** opens "More settings" at the output separator), and **Theme** (**Switch**). The
+  actions lead to the controls of step 3; the panel changes nothing itself.
+- **Accessibility.** One `h1`; the landmarks `nav`, `main`, `aside`, and `header` (narrow
+  windows); a skip link to the main column as the first Tab stop; a name for every control,
+  including icon-only buttons; `aria-expanded` and `aria-controls` on the buttons that show
+  or hide something (side bar, Find, file menu); a visible focus ring on every control; every
+  action works with the keyboard alone; `prefers-reduced-motion` turns off animations and
+  transitions; text contrast at least 4.5:1 and icons and focus rings at least 3:1 in both
+  themes.
+- **Main column.** From the top: the breadcrumb `Files / NAME`, whose menu lists the loaded
+  files (choosing one shows its latest result, like **In this session**) and adds more; the
+  title (the file name, or the number of
+  files); the input card with the drop area and its **+** button, the separator, the
+  encoding, one file or several files, and the primary button; the size limit
+  (`--max-file-mb`) and the note that results are kept in memory for this session only; the
+  step navigation 1–6; the status line (what happened, what to do next, progress, Cancel); and
+  the content of one step. The primary button does the next thing: **Check**, then **Preview
+  cleaning**, then **Save** (which shows step 6); pressed while the file is being read again,
+  it waits for that and then runs.
+- **Which step is shown.** The step last clicked (in the navigation, the side bar, or with
+  the previous/next buttons). When work produces a new result, its step is shown: step 2
+  after a file was read (also with another separator or encoding), step 4 after a check,
+  step 5 after a cleaning preview. Results cleared because a rule changed do not move it back;
+  choosing another mode or removing the last file goes back to step 1.
 - **One server per port.** On Windows the port is claimed exclusively, so starting a second
   interface on a port that is in use fails with an explanation instead of sharing the port.
 - **Dates from a list.** Date formats are chosen from `YYYY-MM-DD`, `DD/MM/YYYY`,
@@ -374,17 +431,20 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   **Other…** accepts any format valid under "Date formats". Profiles with other formats load
   into **Other…** unchanged.
 
-- The page sends the chosen files to that local process, which stores them in a private
-  temporary folder (removed when they are replaced or removed, on **Quit**, and on Ctrl+C).
-  The original files are never opened for writing. A file larger than `--max-file-mb`
-  (default 200), or several files that are larger together, are refused.
+- **Limits.** One server serves one session for the person at this computer. The page sends
+  the chosen files to that local process, which stores them in a private temporary folder
+  (removed when they are replaced or removed, with **New check**, on **Quit**, and on Ctrl+C)
+  and builds every result in memory. One-file mode keeps one file; choosing another replaces
+  it. Nothing is kept after the server stops, so the page has no list of recent files. The
+  original files are never opened for writing. A file larger than `--max-file-mb` (default
+  200), or several files that are larger together, are refused.
 - Preview, check, and cleaning call `check_file`/`clean_file`; the rules set on the page are
   sent as a profile and validated by the profile loader; saving calls `export_clean`. Saved
   files are browser downloads named `NAME.clean.csv`, `NAME.output.toml`,
   `NAME.clean-report.txt|json` (or `NAME.check-report.*`), and `NAME.profile.toml`.
 - The cleaned CSV and its profile cannot be downloaded while the scan is incomplete or errors
   remain; the page states the reason. Reports can always be saved. Reports from the page have
-  `mode: "dry-run"` because the server itself writes no file to a user location.
+  `mode: "dry_run"` because the server itself writes no file to a user location.
 - A result belongs to the file and settings it was made with. Choosing another file or
   changing any setting discards it on the page, and the server refuses to serve a download
   for a result whose settings no longer match.
@@ -438,7 +498,7 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
 
 ## Output profiles
 
-`--output-schema PATH` saves the effective output profile: the resolved output delimiter,
+`--output-profile PATH` saves the effective output profile: the resolved output delimiter,
 encoding, number and date formats (as its source settings), per-column formats as they appear
 in the cleaned file, the same validation policies, and the same transformation selections.
 On cleaned output those transformations are no-ops, so `check` passes and a second `clean`
@@ -477,14 +537,17 @@ only the source can be corrected. Text reports do not show it. Source issues kee
 | `batch` | `ok`, `ok_structure_only`, `data_errors`, `failed` (a file failed or was not fully read) | none; `summary` has only `exit_code` |
 
 `--format text|json` selects the report format for stdout and `--report PATH`. JSON contains
-`schema_version` (currently 1), `tool`, `command`, `source`, `scan` (`complete`,
+`schema_version` (2 since 1.0.0; 0.x wrote 1), `tool`, `command`, `source`, `scan` (`complete`,
 `data_records`, `physical_lines`, `blank_lines`, `fatal_error`), `summary`, issue lists, and
 `details` (`limit`, totals, `shown`, `truncated`). `clean` adds `mode`, `output`,
 `transformations` (`order`, `trim`, `normalize`, `neutralize_formulas`, `deduplicate`;
 `order` names `neutralize_formulas` only when it is selected), `changes` (counts and limited
 before/after examples, whose `steps` name the transformations), `source_issues`,
-`output_issues`, and `export.artifacts`; `check` lists `artifacts`. Artifact lists include the
-report itself (`written` or `failed`). `summary.exit_code` is the command's exit code: it is 2
+`output_issues`, `artifacts`, and `export.artifacts` (the same list, kept from 0.x); `check`
+and `batch` list `artifacts`. `mode` is `dry_run` or `apply` (`null` for `batch check`). Each
+artifact has `kind` (`output_csv`, `output_profile`, or `report`), `path`, `status`
+(`written`, `not_written`, or `failed`), and `error`. Artifact lists include the report
+itself (`written` or `failed`). `summary.exit_code` is the command's exit code: it is 2
 if saving the report (or another artifact) failed, even when the data are valid
 (`summary.status` still describes the data). The report file is written before stdout, so
 stdout always shows the final outcome. `--max-details` limits listed issues and
@@ -495,5 +558,7 @@ the same input and settings produce the same report. Status messages go to stder
 ## Versioning
 
 `schema_version` (profiles) and the report `schema_version` change only for incompatible
-changes; compatible additions keep the version. The Python API follows the package version.
+changes; compatible additions keep the version. Profiles are at version 1. Reports went from
+version 1 to 2 in CSV Tidy 1.0.0 (`dry_run`, identifier artifact kinds,
+`output_field_too_large`; see the changelog). The Python API follows the package version.
 See [RELEASE.md](RELEASE.md), and [STABILITY.md](STABILITY.md) for what is covered from 1.0.0.

@@ -37,7 +37,7 @@ for administrative staff (the local interface). The short list below is the mini
 2. Run `csv-tidy check` on a CSV file with an example profile adapted to the file.
 3. Explain in your own words what one reported issue means and how you would fix it.
 4. Preview fixes with `csv-tidy clean ... --dry-run`.
-5. Export with `--apply --output ... --output-schema ...`.
+5. Export with `--apply --output ... --output-profile ...`.
 6. Check the exported file with the generated profile.
 
 ### Questions

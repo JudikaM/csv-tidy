@@ -91,7 +91,7 @@ def main() -> None:
         preview = clean_file(data, profile)
 
         def report() -> int:
-            built = clean_report(preview, "dry-run", 100, 10)
+            built = clean_report(preview, "dry_run", 100, 10)
             return len(to_json(built)) + len(render_clean_text(built))
 
         # Export needs a result without remaining errors, so it uses a second file whose
@@ -102,7 +102,7 @@ def main() -> None:
 
         def export() -> int:
             written = export_clean(
-                ready, Path(tmp) / "out.csv", output_schema=Path(tmp) / "out.toml", overwrite=True
+                ready, Path(tmp) / "out.csv", output_profile=Path(tmp) / "out.toml", overwrite=True
             )
             return len(written)
 

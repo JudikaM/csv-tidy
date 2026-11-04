@@ -186,6 +186,171 @@ def test_side_bar_state_is_remembered_only_where_storage_works(ui):
     assert '.querySelector(".content").inert = open' in script
     assert 'event.key === "Escape"' in script
     assert "@media (prefers-reduced-motion: reduce)" in css
+    # The side bar has its own divider color; in Light+ it is the ordinary line color.
+    assert "border-right: 1px solid var(--sidebar-line)" in css
+    assert "--sidebar-line: var(--line);" in css.split('[data-theme="light"]')[1]
+
+
+def test_input_card_holds_the_file_controls_and_one_primary_button(ui):
+    """AC-47: the input card, the breadcrumb, and one step shown at a time."""
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    parsed = _Elements()
+    parsed.feed(page)
+    start = page.index('<section class="input-card"')
+    card = page[start : page.index("</section>", start)]
+    # File, separator, encoding, mode, and the primary button live in the card.
+    for control in (
+        'id="file"',
+        'name="delimiter"',
+        'id="encoding"',
+        'name="mode"',
+        'id="primary-action"',
+    ):
+        assert control in card
+    assert card.count('name="delimiter"') == 3 and card.count('name="mode"') == 2
+    assert len(parsed.find("input", name="delimiter")) == 3  # nowhere else
+    for group in ("sep-label", "mode-label"):
+        assert parsed.find("div", role="radiogroup", **{"aria-labelledby": group})
+    # The size limit is shown with the server's own value.
+    ((_, limit, _),) = parsed.find("input", id="file")
+    assert limit["aria-describedby"] == "size-limit"
+    assert "Up to 1 MB per file (several files: together)" in page
+    # Breadcrumb with a menu of loaded files; the title is the only h1.
+    crumbs = parsed.find("nav", class_="crumbs")
+    assert crumbs and crumbs[0][1]["aria-label"] == "Breadcrumb"
+    ((_, menu_button, _),) = parsed.find("button", id="crumb-file")
+    assert menu_button["aria-controls"] == "file-menu" and menu_button["aria-expanded"] == "false"
+    assert parsed.find("h1", id="page-title")
+    # Steps 1-6 under the card, the status line above the step content, and only step 1
+    # shown before the script decides.
+    order = [
+        page.index(marker)
+        for marker in ('class="input-card"', 'class="steps"', 'id="status"', 'class="step-area"')
+    ]
+    assert order == sorted(order)
+    hidden = {
+        a["id"]: "hidden" in a
+        for _, a, _ in parsed.find("section")
+        if a.get("id", "").startswith("step-")
+    }
+    assert hidden == {"step-1": False, **{f"step-{n}": True for n in range(2, 7)}}
+
+
+def test_step_area_shows_one_step_and_the_primary_button_waits_its_turn(ui):
+    script = ui.request("/app.js")[2].decode("utf-8")
+    # Only the marked step is shown.
+    assert "for (let n = 1; n <= LAST_STEP; n += 1) $(`step-${n}`).hidden = n !== step;" in script
+    # The mark moves to the step that shows a new result and never back on its own.
+    assert "if (step > stepMark.progress || reread || restart) markStep(step);" in script
+    # Check, then Preview cleaning, then Save.
+    assert '{ check: "Check", clean: "Preview cleaning", save: "Save" }[next]' in script
+    # A press during a running request waits for it instead of being lost.
+    assert "state.queued = true;" in script
+    assert "if (queued && done && !state.stopped) primaryAction();" in script
+
+
+def test_side_bar_has_new_check_find_and_the_session_list(ui):
+    """AC-48: New check, Find, and "In this session" in the side bar."""
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    script = ui.request("/app.js")[2].decode("utf-8")
+    parsed = _Elements()
+    parsed.feed(page)
+    for element_id in ("new-check", "find-toggle", "find", "session-files"):
+        assert "sidebar" in parsed.find(id=element_id)[0][2], element_id
+    # Find is a disclosure: the button names the field it shows and says whether it is open.
+    ((_, toggle, _),) = parsed.find("button", id="find-toggle")
+    assert toggle["aria-controls"] == "find-box" and toggle["aria-expanded"] == "false"
+    ((_, box, _),) = parsed.find("div", id="find-box")
+    assert box["role"] == "search" and "hidden" in box
+    ((_, field, _),) = parsed.find("input", id="find")
+    assert field["type"] == "search" and field["aria-label"]
+    # It filters the table rows of the step area, again whenever a table is drawn.
+    assert 'document.querySelectorAll(".step-area tbody tr")' in script
+    assert "new MutationObserver(applyFind).observe(" in script
+    # The session list says honestly that nothing is kept after quitting.
+    ((_, section, _),) = parsed.find("section", class_="session")
+    assert section["aria-labelledby"] == "session-title"
+    assert '<h2 class="nav-heading" id="session-title">In this session</h2>' in page
+    assert "Nothing is kept after you quit, so there is no list of recent files." in page
+    # Each file shows a status icon plus the same status in words.
+    for words in ("not checked", "problems found", "no problems", "ready to save"):
+        assert f'"{words}"' in script
+    # New check asks first when there is something to lose, then removes the server copies.
+    ((_, dialog, _),) = parsed.find("dialog", id="new-dialog")
+    assert dialog["aria-labelledby"] == "new-title"
+    assert 'if (hasWork()) $("new-dialog").showModal();' in script
+    assert 'postJson("/api/file/remove", { file_id: id })' in script
+
+
+def test_side_panel_rows_show_the_current_settings_with_an_action_each(ui):
+    """AC-49: Profile, Columns, Unique keys, Output (and Theme), each "Label ... Action"."""
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    script = ui.request("/app.js")[2].decode("utf-8")
+    panel = page[page.index('<aside class="side-panel"') : page.index("</aside>")]
+    labels = re.findall(r"</svg>([^<]+)</dt>", panel)
+    assert labels == ["Profile", "Columns", "Unique keys", "Output", "Theme"]
+    parsed = _Elements()
+    parsed.feed(panel)
+    actions = {a["id"]: a for t, a, _ in parsed.elements if t == "button"}
+    texts = dict(re.findall(r'<button[^>]*id="([^"]+)"[^>]*>([^<]+)</button>', panel))
+    assert texts == {
+        "panel-profile-load": "Load",
+        "panel-profile-save": "Save",
+        "panel-columns-edit": "Edit",
+        "panel-keys-add": "Add",
+        "panel-output-edit": "Edit",
+        "panel-theme": "Switch",
+    }
+    # Each action is named, and its name starts with the word that is shown (WCAG 2.5.3).
+    for element_id, attrs in actions.items():
+        assert attrs["aria-label"].startswith(texts[element_id]), element_id
+    # Saving rules needs a file; the values come from the same state as the controls.
+    assert "disabled" in actions["panel-profile-save"]
+    for value in ("panel-profile", "panel-columns", "panel-keys", "panel-output"):
+        assert f'$("{value}").textContent' in script
+    assert 'addEventListener("click", () => showRules("key-columns", true));' in script
+
+
+def test_page_structure_supports_keyboard_and_screen_reader_use(ui):
+    """AC-50: references resolve, controls are named, and motion can be turned off."""
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    css = ui.request("/app.css")[2].decode("utf-8")
+    parsed = _Elements()
+    parsed.feed(page)
+    ids = {a["id"] for _, a, _ in parsed.elements if "id" in a}
+    # Every id that an ARIA attribute or a label points to exists.
+    for _, attrs, _ in parsed.elements:
+        for name in ("aria-controls", "aria-labelledby", "aria-describedby", "for"):
+            for target in attrs.get(name, "").split():
+                assert target in ids, f"{name}={target}"
+        if "aria-controls" in attrs:  # a disclosure says whether it is open
+            assert attrs.get("aria-expanded") in ("true", "false"), attrs.get("id")
+    # Banner (the bar of narrow windows), navigation, main, and complementary landmarks.
+    assert parsed.find("header", class_="mobile-bar") and parsed.find("aside", class_="side-panel")
+    # A button whose content is only an icon has a name of its own.
+    for attrs, inner in re.findall(r"<button([^>]*)>(.*?)</button>", page, re.S):
+        text = re.sub(r"<[^>]+>", "", re.sub(r"<svg.*?</svg>", "", inner, flags=re.S)).strip()
+        assert text or "aria-label=" in attrs, attrs
+    # Both dialogs are labelled, and the first button is the safe choice.
+    for dialog, safe in (("quit-dialog", "quit-cancel"), ("new-dialog", "new-cancel")):
+        ((_, attrs, _),) = parsed.find("dialog", id=dialog)
+        assert attrs["aria-labelledby"] in ids
+        assert "autofocus" in parsed.find("button", id=safe)[0][1]
+    # Focus is always visible, and reduced motion stops every animation and transition.
+    assert ":focus-visible { outline: 3px solid var(--focus);" in css
+    assert re.search(
+        r"@media \(prefers-reduced-motion: reduce\) \{\s*\*, \*::before, \*::after "
+        r"\{ animation: none !important; transition: none !important; \}",
+        css,
+    )
+
+
+def test_new_check_removes_the_loaded_files_from_the_session(ui, write):
+    first = ui.upload(write("a.csv", b"id\n1\n"))
+    assert ui.post("/api/file/remove", {"file_id": first})[0] == 200
+    body = {"file_id": first, "delimiter": ",", "encoding": "utf-8"}
+    status, answer = ui.post("/api/preview", body)
+    assert status == 409 and "no longer loaded" in answer["error"]
 
 
 def test_logo_is_served_as_a_png_without_the_key(ui):
@@ -269,7 +434,7 @@ def test_check_and_clean_match_the_library_results(ui):
     for key in ("scan", "summary", "issues", "coverage", "details"):
         assert checked["report"][key] == expected[key]
     status, cleaned = ui.post("/api/clean", body)
-    expected = clean_report(clean_file(FIXABLE, profile), "dry-run", 200, 200)
+    expected = clean_report(clean_file(FIXABLE, profile), "dry_run", 200, 200)
     for key in ("scan", "summary", "changes", "source_issues", "output_issues", "transformations"):
         assert cleaned["report"][key] == expected[key]
     assert cleaned["blocked_reason"] is None
@@ -300,12 +465,12 @@ def test_downloads_equal_the_cli_export(ui, tmp_path):
     cli = run_cli(
         "clean",
         str(FIXABLE),
-        "--schema",
+        "--profile",
         str(ID_PROFILE),
         "--apply",
         "--output",
         str(out),
-        "--output-schema",
+        "--output-profile",
         str(schema),
     )
     assert cli.code == 0
@@ -390,7 +555,7 @@ def test_rules_saved_from_the_page_work_with_the_cli(ui, tmp_path):
     assert status == 200 and response["X-File-Name"] == "transactions_fixable.profile.toml"
     saved = tmp_path / "saved.toml"
     saved.write_bytes(data)
-    result = run_cli("check", str(FIXABLE), "--schema", str(saved), "--format", "json")
+    result = run_cli("check", str(FIXABLE), "--profile", str(saved), "--format", "json")
     assert result.code == 1 and json.loads(result.out)["summary"]["errors"] == 2
 
 
@@ -489,7 +654,7 @@ def test_batch_gives_each_file_its_own_status_like_the_cli(ui, batch_files, tmp_
     ):
         shutil.copy(EXAMPLES / name, folder / name)
     cli = json.loads(
-        run_cli("batch", "clean", str(folder), "--schema", str(ID_PROFILE), "--format", "json").out
+        run_cli("batch", "clean", str(folder), "--profile", str(ID_PROFILE), "--format", "json").out
     )
     pick = ("status", "exit_code", "data_records", "errors", "output_errors", "changed_fields")
     by_name = {Path(f["path"]).name: {k: f[k] for k in pick} for f in cli["files"]}
@@ -502,7 +667,7 @@ def test_batch_file_details_equal_the_single_file_result(ui, batch_files):
     body = {"batch_id": data["batch_id"], "file_id": batch_files[1], "profile": profile_dict()}
     status, detail = ui.post("/api/batch/file", body)
     assert status == 200, detail
-    expected = clean_report(clean_file(UNFIXABLE, load_profile(ID_PROFILE)), "dry-run", 200, 200)
+    expected = clean_report(clean_file(UNFIXABLE, load_profile(ID_PROFILE)), "dry_run", 200, 200)
     for key in ("summary", "output_issues", "changes"):
         assert detail["report"][key] == expected[key]
     assert detail["report"]["source"]["path"] == "transactions_unfixable.csv"
@@ -530,7 +695,7 @@ def test_batch_zip_holds_only_exportable_files_and_matches_the_cli(ui, batch_fil
     out = tmp_path / "cli.csv"
     assert (
         run_cli(
-            "clean", str(FIXABLE), "--schema", str(ID_PROFILE), "--apply", "--output", str(out)
+            "clean", str(FIXABLE), "--profile", str(ID_PROFILE), "--apply", "--output", str(out)
         ).code
         == 0
     )

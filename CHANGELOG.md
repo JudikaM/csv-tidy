@@ -6,25 +6,108 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-04
+
+The first stable release. [docs/STABILITY.md](docs/STABILITY.md) lists everything that 1.x
+keeps compatible: profiles, command-line options, exit codes, issue codes, JSON reports, and
+the Python API. To get there, a few names were made consistent (with the old command-line
+and Python names still accepted), and the local interface was reorganized like a desktop
+application with a side bar, a file card, and a side panel.
+
+**Upgrade notes (from 0.5.0).**
+
+- **Profiles:** unchanged. Every 0.x profile works as before; profile `schema_version` stays 1.
+- **Command line:** commands written for 0.5 keep working. `--schema`, `--output-schema`, and
+  `--output-schemas` now print a warning on stderr; switch to `--profile`, `--output-profile`,
+  and `--output-profiles` before 2.0.0, which removes the old names. Exit codes are unchanged.
+- **JSON reports:** `schema_version` is now 2. Programs that read reports must accept it and
+  the renamed values in the table below; clean reports also have a top-level `artifacts`
+  list (the same as `export.artifacts`, which stays). Text reports name artifacts as before.
+- **Python API:** `export_clean(output_schema=...)` and `run_batch(output_schemas=...)` keep
+  working with a `DeprecationWarning`; use `output_profile=` and `output_profiles=`.
+  `ArtifactOutcome.kind` and `BatchResult.mode` use the new values below.
+- **Local interface:** every feature works as before; it is laid out differently (see
+  Changed). Its look, layout, and internal HTTP API are not covered by the stability promise.
+
+| Where | 0.5.0 | 1.0.0 |
+|-------|-------|-------|
+| Option (`check`, `clean`, `batch`) | `--schema PROFILE` | `--profile PROFILE` (old name deprecated) |
+| Option (`clean`) | `--output-schema PATH` | `--output-profile PATH` (old name deprecated) |
+| Option (`batch clean`) | `--output-schemas` | `--output-profiles` (old name deprecated) |
+| Report `schema_version` | `1` | `2` |
+| Report `mode` (`clean`, `batch`), `BatchResult.mode` | `"dry-run"` | `"dry_run"` (`"apply"` unchanged) |
+| Artifact `kind` (reports, `ArtifactOutcome.kind`) | `"output CSV"`, `"output profile"` | `"output_csv"`, `"output_profile"` (`"report"` unchanged) |
+| Issue code for a cleaned value longer than `max_field_chars` (stage `output`) | `field_too_large` | `output_field_too_large` (`field_too_large` stays the fatal reading error) |
+| Clean report | `export.artifacts` | `artifacts` and `export.artifacts` (the same list) |
+| `export_clean` keyword | `output_schema=` | `output_profile=` (old name deprecated) |
+| `run_batch` keyword | `output_schemas=` | `output_profiles=` (old name deprecated) |
+
 ### Added
 
-- [docs/STABILITY.md](docs/STABILITY.md): what Semantic Versioning will cover from 1.0.0
+- [docs/STABILITY.md](docs/STABILITY.md): what Semantic Versioning covers from 1.0.0
   (profiles, command-line options, exit codes, issue codes, JSON reports, the Python API) and
   what it does not (the look of the local interface, message wording, benchmark numbers), a
-  full inventory of that surface, and the decisions for 1.0, including the contract changes
-  planned for 0.7.0 (`--profile` with `--schema` as a deprecated alias, report
-  `schema_version` 2). A test keeps the inventory in step with the code. No behavior changes.
+  full inventory of that surface, the decisions that led to this release, and the
+  deprecation rules. A test keeps the inventory in step with the code.
+- Command line: `--profile` (`check`, `clean`, `batch check`, `batch clean`),
+  `--output-profile` (`clean`), and `--output-profiles` (`batch clean`). Help text, next-step
+  sentences, and the documentation use them.
+- Python API: `CleanResult.ok`, `source_errors`, `source_warnings`, and `output_warnings`,
+  matching `CheckResult.ok`, `errors`, and `warnings`.
+- Python API: `FatalError`, `SourceSettings`, `OutputSettings`, `BatchInput`, and
+  `FileOutcome` are exported from `csv_tidy`, so every type that a public function returns or
+  contains can be imported from the package.
+- Clean reports have a top-level `artifacts` list, like check and batch reports.
+- Issue code `output_field_too_large` (error, stage `output`, remedy `max_field_chars`) for a
+  cleaned value that is longer than `max_field_chars`.
+- Interface: the side bar has **New check** (start again with nothing loaded; it asks first
+  when files, rules, or results would be lost, and removes the temporary copies), **Find**
+  (shows only the table rows of the current step that contain a word: a column name, a value,
+  or a problem; Escape empties and closes it), and **In this session**: every loaded file with
+  its row count and whether it is not checked yet, has problems, or is fine, shown as an icon
+  and in words. Clicking a file opens its latest result; with several files, the file's
+  details, and the results of the other files are kept. A note says that nothing is kept
+  after Quit.
+- Interface: the side panel shows the current **Profile** (Load, Save), how many **Columns**
+  have rules (Edit), the **Unique keys** (Add), the **Output** separator, encoding, line
+  ending, and formula protection (Edit), and the **Theme** (Switch). Each action leads to the
+  control in step 3.
+- Documentation: "Migrating from 0.x" in the README, the interface's limits under "Supported
+  conventions and limits" (one session, results in memory, nothing kept after Quit, the size
+  limit), a section on working on the interface in CONTRIBUTING.md, the page structure in
+  ARCHITECTURE.md, the 1.x support policy in SECURITY.md, and user-testing tasks for the new
+  layout with a results table and a screen-reader (NVDA) checklist in docs/USER_TESTING.md.
+  The sessions with people and the screen-reader session are planned after 1.0; they have
+  not taken place.
 
 ### Changed
 
+- Reports: `schema_version` 2. `mode` is `dry_run` instead of `dry-run`, and artifact kinds
+  are `output_csv` and `output_profile` instead of `output CSV` and `output profile`; the
+  same values in `BatchResult.mode` and `ArtifactOutcome.kind`. Messages and text reports
+  still say "output CSV" and "output profile".
+- A cleaned value longer than `max_field_chars` is reported as `output_field_too_large`
+  instead of `field_too_large`; it still blocks the export.
 - Interface: the page is laid out like a desktop application. A side bar on the left holds
-  previous/next step buttons, links to the files, profile, report, and settings parts of the
-  page, and, at the bottom, the logo, version, "Offline & local", the theme switch, and Quit
-  (which still asks first). It can be folded to a row of icons, and the choice is remembered
-  in this browser. The steps stay in the middle column under one page title; a side panel on
-  the right holds the notes that were in the footer. Below 1100 pixels the side panel moves
-  under the steps; below 720 pixels the side bar opens over the page and keeps the keyboard
-  inside until it is closed (Escape or the side-bar button). Every feature works as before.
+  previous/next step buttons, the sections above, links to the files, profile, report, and
+  settings parts of the page, and, at the bottom, the logo, version, "Offline & local", the
+  theme switch, and Quit (which still asks first). It can be folded to a row of icons, and
+  the choice is remembered in this browser. The steps stay in the middle column under one
+  page title; a side panel on the right holds the rows above and the notes that were in the
+  footer. Below 1100 pixels the side panel moves under the steps; below 720 pixels the side
+  bar opens over the page from a bar at the top and keeps the keyboard inside until it is
+  closed (Escape or the side-bar button). Every feature works as before.
+- Interface: the file, separator, encoding, and one-file/several-files choice are in one input
+  card at the top of the middle column, with a **+** button, the size limit, and one primary
+  button that checks, then previews the cleaning, then shows the ways to save. A breadcrumb
+  (`Files / NAME`) lists the loaded files and opens their latest result; the title shows the
+  file name. Steps 1-6 now show one at a time under the card: the step you pick, or the one
+  with the newest result (2 after reading a file, 4 after a check, 5 after a cleaning
+  preview). The status line sits quietly above the step content.
+- Interface: in the dark theme the side bar is #1F1F1F on a #191919 page, divided by a
+  #303030 line.
+- Interface: the side panel is a card at the right edge of the window; the main column stays
+  centered in the space between the side bar and the panel.
 - Interface: the dark theme (still the default) uses the colors of VS Code's built-in "Dark
   Modern" theme and is now named "Dark Modern"; a theme chosen earlier is still remembered.
 - Interface: every icon is now an inline [Lucide](https://lucide.dev) icon (the set shadcn/ui
@@ -32,12 +115,30 @@ All notable changes are documented here. The format follows
   text color as in shadcn/ui's mode toggle; still no external files or requests.
 - Interface: the light theme uses the colors of VS Code's built-in "Light+" theme and is now
   named "Light+". Text contrast stays at least 4.5:1 in both themes.
-- Interface: the CSV Tidy logo is shown in the header and used as the page icon (`logo.png`,
-  served by the local server like the other page files).
+- Interface: the CSV Tidy logo is shown in the side bar and used as the page icon
+  (`logo.png`, served by the local server like the other page files).
 - Interface: the marked step in the step navigation is gray in both themes instead of indigo.
+- Interface accessibility: the bar at the top of narrow windows is a `header` landmark, the
+  breadcrumb's file button has a name before the script runs, and every control, landmark,
+  focus ring, keyboard path, reduced-motion setting, and color pair was checked automatically
+  in both themes at three window widths (see TEST_CASES.md). This was an automated check,
+  not a session with a screen reader.
+- The saved-profile header of the interface and `profile init`'s next steps name `--profile`.
+
+### Deprecated
+
+- `--schema`, `--output-schema`, and `--output-schemas`: use `--profile`, `--output-profile`,
+  and `--output-profiles`. The old names still work, are not shown by `--help`, and print a
+  warning on stderr; giving an old and a new name together is a usage error. Removed in 2.0.0.
+- `export_clean(output_schema=...)` and `run_batch(output_schemas=...)`: use
+  `output_profile=` and `output_profiles=`. The old names raise `DeprecationWarning`; giving
+  both names raises `TypeError`. Removed in 2.0.0.
 
 ### Fixed
 
+- Interface: pressing the check or preview button right after typing in a field that reads the
+  file again (such as "Rows shown in previews") no longer loses the press; it now runs once the
+  file was read.
 - Documentation: the README options table no longer lists `--max-examples` for `check`
   (only `clean` and `batch clean` have it); CONFIGURATION.md no longer names version 0.4 as
   its scope, and documents `coverage.structure` and the `verdict.state` values of the `clean`
@@ -45,6 +146,8 @@ All notable changes are documented here. The format follows
 - Interface: clicking a step in the step navigation (for example "2. Look") now marks that
   step; before, the mark stayed on the step the work had reached. The mark still moves on by
   itself when choosing a file, checking, or cleaning reaches a new step.
+- Documentation: STABILITY.md no longer lists `batch report` as an artifact kind; no report
+  ever contained it (the summary written by `batch --report` has the kind `report`).
 
 ## [0.5.0] - 2026-10-29
 

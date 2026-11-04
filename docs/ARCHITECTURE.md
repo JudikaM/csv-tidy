@@ -37,7 +37,7 @@ entry points that all call api.check_file / clean_file / export_clean:
 | `reporting.py` | Report dictionaries, JSON, and English text |
 | `profile_init.py` | Starting profiles from a header: explicit choices, guided questions through injected `ask`/`say` callables |
 | `batch.py` | Input selection, artifact planning and collision checks, per-file isolation, batch summary |
-| `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page (HTML, CSS, JS; no dependencies) |
+| `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page: `index.html`, `app.css`, `theme.js` (theme and folded side bar before the first paint), `app.js`, `logo.png`; no dependencies (see "The local page" below) |
 | `shortcuts.py` | Desktop and Start Menu shortcuts (Windows `.lnk` through PowerShell and the Windows Script Host, Linux desktop entries) |
 | `update.py` | `csv-tidy update`: GitHub release lookup, wheel and SHA-256 selection, the pip command; the only network access |
 | `cli.py` | Argument parsing, exit codes, stdout/stderr separation |
@@ -53,27 +53,34 @@ check = check_file("data.csv", profile)  # CheckResult
 # CleanResult, computed in memory only; nothing is written yet.
 result = clean_file("data.csv", profile, overrides=Overrides(trim=("amount",)))
 if result.export_ready:
-    export_clean(result, "output/clean.csv", output_schema="output/clean.output.toml")
+    export_clean(result, "output/clean.csv", output_profile="output/clean.output.toml")
 ```
 
 - `CheckResult`: `issues`, `errors`, `warnings`, `scan` (`ScanInfo`), `settings`, `header`,
   `exit_code` (0 valid, 1 source errors, 2 incomplete scan), `ok`.
 - `CleanResult`: `source_issues` (with `status`), `output_issues` (with `introduced`),
   `changes` (`FieldChange`), `removed` (`RemovedRecord`), `header`, `rows`, `output_profile`,
-  `export_ready`, `export_blocked_reason` (`None` when ready), `exit_code`, `csv_text()`,
+  `source_errors`, `source_warnings`, `output_errors`, `output_warnings`, `export_ready`,
+  `export_blocked_reason` (`None` when ready), `exit_code`, `ok`, `csv_text()`,
   `output_profile_toml()`.
+- `ScanInfo.fatal` is a `FatalError` (`code`, `message`, `line`) or `None`; `Settings.source`
+  and `Settings.output` are `SourceSettings` and `OutputSettings`.
+- `export_clean(result, output, *, output_profile=None, overwrite=False)` returns one
+  `ArtifactOutcome` per file written, with `kind` `output_csv` or `output_profile`.
 - `run_batch(action, select_inputs(paths), profile, ...)` returns a `BatchResult` with one
   `FileOutcome` per file and the aggregate `exit_code`. `BatchInput(path, relative, label)`
   may carry a `label` that names the file in outcomes and reports instead of its path (the
-  local interface passes the original file name). `batch.batch_report` turns the result into
-  the summary dictionary.
+  local interface passes the original file name). `BatchResult.mode` is `dry_run`, `apply`,
+  or `None` (check). The internal `batch.batch_report` turns the result into the summary
+  dictionary that the CLI prints.
 - `Issue`: `code`, `severity` (`error`, `warning`, `fatal`), `stage`, `record`,
   `line_start`, `line_end`, `column`, `value`, `message`, `suggestion`, `related_record`,
-  `related_line`.
+  `related_line`, `status`, `introduced`, `remedy`.
 - `Profile` and `ColumnSpec` objects built directly are validated with the same rules as
-  TOML profiles (`schema.validate_profile`) before any data is read. Lists are accepted
-  wherever tuples are: `schema.canonical_profile` validates a profile and returns a tuple-based
-  copy (unset values stay unset), used by both settings resolution and `profile_to_toml`.
+  TOML profiles (by the internal `schema.validate_profile`) before any data is read. Lists are
+  accepted wherever tuples are: the internal `schema.canonical_profile` validates a profile and
+  returns a tuple-based copy (unset values stay unset), used by both settings resolution and
+  `profile_to_toml`.
 - Results keep `source_file`/`profile_file`: absolute paths captured when the inputs were read.
   `export_clean` protects them even if the working directory changes afterwards.
 - Exceptions (all subclasses of `CsvTidyError`, CLI exit code 2): `ProfileError` (invalid
@@ -81,6 +88,13 @@ if result.export_ready:
   file without `overwrite`, blocked export, or write failure; `outcomes` lists artifacts
   already written). Data problems, including fatal parsing failures, are returned as issues.
 - Core functions never print or call `sys.exit`. The CLI uses exactly these functions.
+- The public API is exactly `csv_tidy.__all__` ([STABILITY.md](STABILITY.md)). Module
+  functions named in this document (`schema.validate_profile`, `schema.canonical_profile`,
+  `batch.batch_report`, and the like) are internal and may change in any release.
+- Renamed keyword arguments keep their 0.x names as deprecated aliases through the internal
+  decorator `api.renamed_keyword`: the old name raises `DeprecationWarning`, both names
+  together raise `TypeError`. The CLI does the same for renamed options (a hidden option
+  with its own destination, a warning on stderr).
 
 ## Invariants (covered by tests)
 
@@ -151,3 +165,31 @@ if result.export_ready:
   supported delimiter produces a `possible_wrong_delimiter` hint instead.
 - **`tomli-w` for TOML output.** Writing TOML correctly requires escaping rules; the generated
   profile is also parsed back and compared before it is written.
+
+## The local page
+
+The page is one static HTML file with its style sheet and two scripts, served by `ui.py` with
+a content security policy that allows nothing else: no inline styles or scripts, no `eval`,
+no `innerHTML`, and no external fonts, icons, or requests. Icons are inline SVG paths from
+Lucide, drawn in `currentColor`. `app.js` builds every dynamic element with
+`document.createElement` and `textContent`, so file contents are never parsed as HTML.
+
+```
+body
+├── a.skip (to main)
+├── nav#sidebar ── fold and step buttons · New check · Find (#find-box) · Files · Profiles ·
+│                  Reports · Settings · section "In this session" (#session-files) ·
+│                  version, theme switch, Quit
+└── div.content
+    ├── header.mobile-bar (narrow windows: opens the side bar over the page)
+    ├── main#main ── breadcrumb and file menu · h1 · input card (file, separator, encoding,
+    │                mode, primary button) · step navigation · status line · step area
+    │                (sections step-1 … step-6; one is shown)
+    └── aside.side-panel ── About this page · Profile · Columns · Unique keys · Output · Theme
+```
+
+All state lives in one `state` object in `app.js` and on the server's session; the side bar
+list and the side panel rows are redrawn from it after every change (`refreshLook`), so they
+cannot disagree with the steps. The server API (`/api/file`, `/api/preview`, `/api/check`,
+`/api/clean`, `/api/batch`, `/api/download`, and the others in `ui.py`) is used only by this
+page and is not part of the covered surface.

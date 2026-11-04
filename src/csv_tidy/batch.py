@@ -19,9 +19,24 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 from . import __version__
-from .api import CheckResult, CleanResult, check_file, clean_file, export_clean
+from .api import (
+    CheckResult,
+    CleanResult,
+    check_file,
+    clean_file,
+    export_clean,
+    renamed_keyword,
+)
 from .errors import CsvTidyError, InputError, OutputError
-from .output import ArtifactOutcome, encode_text, write_artifact
+from .output import (
+    OUTPUT_CSV,
+    OUTPUT_PROFILE,
+    REPORT,
+    ArtifactOutcome,
+    artifact_label,
+    encode_text,
+    write_artifact,
+)
 from .reporting import (
     REPORT_SCHEMA_VERSION,
     check_report,
@@ -78,7 +93,7 @@ class FileOutcome:
 @dataclass(frozen=True)
 class BatchResult:
     action: str
-    mode: str | None  # "dry-run" or "apply" for clean, None for check
+    mode: str | None  # "dry_run" or "apply" for clean, None for check
     profile_path: str | None
     files: tuple[FileOutcome, ...]
 
@@ -148,7 +163,7 @@ def plan_artifacts(
     inputs: Sequence[BatchInput],
     *,
     output_dir: str | Path | None = None,
-    output_schemas: bool = False,
+    output_profiles: bool = False,
     report_dir: str | Path | None = None,
     report_format: str = "json",
 ) -> list[dict[str, Path]]:
@@ -162,12 +177,12 @@ def plan_artifacts(
         parent, stem = item.relative.parent, item.relative.stem
         plan: dict[str, Path] = {}
         if output_dir is not None:
-            plan["output CSV"] = Path(output_dir) / parent / f"{stem}.clean.csv"
-            if output_schemas:
-                plan["output profile"] = Path(output_dir) / parent / f"{stem}.output.toml"
+            plan[OUTPUT_CSV] = Path(output_dir) / parent / f"{stem}.clean.csv"
+            if output_profiles:
+                plan[OUTPUT_PROFILE] = Path(output_dir) / parent / f"{stem}.output.toml"
         if report_dir is not None:
             suffix = "json" if report_format == "json" else "txt"
-            plan["report"] = Path(report_dir) / parent / f"{stem}.report.{suffix}"
+            plan[REPORT] = Path(report_dir) / parent / f"{stem}.report.{suffix}"
         plans.append(plan)
     return plans
 
@@ -205,6 +220,7 @@ def check_artifacts(
             )
 
 
+@renamed_keyword("output_schemas", "output_profiles")
 def run_batch(
     action: str,
     inputs: Sequence[BatchInput],
@@ -213,7 +229,7 @@ def run_batch(
     overrides: Overrides | None = None,
     apply: bool = False,
     output_dir: str | Path | None = None,
-    output_schemas: bool = False,
+    output_profiles: bool = False,
     report_dir: str | Path | None = None,
     report_format: str = "json",
     overwrite: bool = False,
@@ -226,14 +242,16 @@ def run_batch(
     ``clean`` is a preview unless ``apply`` is true, which requires ``output_dir``. Invalid
     settings and unsafe artifact paths raise before any file is read. Problems of a single
     file (unreadable, incomplete scan, failed write) are recorded in its ``FileOutcome``.
+    ``output_schemas`` is a deprecated alias of ``output_profiles`` (``DeprecationWarning``;
+    removed in 2.0.0).
     """
     if action not in ACTIONS:
         raise ValueError(f"action must be one of {ACTIONS}")
-    if action == "check" and (apply or output_dir is not None or output_schemas):
+    if action == "check" and (apply or output_dir is not None or output_profiles):
         raise OutputError("batch check writes no cleaned files; use batch clean with apply")
     if apply and output_dir is None:
         raise OutputError("apply requires an output folder")
-    if not apply and (output_dir is not None or output_schemas):
+    if not apply and (output_dir is not None or output_profiles):
         raise OutputError("an output folder requires apply (batch clean is a preview by default)")
     loaded = load_profile(profile) if isinstance(profile, (str, Path)) else profile
     resolve_settings(loaded, overrides)
@@ -241,7 +259,7 @@ def run_batch(
     plans = plan_artifacts(
         inputs,
         output_dir=output_dir,
-        output_schemas=output_schemas,
+        output_profiles=output_profiles,
         report_dir=report_dir,
         report_format=report_format,
     )
@@ -249,7 +267,7 @@ def run_batch(
     if loaded is not None and loaded.resolved_path:
         protected["input profile"] = Path(loaded.resolved_path)
     labelled = [
-        (f"{kind} for {item.path}", path)
+        (f"{artifact_label(kind)} for {item.path}", path)
         for item, plan in zip(inputs, plans, strict=True)
         for kind, path in plan.items()
     ]
@@ -275,7 +293,7 @@ def run_batch(
             )
         except CsvTidyError as exc:
             outcomes.append(FileOutcome(item.shown, item.relative, "failed", 2, error=str(exc)))
-    mode = None if action == "check" else ("apply" if apply else "dry-run")
+    mode = None if action == "check" else ("apply" if apply else "dry_run")
     return BatchResult(action, mode, loaded.path if loaded else None, tuple(outcomes))
 
 
@@ -329,20 +347,20 @@ def _one(
             try:
                 artifacts += export_clean(
                     cleaned,
-                    plan["output CSV"],
-                    output_schema=plan.get("output profile"),
+                    plan[OUTPUT_CSV],
+                    output_profile=plan.get(OUTPUT_PROFILE),
                     overwrite=overwrite,
                 )
             except OutputError as exc:
                 error = str(exc)
                 artifacts += exc.outcomes or [
-                    ArtifactOutcome("output CSV", str(plan["output CSV"]), "failed", error)
+                    ArtifactOutcome(OUTPUT_CSV, str(plan[OUTPUT_CSV]), "failed", error)
                 ]
         elif apply:
             reason = "output errors remain" if result.scan.complete else "the scan is incomplete"
             artifacts += [
                 ArtifactOutcome(kind, str(plan[kind]), "not_written", reason)
-                for kind in ("output CSV", "output profile")
+                for kind in (OUTPUT_CSV, OUTPUT_PROFILE)
                 if kind in plan
             ]
     exit_code = 2 if error else result.exit_code
@@ -361,18 +379,18 @@ def _one(
             if isinstance(result, CheckResult):
                 report = check_report(result, max_details, listed, code)
                 return to_json(report) if report_format == "json" else render_check_text(report)
-            mode = "apply" if apply else "dry-run"
+            mode = "apply" if apply else "dry_run"
             report = clean_report(result, mode, max_details, max_examples, listed, code)
             return to_json(report) if report_format == "json" else render_clean_text(report)
 
         try:
-            text = text_for(ArtifactOutcome("report", str(target), "written"), exit_code)
+            text = text_for(ArtifactOutcome(REPORT, str(target), "written"), exit_code)
             artifacts.append(
-                write_artifact(target, encode_text(text, "utf-8", "report"), overwrite, "report")
+                write_artifact(target, encode_text(text, "utf-8", "report"), overwrite, REPORT)
             )
         except OutputError as exc:
             exit_code, error = 2, error or str(exc)
-            artifacts.append(ArtifactOutcome("report", str(target), "failed", str(exc)))
+            artifacts.append(ArtifactOutcome(REPORT, str(target), "failed", str(exc)))
     if exit_code == 2 and result.scan.complete:
         status = "failed"
     coverage = coverage_dict(result.settings, result.header)
@@ -437,7 +455,7 @@ def batch_report(
         "changed_fields": sum(o.changed_fields for o in result.files),
         "removed_records": sum(o.removed_records for o in result.files),
         "written": sum(
-            a.kind == "output CSV" and a.status == "written"
+            a.kind == OUTPUT_CSV and a.status == "written"
             for o in result.files
             for a in o.artifacts
         ),
@@ -490,7 +508,7 @@ def _verdict(totals: dict[str, int], structure_only: int) -> dict[str, str]:
 
 
 def _next_steps(result: BatchResult, totals: dict[str, int]) -> list[str]:
-    schema = f" --schema {shown_arg(result.profile_path)}" if result.profile_path else ""
+    profile = f" --profile {shown_arg(result.profile_path)}" if result.profile_path else ""
     steps = []
     if totals["failed"]:
         steps.append(
@@ -501,10 +519,10 @@ def _next_steps(result: BatchResult, totals: dict[str, int]) -> list[str]:
         word = "INVALID" if result.action == "check" else "BLOCKED"
         steps.append(
             f"For details of a file marked {word}, run it alone: "
-            f"csv-tidy {result.action} FILE{schema} (or add --report-dir DIR for one "
+            f"csv-tidy {result.action} FILE{profile} (or add --report-dir DIR for one "
             "report per file)."
         )
-    if result.mode == "dry-run" and totals["ok"]:
+    if result.mode == "dry_run" and totals["ok"]:
         steps.append(
             "Nothing was written. To write the files that are ready, add "
             "--apply --output-dir DIR (files with remaining errors are skipped)."
@@ -512,13 +530,13 @@ def _next_steps(result: BatchResult, totals: dict[str, int]) -> list[str]:
     if any(outcome.structure_only for outcome in result.files):
         steps.append(
             "Only the file structure was checked (no column rules). Create a profile with "
-            "csv-tidy profile init FILE --output profile.toml and pass it with --schema."
+            "csv-tidy profile init FILE --output profile.toml and pass it with --profile."
         )
     return steps
 
 
 def render_batch_text(report: dict[str, Any]) -> str:
-    mode = {None: "", "dry-run": " (dry run, nothing written)", "apply": " (apply)"}[report["mode"]]
+    mode = {None: "", "dry_run": " (dry run, nothing written)", "apply": " (apply)"}[report["mode"]]
     totals = report["totals"]
     lines = [
         f"CSV Tidy {report['tool']['version']} - batch {report['action']}{mode}",
@@ -550,7 +568,8 @@ def render_batch_text(report: dict[str, Any]) -> str:
         for artifact in entry["artifacts"]:
             note = f" ({artifact['error']})" if artifact["error"] else ""
             lines.append(
-                f"             {artifact['kind']}: {artifact['path']} - {artifact['status']}{note}"
+                f"             {artifact_label(artifact['kind'])}: {artifact['path']} - "
+                f"{artifact['status']}{note}"
             )
     good = "ok" if report["action"] == "check" else "ready"
     lines += [
@@ -568,7 +587,8 @@ def render_batch_text(report: dict[str, Any]) -> str:
         ),
     ]
     lines += [
-        f"  {a['kind']}: {a['path']} - {a['status']}" + (f" ({a['error']})" if a["error"] else "")
+        f"  {artifact_label(a['kind'])}: {a['path']} - {a['status']}"
+        + (f" ({a['error']})" if a["error"] else "")
         for a in report["artifacts"]
     ]
     if report["next_steps"]:

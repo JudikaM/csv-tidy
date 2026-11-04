@@ -13,7 +13,15 @@ from . import __version__, batch, profile_init, update
 from .api import check_file, clean_file, export_clean
 from .errors import CsvTidyError, OutputError, ProfileError
 from .formats import NUMBER_FORMATS
-from .output import ArtifactOutcome, encode_text, validate_artifact_paths, write_artifact
+from .output import (
+    OUTPUT_CSV,
+    OUTPUT_PROFILE,
+    REPORT,
+    ArtifactOutcome,
+    encode_text,
+    validate_artifact_paths,
+    write_artifact,
+)
 from .reporting import (
     check_report,
     clean_report,
@@ -41,15 +49,15 @@ if TYPE_CHECKING:
 MAIN_EPILOG = """\
 examples:
   csv-tidy profile init data.csv --output profile.toml     (starting profile, all text)
-  csv-tidy check data.csv --schema profile.toml
-  csv-tidy check data.csv --schema profile.toml --format json --report output/report.json
-  csv-tidy clean data.csv --schema profile.toml            (dry run, writes nothing)
-  csv-tidy batch clean exports/ --schema profile.toml      (many files, one profile)
+  csv-tidy check data.csv --profile profile.toml
+  csv-tidy check data.csv --profile profile.toml --format json --report output/report.json
+  csv-tidy clean data.csv --profile profile.toml            (dry run, writes nothing)
+  csv-tidy batch clean exports/ --profile profile.toml      (many files, one profile)
   csv-tidy ui                                              (local browser interface)
   csv-tidy shortcut install                                (icons that start it)
   csv-tidy update --check                                  (the only command that goes online)
-  csv-tidy clean data.csv --schema profile.toml --apply --output output/clean.csv \\
-      --output-schema output/clean.output.toml
+  csv-tidy clean data.csv --profile profile.toml --apply --output output/clean.csv \\
+      --output-profile output/clean.output.toml
 
 exit codes: 0 no blocking errors, 1 data errors (check: source; clean: remaining output),
             2 usage, configuration, decoding/parsing, read or write failure
@@ -97,10 +105,10 @@ exit codes: 2 if any file failed, could not be fully read, or could not be writt
             result); otherwise 0
 
 examples:
-  csv-tidy batch check exports/ --schema profile.toml
-  csv-tidy batch clean exports/ --schema profile.toml            (preview)
-  csv-tidy batch clean exports/ jan.csv --schema profile.toml --apply --output-dir cleaned/ \\
-      --output-schemas --report-dir reports/ --format json
+  csv-tidy batch check exports/ --profile profile.toml
+  csv-tidy batch clean exports/ --profile profile.toml            (preview)
+  csv-tidy batch clean exports/ jan.csv --profile profile.toml --apply --output-dir cleaned/ \\
+      --output-profiles --report-dir reports/ --format json
 """
 
 SHORTCUT_EPILOG = """\
@@ -178,7 +186,9 @@ def _column_format(text: str) -> tuple[str, str]:
 
 def _source_options(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("source options (override the profile)")
-    group.add_argument("--schema", metavar="PROFILE", help="TOML profile (schema_version = 1)")
+    group.add_argument("--profile", metavar="PROFILE", help="TOML profile (schema_version = 1)")
+    # Deprecated alias of --profile (1.0.0; removed in 2.0.0), not shown in --help.
+    group.add_argument("--schema", dest="old_profile", metavar="PROFILE", help=argparse.SUPPRESS)
     group.add_argument(
         "--delimiter",
         type=_delimiter,
@@ -322,10 +332,11 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--apply", action="store_true", help="write the cleaned CSV to --output")
     clean.add_argument("--output", metavar="PATH", help="cleaned CSV path (requires --apply)")
     clean.add_argument(
-        "--output-schema",
+        "--output-profile",
         metavar="PATH",
         help="save the effective output profile (requires --apply)",
     )
+    clean.add_argument("--output-schema", dest="old_output_profile", help=argparse.SUPPRESS)
     clean.add_argument(
         "--max-examples",
         type=_non_negative,
@@ -476,9 +487,15 @@ def _batch_parser(sub: _Subparsers) -> None:
                 help="folder for NAME.clean.csv files (requires --apply)",
             )
             cmd.add_argument(
-                "--output-schemas",
+                "--output-profiles",
                 action="store_true",
                 help="also write NAME.output.toml next to each cleaned file (requires --apply)",
+            )
+            cmd.add_argument(
+                "--output-schemas",
+                dest="old_output_profiles",
+                action="store_true",
+                help=argparse.SUPPRESS,
             )
             cmd.add_argument(
                 "--max-examples",
@@ -600,10 +617,36 @@ def _overrides(args: argparse.Namespace) -> Overrides:
     )
 
 
+# Options renamed in 1.0.0: (old option, attribute it sets, new option). The old names keep
+# working until 2.0.0 and print a warning that names the new one.
+RENAMED_OPTIONS = (
+    ("--schema", "old_profile", "--profile"),
+    ("--output-schema", "old_output_profile", "--output-profile"),
+    ("--output-schemas", "old_output_profiles", "--output-profiles"),
+)
+
+
+def _renamed_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    """Move deprecated option values to their new names, warning on stderr."""
+    for old, attribute, new in RENAMED_OPTIONS:
+        value = getattr(args, attribute, None)
+        if not value:
+            continue
+        target = new.removeprefix("--").replace("-", "_")
+        if getattr(args, target):
+            parser.error(f"{old} is the old name of {new}; give only {new}")
+        setattr(args, target, value)
+        print(
+            f"csv-tidy: warning: {old} is deprecated and will be removed in CSV Tidy 2.0.0; "
+            f"use {new}",
+            file=sys.stderr,
+        )
+
+
 def _protected(args: argparse.Namespace) -> dict[str, Path]:
     protected = {"input CSV": Path(args.input)}
-    if args.schema:
-        protected["input profile"] = Path(args.schema)
+    if args.profile:
+        protected["input profile"] = Path(args.profile)
     return protected
 
 
@@ -625,15 +668,15 @@ def _publish(
         return to_json(report) if args.format == "json" else render(report)
 
     if args.report:
-        planned = [*outcomes, ArtifactOutcome("report", args.report, "written")]
+        planned = [*outcomes, ArtifactOutcome(REPORT, args.report, "written")]
         text = text_for(planned, exit_code)
         try:
             write_artifact(
-                Path(args.report), encode_text(text, "utf-8", "report"), args.overwrite, "report"
+                Path(args.report), encode_text(text, "utf-8", "report"), args.overwrite, REPORT
             )
         except OutputError as exc:
             exit_code = 2
-            failed = [*outcomes, ArtifactOutcome("report", args.report, "failed", str(exc))]
+            failed = [*outcomes, ArtifactOutcome(REPORT, args.report, "failed", str(exc))]
             text = text_for(failed, exit_code)
             print(f"csv-tidy: error: {exc}", file=sys.stderr)
         else:
@@ -648,7 +691,7 @@ def _publish(
 def run_check(args: argparse.Namespace) -> int:
     if args.report:
         validate_artifact_paths(_protected(args), {"report": Path(args.report)}, args.overwrite)
-    profile = load_profile(args.schema) if args.schema else None
+    profile = load_profile(args.profile) if args.profile else None
     result = check_file(args.input, profile, overrides=_overrides(args))
 
     def build(items: list[ArtifactOutcome], code: int) -> dict[str, Any]:
@@ -666,17 +709,19 @@ def run_clean(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
         parser.error("--neutralize-formulas cannot be combined with --no-neutralize-formulas")
     if args.apply and not args.output:
         parser.error("--apply requires --output PATH")
-    if not args.apply and (args.output or args.output_schema):
-        parser.error("--output and --output-schema require --apply (clean is a dry run by default)")
+    if not args.apply and (args.output or args.output_profile):
+        parser.error(
+            "--output and --output-profile require --apply (clean is a dry run by default)"
+        )
     artifacts = {
-        "output CSV": args.output,
-        "output profile": args.output_schema,
-        "report": args.report,
+        OUTPUT_CSV: args.output,
+        OUTPUT_PROFILE: args.output_profile,
+        REPORT: args.report,
     }
     validate_artifact_paths(
         _protected(args), {k: Path(v) if v else None for k, v in artifacts.items()}, args.overwrite
     )
-    profile = load_profile(args.schema) if args.schema else None
+    profile = load_profile(args.profile) if args.profile else None
     result = clean_file(args.input, profile, overrides=_overrides(args))
 
     outcomes: list[ArtifactOutcome] = []
@@ -689,27 +734,27 @@ def run_clean(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
                     export_clean(
                         result,
                         args.output,
-                        output_schema=args.output_schema,
+                        output_profile=args.output_profile,
                         overwrite=args.overwrite,
                     )
                 )
             except OutputError as exc:
                 failure = exc
                 outcomes = list(exc.outcomes) or [
-                    ArtifactOutcome("output CSV", args.output, "failed", str(exc))
+                    ArtifactOutcome(OUTPUT_CSV, args.output, "failed", str(exc))
                 ]
                 exit_code = 2
         else:
             outcomes.append(
-                ArtifactOutcome("output CSV", args.output, "not_written", "output errors remain")
+                ArtifactOutcome(OUTPUT_CSV, args.output, "not_written", "output errors remain")
             )
-            if args.output_schema:
+            if args.output_profile:
                 outcomes.append(
                     ArtifactOutcome(
-                        "output profile", args.output_schema, "not_written", "output errors remain"
+                        OUTPUT_PROFILE, args.output_profile, "not_written", "output errors remain"
                     )
                 )
-    mode = "apply" if args.apply else "dry-run"
+    mode = "apply" if args.apply else "dry_run"
     if failure is not None:
         print(f"csv-tidy: error: {failure}", file=sys.stderr)
 
@@ -723,7 +768,7 @@ def run_batch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
     action = args.batch_command
     apply = bool(getattr(args, "apply", False))
     output_dir = getattr(args, "output_dir", None)
-    output_schemas = bool(getattr(args, "output_schemas", False))
+    output_profiles = bool(getattr(args, "output_profiles", False))
     if action == "clean":
         if args.trim and args.no_trim:
             parser.error("--trim cannot be combined with --no-trim")
@@ -733,12 +778,12 @@ def run_batch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
             parser.error("--neutralize-formulas cannot be combined with --no-neutralize-formulas")
         if apply and not output_dir:
             parser.error("--apply requires --output-dir DIR")
-        if not apply and (output_dir or output_schemas):
+        if not apply and (output_dir or output_profiles):
             parser.error(
-                "--output-dir and --output-schemas require --apply "
+                "--output-dir and --output-profiles require --apply "
                 "(batch clean is a dry run by default)"
             )
-    profile = load_profile(args.schema) if args.schema else None
+    profile = load_profile(args.profile) if args.profile else None
     inputs = batch.select_inputs(args.inputs, args.pattern, args.recursive)
     result = batch.run_batch(
         action,
@@ -747,7 +792,7 @@ def run_batch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
         overrides=_overrides(args),
         apply=apply,
         output_dir=output_dir,
-        output_schemas=output_schemas,
+        output_profiles=output_profiles,
         report_dir=args.report_dir,
         report_format=args.format,
         overwrite=args.overwrite,
@@ -896,7 +941,7 @@ def run_profile_init(args: argparse.Namespace) -> int:
     write_artifact(output, encode_text(text, "utf-8", "profile"), args.overwrite, "profile")
     kinds = [column.type for column in profile.columns]
     counts = ", ".join(f"{kinds.count(kind)} {kind}" for kind in ("text", "decimal", "date"))
-    command = f"{shown_arg(args.input)} --schema {shown_arg(args.output)}"
+    command = f"{shown_arg(args.input)} --profile {shown_arg(args.output)}"
     print(f"Profile written: {output} ({len(kinds)} columns: {counts})")
     print("Next steps:")
     if not (
@@ -919,6 +964,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             stream.reconfigure(errors="backslashreplace")
     parser = build_parser()
     args = parser.parse_args(argv)
+    _renamed_options(args, parser)
     try:
         if args.command == "clean":
             return run_clean(args, parser)
