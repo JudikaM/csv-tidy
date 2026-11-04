@@ -89,6 +89,8 @@ Things to watch without asking:
 - Does the participant notice the status line above the steps, and read the "Next:" line?
 - Do they use the one button in the file card (**Check**, **Preview cleaning**, **Save**), the
   step buttons, or the side bar to move on? Do they find the side panel on the right?
+- Do first-time users open **How to use** at the bottom of the side panel, and when? Does it
+  help them finish the task (for example, do they follow a step link), or do they ignore it?
 - Do they understand that **In this session** is forgotten after Quit?
 - Do the words "separator", "encoding", "profile", "record", and "file line" make sense to
   them? Which word do they use instead?

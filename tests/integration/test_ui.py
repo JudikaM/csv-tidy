@@ -311,6 +311,55 @@ def test_side_panel_rows_show_the_current_settings_with_an_action_each(ui):
     assert 'addEventListener("click", () => showRules("key-columns", true));' in script
 
 
+def test_side_panel_has_a_closed_how_to_use_guide(ui):
+    """AC-52: a native disclosure after the rows, six step links, a tip, remembered state."""
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    script = ui.request("/app.js")[2].decode("utf-8")
+    css = ui.request("/app.css")[2].decode("utf-8")
+    panel = page[page.index('<aside class="side-panel"') : page.index("</aside>")]
+    # In the side panel, after the rows and before the "Local only" footer.
+    assert panel.index("</dl>") < panel.index('<details class="howto"') < panel.index("panel-foot")
+    parsed = _Elements()
+    parsed.feed(panel)
+    ((_, details, _),) = parsed.find("details", id="howto")
+    assert "open" not in details  # closed by default
+    summary = re.search(r'<summary class="howto-summary">(.*?)</summary>', panel, re.S).group(1)
+    assert re.sub(r"<svg.*?</svg>", "", summary, flags=re.S) == "How to use"
+    assert 'aria-hidden="true"' in summary and 'stroke="currentColor"' in summary
+    steps = re.findall(r'<li><a href="#step-(\d)" data-step="(\d)">(\w+)</a>: ([^<]+)</li>', panel)
+    assert [(href, step, name) for href, step, name, _ in steps] == [
+        (str(n), str(n), name)
+        for n, name in enumerate(("Choose", "Look", "Columns", "Check", "Preview", "Save"), 1)
+    ]
+    assert all(text.endswith(".") for *_, text in steps)
+    assert (
+        '<p class="howto-tip">Save your rules as a profile to reuse them here or with the '
+        '<code class="chip">csv-tidy</code> command.</p>'
+    ) in panel
+    # The step names use the handler of the step navigation; no navigation logic of their own.
+    assert 'document.querySelectorAll(".steps a, .howto-steps a")' in script
+    assert script.count("howto-steps") == 1
+    # The open state is read and written inside try/catch, under its own key.
+    assert re.search(
+        r'try \{\s*\$\("howto"\)\.open = window\.localStorage\.getItem\("csv-tidy-howto"\)', script
+    )
+    assert re.search(r'try \{\s*window\.localStorage\.setItem\("csv-tidy-howto"', script)
+    assert '$("howto").addEventListener("toggle"' in script
+    # No browser marker; the chevron turns when open, without animation under reduced motion.
+    assert ".howto-summary::-webkit-details-marker { display: none; }" in css
+    assert "list-style: none;" in css.split(".howto-summary {")[1].split("}")[0]
+    assert ".howto[open] .howto-chevron { transform: rotate(180deg); }" in css
+    assert "@media (prefers-reduced-motion: reduce) { .howto-chevron { transition: none; } }" in css
+
+
+def test_unused_background_layer_is_gone(ui):
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    css = ui.request("/app.css")[2].decode("utf-8")
+    for token in ("--nebula-1", "--nebula-2", "--nebula-3", "--stars"):
+        assert token not in css
+    assert ".backdrop" not in css and 'class="backdrop"' not in page
+
+
 def test_page_structure_supports_keyboard_and_screen_reader_use(ui):
     """AC-50: references resolve, controls are named, and motion can be turned off."""
     page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")

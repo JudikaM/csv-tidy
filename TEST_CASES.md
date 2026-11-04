@@ -59,6 +59,7 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | AC-50 | Accessibility of the page: every ARIA and label reference resolves, every disclosure states `aria-expanded`, the landmarks `header`/`nav`/`main`/`aside`, icon-only buttons named, both dialogs labelled with the safe button focused first, a visible focus ring, reduced motion stopping every animation and transition | `integration/test_ui.py`: `test_page_structure_supports_keyboard_and_screen_reader_use`; browser checks below |
 | AC-51 | Contract of 1.0.0: `--profile`, `--output-profile`, `--output-profiles` and the hidden deprecated aliases (stderr warning; old and new together refused), `export_clean(output_profile=...)` and `run_batch(output_profiles=...)` with deprecated aliases (`DeprecationWarning`, `TypeError` for both), report `schema_version` 2 with `dry_run`, `output_csv`/`output_profile`, and a top-level `artifacts` list in clean reports, `output_field_too_large`, `CleanResult.ok`/`source_errors`/`source_warnings`/`output_warnings`, and the new exports | `integration/test_contract_1_0.py`: all tests; `integration/test_regressions.py`: `test_r3_expanded_output_beyond_field_limit_blocks_export`; `unit/test_stability_inventory.py` |
 | AC-35 | Batch: deterministic output names, collisions and unsafe paths stop before writing, a failing file does not affect others, single-file commands unchanged | `integration/test_batch.py`: `test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files`, `test_output_name_collisions_stop_the_batch_before_writing`, `test_existing_outputs_and_inputs_are_protected`, `test_one_failed_write_does_not_undo_the_other_files`, `test_overrides_apply_to_every_file`, `test_library_entry_point_matches_the_command`, `test_single_file_commands_are_unchanged_and_help_lists_batch` |
+| AC-52 | **How to use** in the side panel: a native `<details>` after the rows and before the "Local only" footer, closed by default; opens and closes with Enter or Space; the open state is remembered under `csv-tidy-howto` (read and written inside try/catch, so blocked storage only means it starts closed); six step names (data-step 1–6, in order) that show their step like the step navigation; the tip about profiles; the chevron turns when open, without animation under reduced motion; the panel grows downward without changing its width or the main column at 1440, 1024, and 390 pixels. The unused background layer (`.backdrop`, `--nebula-1/2/3`, `--stars`) is gone | `integration/test_ui.py`: `test_side_panel_has_a_closed_how_to_use_guide`, `test_unused_background_layer_is_gone`; browser checks below |
 
 ## Regression tests
 
@@ -247,6 +248,26 @@ script errors. The mark's white document has 19:1 contrast on its black square; 
 itself has 17:1 against the Light+ side bar but only 1.15:1 against the dark side bar
 (#1F1F1F), where the document, not the square's outline, carries the mark, as with the full
 logo before.
+
+For **How to use** and the removed background layer (1.1.0, 2026-11-04), 192 checks passed
+in headless Chrome 156 in both themes at 1440, 1024, and 390 pixels, and the earlier
+walk-throughs (58 logo-mark, 421 side-bar sections, 156 shell, 218 input-card, 47 dark-color
+checks) passed again in the same browser. New checks: the guide is closed on a first visit
+and its summary row spans the panel without the browser's marker; Tab from **Switch**
+reaches it with a visible 3-pixel focus ring, Enter opens it, Space closes it; it stays open
+or closed after a reload (`csv-tidy-howto`); with storage blocked the page has no errors and
+the guide still opens; the chevron turns 180 degrees when open, at once with reduced motion;
+opening it leaves the panel's width and position and the main column unchanged, the panel
+only grows downward (at 1440 x 900 it scrolls on its own and its footer stays reachable);
+each of the six step names shows its step and marks it in the step navigation, with a file
+loaded; no horizontal scrolling, no requests to other hosts, no script errors. Contrast of
+the new color pairs (on the panel `#1F1F1F` / `#FFFFFF`; hover `#2B2B2B` / `#F3F3F3`): caption
+text and chevron 6.08:1 (dark) and 6.19:1 (light), on hover 8.82:1 and 11.39:1; step text
+and tip 6.08:1 and 6.19:1; step links 6.65:1 and 5.68:1; focus ring 3.64:1 and 3.35:1.
+Screenshots of both themes with and without text, before and after removing the background
+layer, have the same background colors; the only differences are anti-aliasing (text is now
+drawn with subpixel instead of grayscale smoothing, edges of rounded corners differ by at
+most 7 of 255).
 
 `csv-tidy update --check` was run once against the real GitHub API (release 0.3.0): the wheel
 and its digest were found and matched the published SHA-256. pip was shown to refuse a wheel
