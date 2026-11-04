@@ -86,7 +86,7 @@ def test_failed_replace_keeps_existing_file_and_removes_temp(tmp_path, monkeypat
 def test_export_writes_csv_and_profile_and_refuses_blocked_results(write, tmp_path):
     good = clean_file(write("g.csv", "a\n1\n"))
     outcomes = export_clean(
-        good, tmp_path / "o" / "clean.csv", output_schema=tmp_path / "o" / "clean.toml"
+        good, tmp_path / "o" / "clean.csv", output_profile=tmp_path / "o" / "clean.toml"
     )
     assert [o.status for o in outcomes] == ["written", "written"]
     assert (tmp_path / "o" / "clean.csv").read_bytes() == b"a\r\n1\r\n"
@@ -109,10 +109,10 @@ def test_profile_write_failure_after_csv_is_reported(write, tmp_path, monkeypatc
 
     monkeypatch.setattr(output_module, "_finalize", finalize_once)
     with pytest.raises(OutputError) as excinfo:
-        export_clean(result, tmp_path / "c.csv", output_schema=tmp_path / "c.toml")
+        export_clean(result, tmp_path / "c.csv", output_profile=tmp_path / "c.toml")
     assert [(o.kind, o.status) for o in excinfo.value.outcomes] == [
-        ("output CSV", "written"),
-        ("output profile", "failed"),
+        ("output_csv", "written"),
+        ("output_profile", "failed"),
     ]
     assert Path(tmp_path / "c.csv").exists() and not (tmp_path / "c.toml").exists()
     assert not [p for p in tmp_path.iterdir() if p.name.endswith(".tmp")]

@@ -123,7 +123,7 @@ def test_r2_export_after_cwd_change_cannot_overwrite_inputs(tmp_path, monkeypatc
         with pytest.raises(OutputError, match="refers to the input"):
             export_clean(result, target.resolve(), overwrite=True)
     with pytest.raises(OutputError, match="refers to the input profile"):
-        export_clean(result, b / "ok.csv", output_schema=a / "p.toml", overwrite=True)
+        export_clean(result, b / "ok.csv", output_profile=a / "p.toml", overwrite=True)
     link = b / "alias.csv"
     os.link(a / "source.csv", link)
     with pytest.raises(OutputError, match="refers to the input CSV"):
@@ -169,13 +169,13 @@ def test_r3_expanded_output_beyond_field_limit_blocks_export(write, tmp_path, da
     path = write("big.csv", data)
     assert check_file(path, prof(settings)).exit_code == 0
     result = clean_file(path, prof(settings))
-    assert [i.code for i in result.output_issues] == ["field_too_large"]
+    assert [i.code for i in result.output_issues] == ["output_field_too_large"]
     assert not result.export_ready
     schema = write("p.toml", "schema_version = 1\n" + settings)
     out, out_schema = tmp_path / "o.csv", tmp_path / "o.toml"
-    cli = run_cli("clean", str(path), "--schema", str(schema), "--apply", "--output", str(out),
-                  "--output-schema", str(out_schema))  # fmt: skip
-    assert cli.code == 1 and "field_too_large" in cli.out
+    cli = run_cli("clean", str(path), "--profile", str(schema), "--apply", "--output", str(out),
+                  "--output-profile", str(out_schema))  # fmt: skip
+    assert cli.code == 1 and "output_field_too_large" in cli.out
     assert not out.exists() and not out_schema.exists()
 
 
@@ -186,12 +186,12 @@ def test_r3_chain_stays_valid_when_the_limit_allows_expansion(write, tmp_path):
         write("p.toml", "schema_version = 1\n" + settings),
     )
     out, out_schema = tmp_path / "o.csv", tmp_path / "o.toml"
-    cli = run_cli("clean", str(path), "--schema", str(schema), "--apply", "--output", str(out),
-                  "--output-schema", str(out_schema))  # fmt: skip
+    cli = run_cli("clean", str(path), "--profile", str(schema), "--apply", "--output", str(out),
+                  "--output-profile", str(out_schema))  # fmt: skip
     assert cli.code == 0
-    assert run_cli("check", str(out), "--schema", str(out_schema)).code == 0
+    assert run_cli("check", str(out), "--profile", str(out_schema)).code == 0
     again = json.loads(
-        run_cli("clean", str(out), "--schema", str(out_schema), "--format", "json").out
+        run_cli("clean", str(out), "--profile", str(out_schema), "--format", "json").out
     )
     assert again["changes"]["changed_fields"] == 0 and again["summary"]["exit_code"] == 0
 
@@ -328,7 +328,7 @@ def test_r7_clean_report_failure_keeps_written_csv_outcome(write, tmp_path):
     data = json.loads(result.out)
     assert result.code == 2 and data["summary"]["exit_code"] == 2
     assert [(a["kind"], a["status"]) for a in data["export"]["artifacts"]] == [
-        ("output CSV", "written"),
+        ("output_csv", "written"),
         ("report", "failed"),
     ]
     assert out.read_bytes() == b"a\r\n1\r\n"
@@ -376,7 +376,7 @@ def test_ra_list_settings_round_trip_and_chain(write, tmp_path):
         assert isinstance(result.settings.trim, tuple)
         assert all(isinstance(key, tuple) for key in result.settings.duplicate_keys)
         out, schema = tmp_path / "l_out.csv", tmp_path / "l_out.toml"
-        export_clean(result, out, output_schema=schema, overwrite=True)
+        export_clean(result, out, output_profile=schema, overwrite=True)
         assert check_file(out, schema).exit_code == 0
         again = clean_file(out, schema)
         assert again.changes == () and again.export_ready
@@ -440,7 +440,7 @@ def test_rb_undefined_codec_is_a_configuration_error(write):
     cli = run_cli("check", str(path), "--encoding", "undefined")
     assert cli.code == 2 and "Traceback" not in cli.err
     schema = write("p.toml", 'schema_version = 1\n[output]\nencoding = "undefined"\n')
-    assert run_cli("clean", str(path), "--schema", str(schema)).code == 2
+    assert run_cli("clean", str(path), "--profile", str(schema)).code == 2
 
 
 def test_rd_hard_link_strategy_is_no_clobber(tmp_path, monkeypatch):

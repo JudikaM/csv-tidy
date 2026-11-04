@@ -62,7 +62,7 @@ def test_duplicates_delimiter_and_fatal_problems(write):
 
 
 def test_json_reports_add_remedy_and_text_reports_are_unchanged():
-    args = ["check", str(EXAMPLES / "transactions_fixable.csv"), "--schema", str(ID_PROFILE)]
+    args = ["check", str(EXAMPLES / "transactions_fixable.csv"), "--profile", str(ID_PROFILE)]
     data = json.loads(run_cli(*args, "--format", "json").out)
     assert [i["remedy"] for i in data["issues"]] == ["trim", "trim"]
     text = run_cli(*args).out

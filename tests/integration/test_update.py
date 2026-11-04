@@ -178,4 +178,5 @@ def test_only_the_update_command_uses_the_network(monkeypatch, examples):
 
     monkeypatch.setattr(update, "fetch_json", refuse)
     profile = str(examples / "profiles" / "transactions-id.toml")
-    assert run_cli("check", str(examples / "transactions_valid.csv"), "--schema", profile).code == 0
+    valid = str(examples / "transactions_valid.csv")
+    assert run_cli("check", valid, "--profile", profile).code == 0

@@ -37,7 +37,7 @@ def test_dry_run_and_apply_are_exclusive(tmp_path):
     result = run_cli(
         "clean",
         FIXABLE,
-        "--schema",
+        "--profile",
         ID_PROFILE,
         "--dry-run",
         "--apply",
@@ -49,8 +49,8 @@ def test_dry_run_and_apply_are_exclusive(tmp_path):
 
 
 def test_apply_requires_output_and_output_requires_apply(tmp_path):
-    assert run_cli("clean", FIXABLE, "--schema", ID_PROFILE, "--apply").code == 2
-    result = run_cli("clean", FIXABLE, "--schema", ID_PROFILE, "--output", str(tmp_path / "x.csv"))
+    assert run_cli("clean", FIXABLE, "--profile", ID_PROFILE, "--apply").code == 2
+    result = run_cli("clean", FIXABLE, "--profile", ID_PROFILE, "--output", str(tmp_path / "x.csv"))
     assert result.code == 2 and "require --apply" in result.err
     assert not (tmp_path / "x.csv").exists()
 
@@ -58,12 +58,12 @@ def test_apply_requires_output_and_output_requires_apply(tmp_path):
 def test_dry_run_may_save_a_report_but_no_csv_or_profile(tmp_path):
     report = tmp_path / "r.json"
     result = run_cli(
-        "clean", FIXABLE, "--schema", ID_PROFILE, "--format", "json", "--report", str(report)
+        "clean", FIXABLE, "--profile", ID_PROFILE, "--format", "json", "--report", str(report)
     )
     assert result.code == 0
     assert [p.name for p in tmp_path.iterdir()] == ["r.json"]
     data = json.loads(report.read_text(encoding="utf-8"))
-    assert data["mode"] == "dry-run"
+    assert data["mode"] == "dry_run"
     assert data["export"]["artifacts"] == [
         {"kind": "report", "path": str(report), "status": "written", "error": None}
     ]
@@ -71,7 +71,7 @@ def test_dry_run_may_save_a_report_but_no_csv_or_profile(tmp_path):
 
 def test_configuration_errors_exit_2_without_traceback(tmp_path, write):
     bad = write("bad.toml", "schema_version = 1\n[source]\ndelimter = ';'\n")
-    result = run_cli("check", FIXABLE, "--schema", str(bad))
+    result = run_cli("check", FIXABLE, "--profile", str(bad))
     assert result.code == 2
     assert "did you mean 'delimiter'" in result.err and "Traceback" not in result.err
     missing = run_cli("check", str(tmp_path / "nope.csv"))
@@ -82,12 +82,12 @@ def test_configuration_errors_exit_2_without_traceback(tmp_path, write):
 
 def test_cli_options_override_profile(write):
     path = write("c.csv", 'transaction_id,customer_id,amount,date\nT1,C1,"1,250.50",02/01/2026\n')
-    via_profile = run_cli("check", str(path), "--schema", ID_PROFILE)
+    via_profile = run_cli("check", str(path), "--profile", ID_PROFILE)
     assert via_profile.code == 1  # profile says ';' and id numbers
     overridden = run_cli(
         "check",
         str(path),
-        "--schema",
+        "--profile",
         ID_PROFILE,
         "--delimiter",
         ",",
@@ -118,12 +118,12 @@ def test_report_collisions_and_input_protection(tmp_path, write):
     over_profile = run_cli(
         "clean",
         str(source),
-        "--schema",
+        "--profile",
         str(schema),
         "--apply",
         "--output",
         str(tmp_path / "x.csv"),
-        "--output-schema",
+        "--output-profile",
         str(schema),
         "--overwrite",
     )
@@ -146,11 +146,11 @@ def test_json_report_contract_and_truncation(write):
     path = write("t.csv", "id,v\n" + rows + "\n")
     profile = write("p.toml", "schema_version = 1\n[columns.v]\nrequired = true\n")
     result = run_cli(
-        "check", str(path), "--schema", str(profile), "--format", "json", "--max-details", "3"
+        "check", str(path), "--profile", str(profile), "--format", "json", "--max-details", "3"
     )
     data = json.loads(result.out)
     assert result.code == 1
-    assert data["schema_version"] == 1 and data["command"] == "check"
+    assert data["schema_version"] == 2 and data["command"] == "check"
     assert data["summary"] == {
         "status": "invalid",
         "errors": 7,
@@ -199,7 +199,7 @@ def test_cli_and_api_agree(examples):
             run_cli(
                 "check",
                 path,
-                "--schema",
+                "--profile",
                 str(examples / "profiles" / "transactions-id.toml"),
                 "--format",
                 "json",
@@ -212,7 +212,7 @@ def test_cli_and_api_agree(examples):
             run_cli(
                 "clean",
                 path,
-                "--schema",
+                "--profile",
                 str(examples / "profiles" / "transactions-id.toml"),
                 "--format",
                 "json",
@@ -233,7 +233,7 @@ def test_api_example_runs():
 
 
 def test_list_options_replace_or_disable_profile_lists():
-    base = ["clean", FIXABLE, "--schema", ID_PROFILE, "--format", "json"]
+    base = ["clean", FIXABLE, "--profile", ID_PROFILE, "--format", "json"]
     default = json.loads(run_cli(*base).out)["transformations"]
     assert default["trim"] == ["customer_id", "amount", "date"]
     replaced = json.loads(run_cli(*base, "--trim", "date").out)["transformations"]

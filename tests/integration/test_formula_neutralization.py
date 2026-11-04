@@ -94,7 +94,7 @@ def test_unused_selection_is_not_written_to_profiles(write):
 
 def test_reports_list_the_transformation_only_when_selected(write):
     used = clean_file(write("f.csv", CSV), profile('neutralize_formulas = ["note"]'))
-    report = clean_report(used, "dry-run", 10, 10)
+    report = clean_report(used, "dry_run", 10, 10)
     transformations = report["transformations"]
     assert transformations["order"] == ["trim", "normalize", "neutralize_formulas", "deduplicate"]
     assert transformations["neutralize_formulas"] == ["note"]
@@ -102,7 +102,7 @@ def test_reports_list_the_transformation_only_when_selected(write):
     assert "3. neutralize formulas: note" in text and "4. deduplicate: off" in text
     assert "[neutralize formulas]" in text
 
-    unused = clean_report(clean_file(write("g.csv", CSV), profile()), "dry-run", 10, 10)
+    unused = clean_report(clean_file(write("g.csv", CSV), profile()), "dry_run", 10, 10)
     assert unused["transformations"]["order"] == ["trim", "normalize", "deduplicate"]
     assert unused["transformations"]["neutralize_formulas"] == []
     assert "neutralize" not in render_clean_text(unused)
@@ -119,7 +119,7 @@ def test_cli_options_select_and_clear_the_columns(write, tmp_path):
 
     schema = write("p.toml", 'schema_version = 1\n[transform]\nneutralize_formulas = ["note"]\n')
     cleared = run_cli(
-        "clean", str(source), "--schema", str(schema), "--no-neutralize-formulas", "--format",
+        "clean", str(source), "--profile", str(schema), "--no-neutralize-formulas", "--format",
         "json",
     )  # fmt: skip
     assert json.loads(cleared.out)["transformations"]["neutralize_formulas"] == []

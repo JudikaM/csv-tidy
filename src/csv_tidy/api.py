@@ -6,13 +6,19 @@ Core functions never print or exit. Configuration and I/O problems raise
 
 from __future__ import annotations
 
+import functools
+import warnings
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import ParamSpec, TypeVar
 
 from . import __version__
 from .errors import OutputError
 from .normalization import FieldChange, RemovedRecord, transform
 from .output import (
+    OUTPUT_CSV,
+    OUTPUT_PROFILE,
     ArtifactOutcome,
     encode_text,
     render_csv,
@@ -30,6 +36,39 @@ from .schema import (
     resolve_settings,
 )
 from .validation import ERROR, FATAL, WARNING, Issue, validate_table
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def renamed_keyword(old: str, new: str) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
+    """Accept the keyword argument ``old`` as a deprecated alias of ``new`` until 2.0.0.
+
+    The old name warns with ``DeprecationWarning``; giving both names raises ``TypeError``.
+    """
+
+    def decorate(func: Callable[_P, _R]) -> Callable[_P, _R]:
+        @functools.wraps(func)
+        def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+            if old in kwargs:
+                name = func.__name__
+                if new in kwargs:
+                    raise TypeError(
+                        f"{name}() got both {new!r} and its deprecated alias {old!r}; "
+                        f"pass only {new!r}"
+                    )
+                warnings.warn(
+                    f"{name}({old}=...) is deprecated and will be removed in CSV Tidy 2.0.0; "
+                    f"use {name}({new}=...)",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                kwargs[new] = kwargs.pop(old)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorate
 
 
 @dataclass(frozen=True)
@@ -98,8 +137,22 @@ class CleanResult:
     profile_file: Path | None = None
 
     @property
+    def source_errors(self) -> int:
+        """Errors of the source file, before the selected transformations."""
+        return sum(i.severity == ERROR for i in self.source_issues)
+
+    @property
+    def source_warnings(self) -> int:
+        return sum(i.severity == WARNING for i in self.source_issues)
+
+    @property
     def output_errors(self) -> int:
+        """Errors that remain in the cleaned result; they block the export."""
         return sum(i.severity == ERROR for i in self.output_issues)
+
+    @property
+    def output_warnings(self) -> int:
+        return sum(i.severity == WARNING for i in self.output_issues)
 
     @property
     def export_ready(self) -> bool:
@@ -133,6 +186,11 @@ class CleanResult:
         if not self.scan.complete:
             return 2
         return 0 if self.export_ready else 1
+
+    @property
+    def ok(self) -> bool:
+        """True when the cleaned result can be exported (exit code 0)."""
+        return self.exit_code == 0
 
     def output_profile_toml(self) -> str:
         """The effective output profile as TOML text."""
@@ -310,11 +368,12 @@ def protected_inputs(result: CheckResult | CleanResult) -> dict[str, Path]:
     return protected
 
 
+@renamed_keyword("output_schema", "output_profile")
 def export_clean(
     result: CleanResult,
     output: str | Path,
     *,
-    output_schema: str | Path | None = None,
+    output_profile: str | Path | None = None,
     overwrite: bool = False,
 ) -> tuple[ArtifactOutcome, ...]:
     """Write the cleaned CSV (and optionally its output profile) after safety checks.
@@ -322,25 +381,26 @@ def export_clean(
     Raises ``OutputError`` if output errors remain, a path aliases an input or another
     artifact, a file exists without ``overwrite``, or a write fails. Each file is replaced
     atomically; if the profile write fails after the CSV was written, the error's
-    ``outcomes`` record that the CSV was written.
+    ``outcomes`` record that the CSV was written. ``output_schema`` is a deprecated alias of
+    ``output_profile`` (``DeprecationWarning``; removed in 2.0.0).
     """
     if not result.export_ready:
         raise OutputError(f"export blocked: {result.export_blocked_reason}")
     output = Path(output)
-    schema = Path(output_schema) if output_schema is not None else None
+    profile = Path(output_profile) if output_profile is not None else None
     validate_artifact_paths(
-        protected_inputs(result), {"output CSV": output, "output profile": schema}, overwrite
+        protected_inputs(result), {OUTPUT_CSV: output, OUTPUT_PROFILE: profile}, overwrite
     )
     out = result.settings.output
     csv_bytes = encode_text(result.csv_text(), out.encoding, "output CSV")
-    schema_bytes = (
-        encode_text(result.output_profile_toml(), "utf-8", "output profile") if schema else None
+    profile_bytes = (
+        encode_text(result.output_profile_toml(), "utf-8", "output profile") if profile else None
     )
-    outcomes = [write_artifact(output, csv_bytes, overwrite, "output CSV")]
-    if schema is not None and schema_bytes is not None:
+    outcomes = [write_artifact(output, csv_bytes, overwrite, OUTPUT_CSV)]
+    if profile is not None and profile_bytes is not None:
         try:
-            outcomes.append(write_artifact(schema, schema_bytes, overwrite, "output profile"))
+            outcomes.append(write_artifact(profile, profile_bytes, overwrite, OUTPUT_PROFILE))
         except OutputError as exc:
-            outcomes.append(ArtifactOutcome("output profile", str(schema), "failed", str(exc)))
+            outcomes.append(ArtifactOutcome(OUTPUT_PROFILE, str(profile), "failed", str(exc)))
             raise OutputError(str(exc), tuple(outcomes)) from None
     return tuple(outcomes)

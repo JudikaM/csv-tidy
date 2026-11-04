@@ -49,7 +49,7 @@ def test_check_without_column_rules_reports_coverage_in_json():
 
 
 def test_check_with_a_profile_lists_checked_and_unchecked_columns():
-    result = run_cli("check", UNFIXABLE, "--schema", ID_PROFILE)
+    result = run_cli("check", UNFIXABLE, "--profile", ID_PROFILE)
     out = lines(result.out)
     assert result.code == 1
     assert out[1] == "Verdict: FAILED - 3 errors found in the source file."
@@ -59,7 +59,7 @@ def test_check_with_a_profile_lists_checked_and_unchecked_columns():
     assert "date (date, DD/MM/YYYY, required)" in checked
     assert "unique key (transaction_id)" in checked
     assert "Not checked: values in 1 column without rules (note)" in out
-    data = json.loads(run_cli("check", UNFIXABLE, "--schema", ID_PROFILE, "--format", "json").out)
+    data = json.loads(run_cli("check", UNFIXABLE, "--profile", ID_PROFILE, "--format", "json").out)
     assert data["coverage"]["scope"] == "structure_and_values"
     assert data["coverage"]["undeclared_columns"] == ["note"]
     assert data["coverage"]["declared_columns"][2] == {
@@ -73,7 +73,7 @@ def test_check_with_a_profile_lists_checked_and_unchecked_columns():
 
 def test_passing_check_with_rules_states_what_passed():
     valid = str(EXAMPLES / "transactions_valid.csv")
-    out = lines(run_cli("check", valid, "--schema", ID_PROFILE).out)
+    out = lines(run_cli("check", valid, "--profile", ID_PROFILE).out)
     assert out[1] == "Verdict: PASSED - no errors found by the declared rules."
     assert out[-1] == "Status: source validation passed (exit code 0)"
 
@@ -89,7 +89,7 @@ def test_incomplete_check_puts_the_stop_location_in_the_verdict(write):
 
 
 def test_clean_preview_separates_repaired_problems_from_remaining_ones():
-    result = run_cli("clean", FIXABLE, "--schema", ID_PROFILE)
+    result = run_cli("clean", FIXABLE, "--profile", ID_PROFILE)
     out = lines(result.out)
     assert result.code == 0
     assert out[1].startswith("Verdict: READY TO EXPORT")
@@ -103,7 +103,7 @@ def test_clean_preview_separates_repaired_problems_from_remaining_ones():
 
 
 def test_blocked_clean_lists_unresolved_problems_first_and_once():
-    result = run_cli("clean", UNFIXABLE, "--schema", ID_PROFILE)
+    result = run_cli("clean", UNFIXABLE, "--profile", ID_PROFILE)
     out = lines(result.out)
     assert result.code == 1
     assert out[1] == (
@@ -116,7 +116,7 @@ def test_blocked_clean_lists_unresolved_problems_first_and_once():
 
 
 def test_clean_json_keeps_the_issue_history_and_adds_coverage():
-    data = json.loads(run_cli("clean", FIXABLE, "--schema", ID_PROFILE, "--format", "json").out)
+    data = json.loads(run_cli("clean", FIXABLE, "--profile", ID_PROFILE, "--format", "json").out)
     assert [(i["code"], i["severity"], i["status"]) for i in data["source_issues"]["items"]] == [
         ("invalid_number", "error", "resolved"),
         ("invalid_date", "error", "resolved"),

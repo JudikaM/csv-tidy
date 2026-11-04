@@ -8,11 +8,11 @@ from typing import Any
 
 from . import __version__
 from .api import CheckResult, CleanResult, ScanInfo
-from .output import ArtifactOutcome
+from .output import OUTPUT_CSV, OUTPUT_PROFILE, ArtifactOutcome, artifact_label
 from .schema import DEFAULT_DELIMITER, DEFAULT_ENCODING, Settings, delimiter_option
 from .validation import ERROR, FATAL, WARNING, Issue
 
-REPORT_SCHEMA_VERSION = 1
+REPORT_SCHEMA_VERSION = 2
 VALUE_LIMIT = 200
 
 
@@ -118,7 +118,7 @@ def _command(action: str, source: dict[str, Any], *extra: str) -> str:
     repeated; with one, options given on the command line must be repeated by the user."""
     parts = ["csv-tidy", action, shown_arg(source["path"])]
     if source["profile"]:
-        parts += ["--schema", shown_arg(source["profile"])]
+        parts += ["--profile", shown_arg(source["profile"])]
     else:
         if source["delimiter"] != DEFAULT_DELIMITER:
             parts += ["--delimiter", shown_arg(delimiter_option(source["delimiter"]))]
@@ -165,7 +165,7 @@ def _profile_steps(source: dict[str, Any], coverage: dict[str, Any]) -> list[str
         "No values were checked: numbers, dates, required fields and unique keys are only "
         "checked for columns declared in a profile, and nothing is guessed from the data.",
         f"Create a profile: {start} (add --interactive for guided questions), "
-        "then run check again with --schema profile.toml.",
+        "then run check again with --profile profile.toml.",
     ]
 
 
@@ -310,20 +310,20 @@ def clean_report(
         verdict += f"; {_n(repaired, 'source problem')} repaired" if repaired else ""
         verdict += f".{notes}"
         written = {a.kind: a.path for a in artifacts if a.status == "written"}
-        if mode == "dry-run":
+        if mode == "dry_run":
             steps = [
                 "Nothing was written. To write the result, run the same command with "
-                "--apply --output PATH (add --output-schema PATH to save a profile that "
+                "--apply --output PATH (add --output-profile PATH to save a profile that "
                 "describes the cleaned file)."
             ]
-        elif "output CSV" in written:
-            recheck = {**source, "path": written["output CSV"], "profile": None}
-            if "output profile" in written:
-                recheck["profile"] = written["output profile"]
+        elif OUTPUT_CSV in written:
+            recheck = {**source, "path": written[OUTPUT_CSV], "profile": None}
+            if OUTPUT_PROFILE in written:
+                recheck["profile"] = written[OUTPUT_PROFILE]
                 steps = [f"Re-check the exported file: {_command('check', recheck)}"]
             else:
                 steps = [
-                    "The cleaned CSV was written. Export again with --output-schema PATH to "
+                    "The cleaned CSV was written. Export again with --output-profile PATH to "
                     "get a profile for re-checking it."
                 ]
         else:
@@ -419,6 +419,7 @@ def clean_report(
             "exit_code": result.exit_code if exit_code is None else exit_code,
         },
         "next_steps": steps,
+        "artifacts": _artifact_list(artifacts),
         "export": {"artifacts": _artifact_list(artifacts)},
     }
 
@@ -581,13 +582,14 @@ def render_check_text(report: dict[str, Any]) -> str:
 
 def _artifact_lines(artifacts: list[dict[str, Any]]) -> list[str]:
     return [
-        f"  {a['kind']}: {a['path']} - {a['status']}" + (f" ({a['error']})" if a["error"] else "")
+        f"  {artifact_label(a['kind'])}: {a['path']} - {a['status']}"
+        + (f" ({a['error']})" if a["error"] else "")
         for a in artifacts
     ]
 
 
 def render_clean_text(report: dict[str, Any]) -> str:
-    mode = "dry run, nothing written" if report["mode"] == "dry-run" else "apply"
+    mode = "dry run, nothing written" if report["mode"] == "dry_run" else "apply"
     o, t, c = report["output"], report["transformations"], report["changes"]
     lines = [
         f"CSV Tidy {report['tool']['version']} - clean ({mode})",
@@ -665,7 +667,7 @@ def render_clean_text(report: dict[str, Any]) -> str:
             "Export: ready"
             + (
                 " (run with --apply --output PATH to write it)"
-                if report["mode"] == "dry-run"
+                if report["mode"] == "dry_run"
                 else ""
             )
         )

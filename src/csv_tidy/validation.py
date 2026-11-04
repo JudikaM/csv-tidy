@@ -384,7 +384,7 @@ def _oversized_fields(
     limit = settings.source.max_field_chars
     return [
         Issue(
-            "field_too_large",
+            "output_field_too_large",
             ERROR,
             f"The cleaned value has {len(value)} characters, more than max_field_chars "
             f"({limit}); the output could not be read back with its output profile.",

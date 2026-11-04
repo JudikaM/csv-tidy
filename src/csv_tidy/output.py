@@ -16,10 +16,25 @@ from .errors import OutputError
 
 LINE_TERMINATORS = {"crlf": "\r\n", "lf": "\n"}
 
+# Artifact kinds as reports and ``ArtifactOutcome.kind`` name them (report schema_version 2),
+# and the words that messages use for them.
+OUTPUT_CSV = "output_csv"
+OUTPUT_PROFILE = "output_profile"
+REPORT = "report"
+ARTIFACT_LABELS = {OUTPUT_CSV: "output CSV", OUTPUT_PROFILE: "output profile", REPORT: "report"}
+
+
+def artifact_label(kind: str) -> str:
+    """The words for an artifact kind in messages; other labels are returned unchanged."""
+    return ARTIFACT_LABELS.get(kind, kind)
+
 
 @dataclass(frozen=True)
 class ArtifactOutcome:
-    """What happened to one artifact: "written", "not_written" or "failed"."""
+    """What happened to one artifact: "written", "not_written" or "failed".
+
+    ``kind`` is "output_csv", "output_profile", or "report".
+    """
 
     kind: str
     path: str
@@ -42,9 +57,10 @@ def validate_artifact_paths(
 ) -> None:
     """Reject artifacts that alias an input, alias each other, or exist without ``overwrite``.
 
-    ``protected`` maps a label (e.g. "input CSV") to a path that must never be written.
+    ``protected`` maps a label (e.g. "input CSV") to a path that must never be written;
+    ``artifacts`` maps an artifact kind (or a label) to its planned path.
     """
-    chosen = {kind: Path(p) for kind, p in artifacts.items() if p is not None}
+    chosen = {artifact_label(kind): Path(p) for kind, p in artifacts.items() if p is not None}
     for kind, path in chosen.items():
         for label, source in protected.items():
             if same_file(path, Path(source)):
@@ -169,5 +185,6 @@ def write_artifact(path: Path, data: bytes, overwrite: bool, kind: str) -> Artif
     except OutputError:
         raise
     except OSError as exc:
-        raise OutputError(f"cannot write the {kind} {path}: {exc.strerror or exc}") from None
+        label = artifact_label(kind)
+        raise OutputError(f"cannot write the {label} {path}: {exc.strerror or exc}") from None
     return ArtifactOutcome(kind, str(path), "written")

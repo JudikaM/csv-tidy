@@ -53,7 +53,7 @@ def test_template_declares_every_column_as_text_and_guesses_nothing(tmp_path, no
     assert text.startswith("# ") and "nothing was inferred" in text
     assert str(out) in result.out and "check" in result.out
     # The template has no value rules yet, and check says so instead of looking successful.
-    report = run_cli("check", str(FIXABLE), "--schema", str(out)).out
+    report = run_cli("check", str(FIXABLE), "--profile", str(out)).out
     assert "PASSED (structure only)" in report and "declares no value rules" in report
 
 

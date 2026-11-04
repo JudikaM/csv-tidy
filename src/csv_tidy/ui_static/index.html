@@ -31,11 +31,24 @@
     </div>
   </div>
   <ul class="nav-list">
+    <li><button type="button" id="new-check" class="nav-row"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span class="nav-label">New check</span></button></li>
+    <li>
+      <button type="button" id="find-toggle" class="nav-row" aria-expanded="false" aria-controls="find-box"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><span class="nav-label">Find</span></button>
+      <div class="find-box" id="find-box" role="search" aria-label="Find in this step" hidden>
+        <input type="search" id="find" aria-label="Find rows in the current step" aria-describedby="find-count" placeholder="Column, value, or problem" autocomplete="off" spellcheck="false">
+        <p class="nav-hint" id="find-count" aria-live="polite">Shows only the table rows that contain this text.</p>
+      </div>
+    </li>
     <li><a class="nav-row" href="#step-1" data-step="1"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-3a2 2 0 0 1-2-2V2"/><path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z"/><path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8"/></svg><span class="nav-label">Files</span></a></li>
     <li><a class="nav-row" href="#step-3" data-step="3"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="nav-label">Profiles</span></a></li>
     <li><a class="nav-row" href="#step-6" data-step="6"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><span class="nav-label">Reports</span></a></li>
     <li><a class="nav-row" href="#step-3" data-step="3" id="nav-settings"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg><span class="nav-label">Settings</span></a></li>
   </ul>
+  <section class="session" aria-labelledby="session-title">
+    <h2 class="nav-heading" id="session-title">In this session</h2>
+    <ul class="session-list" id="session-files"></ul>
+    <p class="nav-hint" id="session-hint">Files stay here only while CSV Tidy runs. Nothing is kept after you quit, so there is no list of recent files.</p>
+  </section>
   <div class="nav-foot">
     <div class="brand">
       <img class="logo" src="logo.png" alt="" width="28" height="28">
@@ -60,101 +73,110 @@
 
 <div class="content">
 
-<div class="mobile-bar">
+<header class="mobile-bar">
   <button type="button" id="nav-open" class="icon-button" aria-controls="sidebar" aria-expanded="false" aria-label="Side bar" title="Show the side bar">
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
   </button>
   <img class="logo" src="logo.png" alt="" width="24" height="24">
   <span class="brand-name">CSV Tidy</span>
-</div>
+</header>
 
 <main id="main" tabindex="-1">
 
 <header class="page-head">
-  <h1>Check and clean a CSV file</h1>
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <ol>
+      <li><a href="#step-1" data-step="1" id="crumb-files">Files</a></li>
+      <li id="crumb-none" class="crumb-muted">No file chosen</li>
+      <li class="crumb-menu" id="crumb-current" hidden>
+        <button type="button" id="crumb-file" class="crumb-button" aria-expanded="false" aria-controls="file-menu" aria-label="Choose the file to show">
+          <span id="crumb-name"></span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <ul class="menu" id="file-menu" hidden></ul>
+      </li>
+    </ol>
+  </nav>
+  <h1 id="page-title">Check and clean a CSV file</h1>
   <p class="tagline">Everything runs on this computer; nothing is sent to the internet.</p>
 </header>
 
-<div class="status" id="status" data-kind="idle">
-  <div class="status-inner">
-    <div class="status-text" role="status" aria-live="polite" aria-atomic="true">
-      <span class="dot" aria-hidden="true"></span>
-      <div>
-        <p class="status-main" id="status-main">No file chosen yet.</p>
-        <p class="status-next" id="status-next">Next: choose a CSV file in step 1.</p>
-      </div>
+<section class="input-card" aria-labelledby="input-title">
+  <h2 id="input-title" class="sr">Choose the file and how to read it</h2>
+  <span class="sr" id="file-label">CSV file</span>
+  <label class="dropzone big" id="dropzone" for="file">
+    <input type="file" id="file" class="sr" accept=".csv,.txt,text/csv,text/plain" aria-labelledby="file-label" aria-describedby="size-limit">
+    <span class="dz-text">
+      <span class="dz-name" id="file-name">No file chosen</span>
+      <span class="dz-hint" id="dz-hint">Click to browse, or drop a .csv file here</span>
+    </span>
+    <span class="dz-add" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span>
+  </label>
+  <div class="card-controls">
+    <div class="seg" role="radiogroup" aria-labelledby="sep-label">
+      <span class="mini-label" id="sep-label">Separator</span>
+      <label class="seg-opt"><input type="radio" name="delimiter" value="," checked><span>Comma</span><code>,</code></label>
+      <label class="seg-opt"><input type="radio" name="delimiter" value=";"><span>Semicolon</span><code>;</code></label>
+      <label class="seg-opt"><input type="radio" name="delimiter" value="&#9;"><span>Tab</span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg></label>
     </div>
-    <div class="status-side">
-      <div class="busy" id="busy" hidden><span class="busy-bar" aria-hidden="true"></span></div>
-      <button type="button" id="cancel" class="secondary small" hidden>Cancel</button>
-      <nav class="steps" aria-label="Steps">
-        <a href="#step-1" data-step="1">1. Choose</a>
-        <a href="#step-2" data-step="2">2. Look</a>
-        <a href="#step-3" data-step="3">3. Columns</a>
-        <a href="#step-4" data-step="4">4. Check</a>
-        <a href="#step-5" data-step="5">5. Preview</a>
-        <a href="#step-6" data-step="6">6. Save</a>
-      </nav>
-    </div>
-  </div>
-</div>
-
-<section class="card" id="step-1" aria-labelledby="h-file">
-  <h2 id="h-file"><span class="num" aria-hidden="true">1</span> Choose the file</h2>
-  <fieldset class="mode">
-    <legend class="eyebrow">What do you want to work on?</legend>
-    <div class="options two">
-      <label class="option">
-        <input type="radio" name="mode" value="single" checked>
-        <span><span class="option-title">One file</span><span class="option-text">Check and clean a single CSV file</span></span>
-      </label>
-      <label class="option">
-        <input type="radio" name="mode" value="batch">
-        <span><span class="option-title">Several files with the same rules</span><span class="option-text">Apply one set of column rules to a batch of files</span></span>
-      </label>
-    </div>
-  </fieldset>
-  <div class="setup">
-    <div class="field">
-      <span class="eyebrow" id="file-label">CSV file</span>
-      <label class="dropzone" id="dropzone" for="file">
-        <input type="file" id="file" class="sr" accept=".csv,.txt,text/csv,text/plain" aria-labelledby="file-label">
-        <span class="dz-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
-        </span>
-        <span class="dz-text">
-          <span class="dz-name" id="file-name">No file chosen</span>
-          <span class="dz-hint" id="dz-hint">Click to browse, or drop a .csv file here</span>
-        </span>
-        <span class="dz-button" aria-hidden="true">Choose file</span>
-      </label>
-      <p class="hint with-icon" id="file-note">Your file is only read. It is never changed.</p>
-    </div>
-    <fieldset class="field">
-      <legend class="eyebrow">Columns are separated by</legend>
-      <div class="options three compact">
-        <label class="option"><input type="radio" name="delimiter" value="," checked><span class="option-title">Comma</span><code class="chip">,</code></label>
-        <label class="option"><input type="radio" name="delimiter" value=";"><span class="option-title">Semicolon</span><code class="chip">;</code></label>
-        <label class="option"><input type="radio" name="delimiter" value="&#9;"><span class="option-title">Tab</span><code class="chip" aria-label="Tab"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/></svg></code></label>
-      </div>
-      <p class="hint">Not detected automatically. If the preview shows one wide column, switch this.</p>
-    </fieldset>
-    <div class="field">
-      <label for="encoding" class="eyebrow">Text encoding</label>
-      <select id="encoding">
+    <div class="seg">
+      <label for="encoding" class="mini-label">Encoding</label>
+      <select id="encoding" class="compact">
         <option value="utf-8">UTF-8 (most common)</option>
         <option value="cp1252">Windows-1252 (older Excel, Western Europe)</option>
         <option value="latin-1">Latin-1 (ISO 8859-1)</option>
         <option value="utf-16">UTF-16 (Excel "Unicode Text")</option>
         <option value="other">Other…</option>
       </select>
-      <div id="encoding-other-wrap" hidden>
-        <label for="encoding-other">Encoding name</label>
-        <input type="text" id="encoding-other" autocomplete="off" spellcheck="false" placeholder="for example cp1250">
-      </div>
-      <p class="hint">Change this if letters such as <code>é</code> or <code>ñ</code> look wrong, or the file cannot be read.</p>
+    </div>
+    <div class="seg" role="radiogroup" aria-labelledby="mode-label">
+      <span class="mini-label" id="mode-label">Files</span>
+      <label class="seg-opt"><input type="radio" name="mode" value="single" checked><span>One file</span></label>
+      <label class="seg-opt"><input type="radio" name="mode" value="batch"><span>Several files</span></label>
+    </div>
+    <button type="button" id="primary-action" class="primary" data-next="check" disabled>Check</button>
+  </div>
+  <div class="card-extra" id="encoding-other-wrap" hidden>
+    <label for="encoding-other">Encoding name</label>
+    <input type="text" id="encoding-other" autocomplete="off" spellcheck="false" placeholder="for example cp1250">
+  </div>
+</section>
+<p class="hint card-note"><span id="file-note">Your file is only read. It is never changed.</span> <span id="size-limit">Up to {{max_file_mb}} MB per file (several files: together); results are kept in memory for this session only.</span></p>
+
+<nav class="steps" aria-label="Steps">
+  <a href="#step-1" data-step="1">1. Choose</a>
+  <a href="#step-2" data-step="2">2. Look</a>
+  <a href="#step-3" data-step="3">3. Columns</a>
+  <a href="#step-4" data-step="4">4. Check</a>
+  <a href="#step-5" data-step="5">5. Preview</a>
+  <a href="#step-6" data-step="6">6. Save</a>
+</nav>
+
+<div class="status" id="status" data-kind="idle">
+  <div class="status-text" role="status" aria-live="polite" aria-atomic="true">
+    <span class="dot" aria-hidden="true"></span>
+    <div>
+      <p class="status-main" id="status-main">No file chosen yet.</p>
+      <p class="status-next" id="status-next">Next: choose a CSV file in the box above.</p>
     </div>
   </div>
+  <div class="status-side">
+    <div class="busy" id="busy" hidden><span class="busy-bar" aria-hidden="true"></span></div>
+    <button type="button" id="cancel" class="secondary small" hidden>Cancel</button>
+  </div>
+</div>
+
+<p class="find-note" id="find-note" hidden><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><span id="find-note-text"></span> <button type="button" id="find-clear" class="link-button">Show all rows</button></p>
+
+<div class="step-area">
+
+<section class="card" id="step-1" aria-labelledby="h-file">
+  <h2 id="h-file"><span class="num" aria-hidden="true">1</span> Choose the file</h2>
+  <ul class="tips">
+    <li><b>One file</b> checks and cleans a single CSV file. <b>Several files</b> applies one set of column rules to every chosen file.</li>
+    <li>The separator is not detected automatically. If the preview in step 2 shows one wide column, switch it.</li>
+    <li>Change the encoding if letters such as <code>é</code> or <code>ñ</code> look wrong, or the file cannot be read.</li>
+  </ul>
   <div id="batch-files-wrap" hidden>
     <h3 id="batch-files-title">Chosen files</h3>
     <p class="hint">Every file is checked and cleaned with the same separator, encoding, and rules. The rules in step 3 are based on the columns of the file you preview.</p>
@@ -167,7 +189,7 @@
   </div>
 </section>
 
-<section class="card" id="step-2" aria-labelledby="h-preview">
+<section class="card" id="step-2" hidden aria-labelledby="h-preview">
   <h2 id="h-preview"><span class="num" aria-hidden="true">2</span> Look at the data</h2>
   <div id="preview-empty" class="empty">
     <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
@@ -186,7 +208,7 @@
   </div>
 </section>
 
-<section class="card" id="step-3" aria-labelledby="h-rules">
+<section class="card" id="step-3" hidden aria-labelledby="h-rules">
   <h2 id="h-rules"><span class="num" aria-hidden="true">3</span> Describe the columns</h2>
   <div id="rules-empty" class="empty">
     <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg>
@@ -347,21 +369,21 @@
   </div>
 </section>
 
-<section class="card" id="step-4" aria-labelledby="h-check">
+<section class="card" id="step-4" hidden aria-labelledby="h-check">
   <h2 id="h-check"><span class="num" aria-hidden="true">4</span> Check the file</h2>
   <p class="lead">Finds problems using your rules. Nothing is changed.</p>
   <button type="button" id="run-check" class="primary" disabled>Check file</button>
   <div id="check-result" class="result" hidden></div>
 </section>
 
-<section class="card" id="step-5" aria-labelledby="h-clean">
+<section class="card" id="step-5" hidden aria-labelledby="h-clean">
   <h2 id="h-clean"><span class="num" aria-hidden="true">5</span> Preview the cleaned copy</h2>
   <p class="lead">Applies only the repairs ticked in step 3 and shows every value before and after. Still nothing is saved.</p>
   <button type="button" id="run-clean" class="primary" disabled>Preview cleaning</button>
   <div id="clean-result" class="result" hidden></div>
 </section>
 
-<section class="card" id="step-6" aria-labelledby="h-save">
+<section class="card" id="step-6" hidden aria-labelledby="h-save">
   <h2 id="h-save"><span class="num" aria-hidden="true">6</span> Save</h2>
   <p class="lead" id="save-note">Files are saved through your browser's download folder. Your original file stays as it is.</p>
   <div class="actions" id="batch-actions" hidden>
@@ -381,12 +403,40 @@
   <p class="blocked" id="save-blocked" hidden></p>
 </section>
 
+</div>
+
 </main>
 
 <aside class="side-panel" aria-labelledby="side-panel-title">
-  <h2 id="side-panel-title" class="eyebrow">About this page</h2>
+  <h2 id="side-panel-title" class="panel-title">About this page</h2>
   <p>CSV Tidy never guesses types or formats and repairs only what you select. The same engine runs behind the <code class="chip">csv-tidy</code> command; profiles saved here work there.</p>
-  <p class="mono foot-theme">Theme: <strong id="footer-theme">Dark Modern</strong></p>
+  <dl class="panel-rows">
+    <div class="panel-row">
+      <dt><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>Profile</dt>
+      <dd class="panel-value" id="panel-profile">No profile</dd>
+      <dd class="panel-actions"><button type="button" class="link-button" id="panel-profile-load" aria-label="Load a profile">Load</button><button type="button" class="link-button" id="panel-profile-save" aria-label="Save the rules as a profile" disabled>Save</button></dd>
+    </div>
+    <div class="panel-row">
+      <dt><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>Columns</dt>
+      <dd class="panel-value" id="panel-columns">No file yet</dd>
+      <dd class="panel-actions"><button type="button" class="link-button" id="panel-columns-edit" aria-label="Edit the column rules">Edit</button></dd>
+    </div>
+    <div class="panel-row">
+      <dt><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>Unique keys</dt>
+      <dd class="panel-value" id="panel-keys">None</dd>
+      <dd class="panel-actions"><button type="button" class="link-button" id="panel-keys-add" aria-label="Add a combined unique key">Add</button></dd>
+    </div>
+    <div class="panel-row">
+      <dt><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M4 7V4a2 2 0 0 1 2-2 2 2 0 0 0-2 2"/><path d="M4.063 20.999a2 2 0 0 0 2 1L18 22a2 2 0 0 0 2-2V7l-5-5H6"/><path d="m5 11-3 3"/><path d="m5 17-3-3h10"/></svg>Output</dt>
+      <dd class="panel-value" id="panel-output">Comma, UTF-8, CRLF; formulas not protected</dd>
+      <dd class="panel-actions"><button type="button" class="link-button" id="panel-output-edit" aria-label="Edit the output settings">Edit</button></dd>
+    </div>
+    <div class="panel-row">
+      <dt><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>Theme</dt>
+      <dd class="panel-value" id="footer-theme">Dark Modern</dd>
+      <dd class="panel-actions"><button type="button" class="link-button" id="panel-theme" aria-label="Switch the color theme">Switch</button></dd>
+    </div>
+  </dl>
   <p class="panel-foot">Local only — nothing leaves this computer</p>
 </aside>
 
@@ -404,6 +454,20 @@
   <div class="dialog-actions">
     <button type="button" id="quit-cancel" class="secondary" autofocus>Stay in CSV Tidy</button>
     <button type="button" id="quit-confirm" class="danger">Quit CSV Tidy</button>
+  </div>
+</dialog>
+
+<dialog id="new-dialog" aria-labelledby="new-title" aria-describedby="new-text">
+  <div class="dialog-head">
+    <span class="dialog-icon calm" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+    </span>
+    <h2 id="new-title">Start a new check?</h2>
+  </div>
+  <p id="new-text">This clears the loaded files, the rules, and the results on this page. Files you already saved and your original files are not changed.</p>
+  <div class="dialog-actions">
+    <button type="button" id="new-cancel" class="secondary" autofocus>Keep working</button>
+    <button type="button" id="new-confirm" class="primary">Start a new check</button>
   </div>
 </dialog>
 

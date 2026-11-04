@@ -124,14 +124,14 @@ def main() -> None:
         run([str(cli), "--version"], work, 0)
         run([str(cli), "--help"], work, 0)
         run([str(python), "-I", "-m", "csv_tidy", "--version"], work, 0)
-        run([str(cli), "check", "examples/transactions_valid.csv", "--schema", profile], work, 0)
-        run([str(cli), "check", "examples/transactions_fixable.csv", "--schema", profile], work, 1)
+        run([str(cli), "check", "examples/transactions_valid.csv", "--profile", profile], work, 0)
+        run([str(cli), "check", "examples/transactions_fixable.csv", "--profile", profile], work, 1)
         run(
             [
                 str(cli),
                 "check",
                 "examples/transactions_unfixable.csv",
-                "--schema",
+                "--profile",
                 profile,
                 "--format",
                 "json",
@@ -146,7 +146,7 @@ def main() -> None:
                 str(cli),
                 "clean",
                 "examples/transactions_fixable.csv",
-                "--schema",
+                "--profile",
                 profile,
                 "--dry-run",
             ],
@@ -158,12 +158,12 @@ def main() -> None:
                 str(cli),
                 "clean",
                 "examples/transactions_fixable.csv",
-                "--schema",
+                "--profile",
                 profile,
                 "--apply",
                 "--output",
                 "output/transactions_clean.csv",
-                "--output-schema",
+                "--output-profile",
                 "output/transactions.output.toml",
             ],
             work,
@@ -174,7 +174,7 @@ def main() -> None:
                 str(cli),
                 "check",
                 "output/transactions_clean.csv",
-                "--schema",
+                "--profile",
                 "output/transactions.output.toml",
             ],
             work,
@@ -185,7 +185,7 @@ def main() -> None:
                 str(cli),
                 "clean",
                 "output/transactions_clean.csv",
-                "--schema",
+                "--profile",
                 "output/transactions.output.toml",
                 "--dry-run",
             ],
@@ -199,7 +199,7 @@ def main() -> None:
                 str(cli),
                 "clean",
                 "examples/transactions_unfixable.csv",
-                "--schema",
+                "--profile",
                 profile,
                 "--apply",
                 "--output",
@@ -231,7 +231,7 @@ def main() -> None:
                 str(cli),
                 "check",
                 "examples/transactions_fixable.csv",
-                "--schema",
+                "--profile",
                 "output/starting.toml",
             ],
             work,
@@ -247,7 +247,7 @@ def main() -> None:
                 "examples",
                 "--pattern",
                 "transactions_*fix*.csv",
-                "--schema",
+                "--profile",
                 profile,
                 "--apply",
                 "--output-dir",
