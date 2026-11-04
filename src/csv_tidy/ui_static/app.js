@@ -1512,8 +1512,9 @@ function markStep(step) {
   applyFind(); /* the count names the rows of the step that is shown */
 }
 
-/* The step content sits right under the navigation, so a click shows it without jumping. */
-for (const link of document.querySelectorAll(".steps a")) {
+/* The step content sits right under the navigation, so a click shows it without jumping.
+   The step names in "How to use" (side panel) behave the same way. */
+for (const link of document.querySelectorAll(".steps a, .howto-steps a")) {
   link.addEventListener("click", (event) => {
     event.preventDefault();
     markStep(Number(link.dataset.step));
@@ -1956,6 +1957,20 @@ $("panel-columns-edit").addEventListener("click", () => showRules(null, false));
 $("panel-keys-add").addEventListener("click", () => showRules("key-columns", true));
 $("panel-output-edit").addEventListener("click", () => showRules("out-delimiter", true));
 $("panel-theme").addEventListener("click", () => $("theme-toggle").click());
+
+/* "How to use" is a native <details>: it opens and closes by itself; only the choice is kept. */
+try {
+  $("howto").open = window.localStorage.getItem("csv-tidy-howto") === "open";
+} catch (error) {
+  /* storage is blocked: the guide starts closed */
+}
+$("howto").addEventListener("toggle", () => {
+  try {
+    window.localStorage.setItem("csv-tidy-howto", $("howto").open ? "open" : "closed");
+  } catch (error) {
+    /* the choice is not remembered, which is fine */
+  }
+});
 
 function refreshLook() {
   const step = currentStep();

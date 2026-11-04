@@ -11,7 +11,6 @@
 <script src="theme.js"></script>
 </head>
 <body>
-<div class="backdrop" aria-hidden="true"></div>
 <a class="skip" href="#main">Skip to the main column</a>
 
 <div class="app">
@@ -437,6 +436,18 @@
       <dd class="panel-actions"><button type="button" class="link-button" id="panel-theme" aria-label="Switch the color theme">Switch</button></dd>
     </div>
   </dl>
+  <details class="howto" id="howto">
+    <summary class="howto-summary">How to use<svg class="icon howto-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <ol class="howto-steps">
+      <li><a href="#step-1" data-step="1">Choose</a>: Drop a CSV file or press +.</li>
+      <li><a href="#step-2" data-step="2">Look</a>: Check the separator and encoding in the preview.</li>
+      <li><a href="#step-3" data-step="3">Columns</a>: Give the columns you care about a type and format.</li>
+      <li><a href="#step-4" data-step="4">Check</a>: See the problems with their row and column.</li>
+      <li><a href="#step-5" data-step="5">Preview</a>: See which values will change.</li>
+      <li><a href="#step-6" data-step="6">Save</a>: Download the clean copy and the report.</li>
+    </ol>
+    <p class="howto-tip">Save your rules as a profile to reuse them here or with the <code class="chip">csv-tidy</code> command.</p>
+  </details>
   <p class="panel-foot">Local only — nothing leaves this computer</p>
 </aside>
 

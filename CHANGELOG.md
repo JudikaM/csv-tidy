@@ -6,6 +6,27 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-04
+
+A short guide in the local interface.
+
+**Upgrade notes (from 1.0.1).** Profiles, CLI, reports, and the Python API are unchanged.
+
+### Added
+
+- Interface: **How to use** at the bottom of the side panel, a short guide that is closed
+  until it is opened: the six steps in one line each, every step name leading to its step,
+  and a tip that profiles saved on the page also work with the `csv-tidy` command. It is a
+  native disclosure that works with the keyboard and screen readers, and whether it is open
+  is remembered in the browser (`csv-tidy-howto`, where the browser allows storage). In wide
+  windows the side panel now scrolls on its own when it is taller than the window.
+
+### Removed
+
+- Interface: the unused background layer (the `backdrop` element and its style rule) and its
+  style tokens `--nebula-1`, `--nebula-2`, `--nebula-3`, and `--stars`. They were transparent
+  in both themes, so the page looks the same.
+
 ## [1.0.1] - 2026-11-04
 
 A small clean-up of the local interface.

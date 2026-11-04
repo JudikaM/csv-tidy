@@ -401,7 +401,13 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   **Add** opens "More settings" at the combined-key list), **Output** (separator, encoding,
   and line ending of the cleaned copy, and in how many columns formulas are protected;
   **Edit** opens "More settings" at the output separator), and **Theme** (**Switch**). The
-  actions lead to the controls of step 3; the panel changes nothing itself.
+  actions lead to the controls of step 3; the panel changes nothing itself. Under the rows,
+  **How to use** is a short guide that is closed until it is opened (a native disclosure,
+  so the keyboard and screen readers get its open or closed state): the six steps in one
+  line each, every step name leading to its step like the step navigation, and a tip that
+  saved profiles also work with the `csv-tidy` command. Whether it is open is remembered
+  like the theme (where the browser allows storage). Opening it makes the panel longer, not
+  wider; in wide windows the panel scrolls on its own when it is taller than the window.
 - **Accessibility.** One `h1`; the landmarks `nav`, `main`, `aside`, and `header` (narrow
   windows); a skip link to the main column as the first Tab stop; a name for every control,
   including icon-only buttons; `aria-expanded` and `aria-controls` on the buttons that show
