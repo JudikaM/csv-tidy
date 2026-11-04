@@ -96,7 +96,7 @@ def test_page_is_self_contained_and_needs_the_key(ui):
     assert not re.search(r'\sstyle="|\son[a-z]+="', page)
     assert "<script>" not in page and "<style" not in page
     assert re.findall(r'<(?:script|link)[^>]+(?:src|href)="([^"]+)"', page) == [
-        "data:,",
+        "logo.png",
         "app.css",
         "theme.js",
         "app.js",
@@ -105,12 +105,18 @@ def test_page_is_self_contained_and_needs_the_key(ui):
     assert ui.request("/../pyproject.toml")[0] == 404
 
 
-def test_light_theme_is_the_default(ui):
+def test_dark_theme_is_the_default(ui):
     page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
-    assert '<html lang="en" data-theme="light">' in page
-    assert 'id="theme-label">Light<' in page
+    assert '<html lang="en" data-theme="cosmos">' in page
+    assert 'id="theme-label">Dark Modern<' in page
     script = ui.request("/theme.js")[2].decode("utf-8")
-    assert 'let theme = "light";' in script
+    assert 'let theme = "cosmos";' in script
+
+
+def test_logo_is_served_as_a_png_without_the_key(ui):
+    status, headers, body = ui.request("/logo.png")
+    assert status == 200 and headers["Content-Type"] == "image/png"
+    assert body.startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_server_listens_on_loopback_only(ui):

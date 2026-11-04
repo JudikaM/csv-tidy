@@ -8,11 +8,23 @@ All notable changes are documented here. The format follows
 
 ### Changed
 
-- Interface: the light theme is now the default; the dark "Cosmos" theme is one click away in
-  the header, and a theme chosen earlier is still remembered by the browser.
+- Interface: the dark theme (still the default) uses the colors of VS Code's built-in "Dark
+  Modern" theme and is now named "Dark Modern"; a theme chosen earlier is still remembered.
 - Interface: every icon is now an inline [Lucide](https://lucide.dev) icon (the set shadcn/ui
-  uses), including the theme switch (sun and moon) and the Tab separator; still no external
-  files or requests.
+  uses), including the Tab separator and the theme switch, which shows a sun or moon in the
+  text color as in shadcn/ui's mode toggle; still no external files or requests.
+- Interface: the light theme uses the colors of the "PowerShell ISE" theme from the VS Code
+  PowerShell extension (white panels on light blue, navy accents, dark green, dark red, and
+  dark orange states). Text contrast stays at least 4.5:1 in both themes.
+- Interface: the CSV Tidy logo is shown in the header and used as the page icon (`logo.png`,
+  served by the local server like the other page files).
+- Interface: the marked step in the step navigation is gray in both themes instead of indigo.
+
+### Fixed
+
+- Interface: clicking a step in the step navigation (for example "2. Look") now marks that
+  step; before, the mark stayed on the step the work had reached. The mark still moves on by
+  itself when choosing a file, checking, or cleaning reaches a new step.
 
 ## [0.5.0] - 2026-10-29
 

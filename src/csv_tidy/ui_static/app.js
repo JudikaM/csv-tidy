@@ -1413,7 +1413,7 @@ $("quit-confirm").addEventListener("click", () => {
 
 /* ------------------------------------------------------------------ look and feel */
 
-const THEMES = { cosmos: "Cosmos dark", light: "Light" };
+const THEMES = { cosmos: "Dark Modern", light: "PowerShell ISE light" };
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -1467,11 +1467,29 @@ function currentStep() {
   return 3;
 }
 
-function refreshLook() {
-  const step = currentStep();
+/* The step navigation marks one step: the one last clicked, until the work moves on to a new
+   step (choosing a file, checking, cleaning), which then becomes the marked one. */
+const stepMark = { progress: 0, shown: 1 };
+
+function markStep(step) {
+  stepMark.shown = step;
   for (const link of document.querySelectorAll(".steps a")) {
     if (Number(link.dataset.step) === step) link.setAttribute("aria-current", "step");
     else link.removeAttribute("aria-current");
+  }
+}
+
+for (const link of document.querySelectorAll(".steps a")) {
+  link.addEventListener("click", () => markStep(Number(link.dataset.step)));
+}
+
+function refreshLook() {
+  const step = currentStep();
+  if (step !== stepMark.progress) {
+    stepMark.progress = step;
+    markStep(step);
+  } else {
+    markStep(stepMark.shown);
   }
   const batchMode = state.mode === "batch";
   let name = "No file chosen";

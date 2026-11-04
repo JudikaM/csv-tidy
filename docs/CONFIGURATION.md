@@ -354,7 +354,8 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   `csv-tidy-ui-error.txt` in the temporary folder, because there is no window to show it.
 - **Plain suggestions.** The page explains problems with its own controls, based on each
   issue's `remedy` (see Reports); for other issues it shows the suggestion text.
-- **Look.** A light theme (default) and a dark theme, switched in the header and remembered
+- **Look.** A dark theme (default, in the colors of VS Code's "Dark Modern") and a light theme
+  (in the colors of the "PowerShell ISE" editor theme), switched in the header and remembered
   in the browser's local storage for this address. Quit asks for confirmation. Files can be
   dropped onto the file area. The page uses only its own style sheet and scripts
   (`app.css`, `theme.js`, `app.js`); no fonts or styles are loaded from elsewhere.
