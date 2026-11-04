@@ -17,6 +17,14 @@ All notable changes are documented here. The format follows
 
 ### Changed
 
+- Interface: the page is laid out like a desktop application. A side bar on the left holds
+  previous/next step buttons, links to the files, profile, report, and settings parts of the
+  page, and, at the bottom, the logo, version, "Offline & local", the theme switch, and Quit
+  (which still asks first). It can be folded to a row of icons, and the choice is remembered
+  in this browser. The steps stay in the middle column under one page title; a side panel on
+  the right holds the notes that were in the footer. Below 1100 pixels the side panel moves
+  under the steps; below 720 pixels the side bar opens over the page and keeps the keyboard
+  inside until it is closed (Escape or the side-bar button). Every feature works as before.
 - Interface: the dark theme (still the default) uses the colors of VS Code's built-in "Dark
   Modern" theme and is now named "Dark Modern"; a theme chosen earlier is still remembered.
 - Interface: every icon is now an inline [Lucide](https://lucide.dev) icon (the set shadcn/ui

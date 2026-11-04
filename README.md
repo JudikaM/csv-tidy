@@ -380,8 +380,11 @@ This starts a small web server **on this computer only** and opens a page in you
   <img src="docs/images/interface-preview-light.png" alt="Step 5 of the local interface: the cleaned copy has no problems, a table lists every changed value before and after with the repair that changed it, and the cleaned rows are shown with changed values highlighted.">
 </picture>
 
-The page has a dark and a light theme (switch in the header), and files can be dropped onto
-the file area. Dates are chosen from a list of common formats (with an example such as `31/12/2026`), and
+The page is laid out like a desktop application: a side bar on the left (it can be folded to
+a row of icons, and opens over the page on a phone-sized window), the steps in the middle, and
+a side panel on the right. The side bar holds the theme switch (dark and light), **Quit CSV
+Tidy**, and buttons that move to the previous or next step. Files can be dropped onto the file
+area. Dates are chosen from a list of common formats (with an example such as `31/12/2026`), and
 **Other…** accepts any supported format. Suggestions name the page's own controls, for
 example *Tick "Repair: trim spaces" for "amount" in step 3*.
 

@@ -52,6 +52,7 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | AC-43 | `profile init`: per-column number and date formats as options, validated before writing (unknown column, wrong column type, invalid format, repeated column, missing `=`), column names containing `=` | `integration/test_profile_init.py`: `test_per_column_formats_are_written_and_used`, `test_column_names_may_contain_an_equals_sign`, `test_per_column_format_mistakes_are_refused_before_writing` |
 | AC-44 | Opt-in formula neutralization in selected text columns: OWASP triggers get a leading `'`, other values and numbers are unchanged, trimming first, text columns only, missing columns reported, output profile keeps it and a second clean is a no-op, unused selection not written, reports, CLI options, batch, interface | `integration/test_formula_neutralization.py`: all tests; `integration/test_ui.py`: `test_interface_profiles_can_neutralize_formulas` |
 | AC-45 | `docs/STABILITY.md` lists the whole covered surface: every command and long option, profile key and value, issue code (the same set as the code), `remedy` value, field of the `check`, `clean`, and `batch` JSON reports, and name in `csv_tidy.__all__` | `unit/test_stability_inventory.py`: all tests |
+| AC-46 | Interface shell: a side bar (`nav`), one main column (`main`) with the only `h1`, and a side panel (`aside`); a skip link as the first stop; side-bar toggles with `aria-controls` and `aria-expanded`; named icon-only buttons; theme switch and Quit in the side bar; the folded state read and written only inside try/catch; a modal overlay below 720 px (Escape, focus kept inside); the step marker follows the last clicked step and moves on with the work | `integration/test_ui.py`: `test_page_shell_has_side_bar_main_column_and_side_panel`, `test_side_bar_state_is_remembered_only_where_storage_works`; browser checks below |
 | AC-35 | Batch: deterministic output names, collisions and unsafe paths stop before writing, a failing file does not affect others, single-file commands unchanged | `integration/test_batch.py`: `test_apply_writes_separate_deterministic_outputs_and_skips_blocked_files`, `test_output_name_collisions_stop_the_batch_before_writing`, `test_existing_outputs_and_inputs_are_protected`, `test_one_failed_write_does_not_undo_the_other_files`, `test_overrides_apply_to_every_file`, `test_library_entry_point_matches_the_command`, `test_single_file_commands_are_unchanged_and_help_lists_batch` |
 
 ## Regression tests
@@ -158,6 +159,23 @@ area, Quit asking in a dialog (Stay keeps the server, Quit stops it), no horizon
 1024 and 390 pixels, every control named, and the lowest text contrast 5.19:1 (dark) and 4.97:1
 (light), with white on the primary-button gradient at 6.29:1 and above. The 0.4.0, 0.3.0, and
 one-file walk-throughs (13, 26, 37 checks) passed again with the new markup.
+
+For the side-bar layout (unreleased, 2026-11-04), 152 checks passed in headless Edge
+(Playwright) at 1440 x 900, 1024 x 768, and 390 x 844 pixels in both themes: the three
+landmarks and one `h1`; every visible control named; no horizontal scrolling with and without
+results and with the side bar folded; the previous-step button disabled at step 1 and the
+next-step button at step 6; the next-step button marking step 2; choosing a file moving the
+mark to step 3 and cleaning to step 6; a clicked step staying marked; folding to a 56-pixel
+rail, remembered after reloading, and unfolding; the side panel right of the main column at
+1440 and under it at 1024; at 390 the overlay opening with focus on its toggle and the rest of
+the page inert, Tab and Shift+Tab staying inside, Escape closing it with focus back on the
+opening button, and a click beside it closing it; the Settings link opening More settings;
+the whole workflow (file, profile, check, preview, save buttons enabled); the theme switch
+and the Quit dialog from the side bar; the skip link as the first Tab stop, leading to the
+main column. Lowest measured contrast of the new or moved colors: text 5.22:1 (dark) and
+4.74:1 (light, the "Offline & local" pill), icons 6.55:1 (dark) and 5.58:1 (light). No
+external request and no script error. The first run found that the overlay could not take
+focus while it was still hidden; it is now visible as soon as it opens.
 
 `csv-tidy update --check` was run once against the real GitHub API (release 0.3.0): the wheel
 and its digest were found and matched the published SHA-256. pip was shown to refuse a wheel
