@@ -97,7 +97,7 @@ def test_page_is_self_contained_and_needs_the_key(ui):
     assert not re.search(r'\sstyle="|\son[a-z]+="', page)
     assert "<script>" not in page and "<style" not in page
     assert re.findall(r'<(?:script|link)[^>]+(?:src|href)="([^"]+)"', page) == [
-        "logo.png",
+        "logo-mark.png",
         "app.css",
         "theme.js",
         "app.js",
@@ -357,6 +357,23 @@ def test_logo_is_served_as_a_png_without_the_key(ui):
     status, headers, body = ui.request("/logo.png")
     assert status == 200 and headers["Content-Type"] == "image/png"
     assert body.startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_logo_mark_is_served_as_a_png_without_the_key(ui):
+    status, headers, body = ui.request("/logo-mark.png")
+    assert status == 200 and headers["Content-Type"] == "image/png"
+    assert body.startswith(b"\x89PNG\r\n\x1a\n")
+    # IHDR: 64 x 64 pixels, 8-bit RGBA (transparent corners), sharp at 32 px on 2x screens.
+    assert body[12:16] == b"IHDR"
+    assert int.from_bytes(body[16:20], "big") == int.from_bytes(body[20:24], "big") == 64
+    assert body[24:26] == b"\x08\x06"
+    # The favicon and both side-bar spots use the small mark, not the logo with its text.
+    page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
+    assert re.findall(r'<img class="logo"[^>]*>', page) == [
+        '<img class="logo" src="logo-mark.png" alt="" width="28" height="28">',
+        '<img class="logo" src="logo-mark.png" alt="" width="24" height="24">',
+    ]
+    assert '<link rel="icon" type="image/png" href="logo-mark.png">' in page
 
 
 def test_server_listens_on_loopback_only(ui):

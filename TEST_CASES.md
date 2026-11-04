@@ -47,7 +47,7 @@ counts, statuses, exit codes, and file contents, not internal calls.
 | AC-38 | Start without a command line: `csv-tidy-ui` (no console), Desktop/Start Menu shortcuts on Windows and Linux, other programs' shortcuts never touched, server stops after inactivity | `integration/test_shortcuts.py`: all tests (Windows `.lnk` created and read back on Windows); `integration/test_ui.py`: `test_idle_server_stops_by_itself_and_contact_keeps_it_running`, `test_requests_without_the_key_do_not_keep_the_server_alive`, `test_run_ui_with_idle_minutes_returns_and_cleans_up`, `test_gui_entry_point_opens_the_browser_without_a_console`, `test_quiet_mode_survives_a_missing_console`, `test_ui_command_accepts_idle_minutes`; `scripts/smoke_dist.py` (program present, shortcuts from the installed wheel) |
 | AC-39 | `csv-tidy update`: explicit, verified (SHA-256 from the release), up to date / check-only without pip, failures explained, no network in other commands | `integration/test_update.py`: all tests |
 | AC-40 | Issues carry `remedy` (JSON only); the interface explains it with its own controls | `integration/test_remedy.py`: all tests |
-| AC-41 | Interface look: self-contained page (own `app.css`, `theme.js`, `app.js`; no inline styles, handlers, or scripts), one server per port | `integration/test_ui.py`: `test_page_is_self_contained_and_needs_the_key`, `test_a_second_server_cannot_share_the_port_of_a_running_one`; `scripts/smoke_dist.py` (`theme.js` in both archives) |
+| AC-41 | Interface look: self-contained page (own `app.css`, `theme.js`, `app.js`; no inline styles, handlers, or scripts), one server per port; the page icon and both side-bar logos use `logo-mark.png` (64 x 64 PNG, the logo without its text), and `logo.png` stays served | `integration/test_ui.py`: `test_page_is_self_contained_and_needs_the_key`, `test_a_second_server_cannot_share_the_port_of_a_running_one`, `test_logo_is_served_as_a_png_without_the_key`, `test_logo_mark_is_served_as_a_png_without_the_key`; `scripts/smoke_dist.py` (`theme.js`, `logo.png`, and `logo-mark.png` in both archives) |
 | AC-42 | Tab-separated files: tab delimiter in profiles (`"\t"`), options (`tab`, a tab, or `\t`), output and output profiles, the single-column hint, next-step commands, `profile init`, and the interface | `integration/test_tab_delimiter.py`: all tests; `integration/test_ui.py`: `test_preview_reads_tab_separated_files` |
 | AC-43 | `profile init`: per-column number and date formats as options, validated before writing (unknown column, wrong column type, invalid format, repeated column, missing `=`), column names containing `=` | `integration/test_profile_init.py`: `test_per_column_formats_are_written_and_used`, `test_column_names_may_contain_an_equals_sign`, `test_per_column_format_mistakes_are_refused_before_writing` |
 | AC-44 | Opt-in formula neutralization in selected text columns: OWASP triggers get a leading `'`, other values and numbers are unchanged, trimming first, text columns only, missing columns reported, output profile keeps it and a second clean is a no-op, unused selection not written, reports, CLI options, batch, interface | `integration/test_formula_neutralization.py`: all tests; `integration/test_ui.py`: `test_interface_profiles_can_neutralize_formulas` |
@@ -234,6 +234,19 @@ all fixed: the grey meta text of a session row would have been 4.08:1 on the dar
 (now on `--subtle`), the breadcrumb file button had no name before the script ran, **Edit**
 (Columns) focused a rule row that Find had hidden, and the session list marked the previewed
 file instead of the file whose details were open.
+
+For the small logo mark and the removed style tokens (1.0.1, 2026-11-04), 58 checks passed in
+headless Chrome 156 in both themes at 1440, 1024, and 390 pixels, and the earlier
+walk-throughs (421 side-bar sections, 156 shell, 218 input-card, 47 dark-color checks) passed
+again in the same browser. New checks: both logo images and the page icon load
+`logo-mark.png` (64 x 64), keep `alt=""` and their width and height, and show at 28 pixels in
+the side bar (also folded and in the overlay at 390 pixels) and 24 pixels in the top bar;
+`--header`, `--status-bg`, and `--z-sticky` are undefined; a check and a preview of
+`transactions_fixable.csv` run without horizontal scrolling, requests to other hosts, or
+script errors. The mark's white document has 19:1 contrast on its black square; the square
+itself has 17:1 against the Light+ side bar but only 1.15:1 against the dark side bar
+(#1F1F1F), where the document, not the square's outline, carries the mark, as with the full
+logo before.
 
 `csv-tidy update --check` was run once against the real GitHub API (release 0.3.0): the wheel
 and its digest were found and matched the published SHA-256. pip was shown to refuse a wheel

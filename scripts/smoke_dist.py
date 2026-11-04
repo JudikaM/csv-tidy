@@ -70,11 +70,11 @@ def run(cmd: list[str], cwd: Path, expect: int) -> str:
     return proc.stdout
 
 
-UI_ASSETS = ("index.html", "app.css", "app.js", "theme.js", "logo.png")
+UI_ASSETS = ("index.html", "app.css", "app.js", "theme.js", "logo.png", "logo-mark.png")
 
 
 def check_ui_assets(wheel: Path, dist: Path) -> None:
-    """The interface is three static files; both archives must carry all of them."""
+    """Both archives must carry every static file of the interface (UI_ASSETS)."""
     with zipfile.ZipFile(wheel) as archive:
         wheel_names = set(archive.namelist())
     missing = [n for n in UI_ASSETS if f"csv_tidy/ui_static/{n}" not in wheel_names]
