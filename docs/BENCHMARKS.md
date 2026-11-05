@@ -7,7 +7,7 @@ a temporary directory, then times, with `examples/profiles/transactions-id.toml`
 - building and rendering the report (JSON and text with the default limits);
 - `export_clean` (cleaned CSV and output profile);
 - a batch of five files holding the same number of rows in total, through `run_batch` (as
-  `csv-tidy batch clean` without `--apply`) and through the local interface's session (the
+  `datakrit batch clean` without `--apply`) and through the local interface's session (the
   several-files preview followed by the "Save all results as ZIP" download, which recomputes
   and exports every ready file).
 
@@ -24,7 +24,7 @@ problems are all repairable. No dataset is committed.
 ## Recorded results
 
 Measured on 2026-10-14 on one developer machine: Windows 11 (10.0.26300), CPython 3.13.3,
-12 logical CPUs, CSV Tidy 0.3.0, seed 20260211, issue rate 0.02. Single runs; expect variation
+12 logical CPUs, version 0.3.0, seed 20260211, issue rate 0.02. Single runs; expect variation
 between runs and machines. These numbers are not performance guarantees.
 
 | Rows | File size | Check | Clean preview | Report (JSON + text) | Export (CSV + profile) |

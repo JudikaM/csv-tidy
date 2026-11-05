@@ -1,6 +1,6 @@
 # Configuration and data contracts
 
-This is the authoritative reference for CSV Tidy profiles, options, defaults, and the
+This is the authoritative reference for Datakrit profiles, options, defaults, and the
 input/output contracts of `check`, `clean`, `profile init`, `batch`, `ui`, `shortcut`, and
 `update`.
 
@@ -52,7 +52,7 @@ from the CSV header are reported as `missing_column` errors when the file is rea
 
 ## Creating profiles
 
-`csv-tidy profile init INPUT --output PROFILE` reads the header of `INPUT` and writes a
+`datakrit profile init INPUT --output PROFILE` reads the header of `INPUT` and writes a
 starting profile. It reuses the profile validation and the TOML serializer described here, so
 a generated profile is always a valid profile.
 
@@ -140,7 +140,7 @@ must then use only the fixed-width tokens `YYYY`, `MM`, and `DD`, because with `
 value such as `2026111` could be 1 November or 11 January. Separators are used between every
 two tokens or not at all; `YYYY-MMDD` is rejected.
 Calendar validity is checked (`31/02/2026` and `29/02/2025` are invalid; `29/02/2024` is valid).
-`01/02/2026` is 1 February with `DD/MM/YYYY` and 2 January with `MM/DD/YYYY`; CSV Tidy never
+`01/02/2026` is 1 February with `DD/MM/YYYY` and 2 January with `MM/DD/YYYY`; Datakrit never
 guesses which one you meant. Month names, times, and time zones are not supported.
 
 ## Reading rules
@@ -161,7 +161,7 @@ guesses which one you meant. Month names, times, and time zones are not supporte
   `rot_13`, and the placeholder `undefined` codec, are rejected as configuration errors.
 - Parsing follows Python's `csv` module in strict mode. It stops on malformed quoting such as
   an unterminated quoted field or text after a closing quote (`"bad"x`). A quote character
-  inside an *unquoted* field (`a"b`) is accepted and kept literally; CSV Tidy does not enforce
+  inside an *unquoted* field (`a"b`) is accepted and kept literally; Datakrit does not enforce
   every RFC 4180 rule beyond what Python's parser checks.
 - `record` numbers count data records (header excluded); `line` numbers are physical lines.
 - Header names are matched exactly (case and whitespace).
@@ -239,10 +239,9 @@ duplicate keys that appear after trimming).
   `--output-profile` require `--apply`; `--dry-run` and `--apply` cannot be combined. A dry run
   may save a report with `--report` but never writes a CSV or output profile.
 - `--profile`, `--output-profile`, and `--output-profiles` were called `--schema`,
-  `--output-schema`, and `--output-schemas` before 1.0.0. The old names still work, are not
-  shown by `--help`, and print `csv-tidy: warning: --schema is deprecated and will be removed
-  in CSV Tidy 2.0.0; use --profile` (and so on) on stderr; they are removed in 2.0.0. Giving
-  an old name together with its new name is a usage error (exit code 2).
+  `--output-schema`, and `--output-schemas` before 1.0.0. The old names were removed in
+  2.0.0: giving one is a usage error (exit code 2) that names the new option, for example
+  `datakrit: error: --schema was removed in 2.0.0; use --profile`.
 - A fatal parsing error makes the scan incomplete: reports say so, counts cover only what was
   read, and the exit code is 2. A partially scanned file is never reported as valid.
 - `profile init` exits with 0 when the profile was written, 2 for the refusals listed under
@@ -264,90 +263,71 @@ duplicate keys that appear after trimming).
 check nothing. A file can therefore pass with exit code 0 while containing `31/02/2026` in a
 column that no profile declares as a date. Reports make this explicit: the text report has
 `Checked:` and `Not checked:` lines and the verdict `PASSED (structure only)`, and JSON has a
-`coverage` object. CSV Tidy does not detect types; create a profile with `profile init`.
+`coverage` object. Datakrit does not detect types; create a profile with `profile init`.
 
 ## Shortcuts
 
-`csv-tidy shortcut install [--folder DIR] [--no-desktop]` and
-`csv-tidy shortcut remove [--folder DIR]`.
+`datakrit shortcut install [--folder DIR] [--no-desktop]` and
+`datakrit shortcut remove [--folder DIR]`.
 
 | System | Install creates | Started program |
 |--------|-----------------|-----------------|
-| Windows | `CSV Tidy.lnk` on the Desktop and in the Start Menu (Programs); `Update CSV Tidy.lnk` in the Start Menu | `csv-tidy-ui` next to the Python that runs the command; for Update: that Python with `-m csv_tidy update --pause` (a console window that waits for Enter) |
-| Linux | `csv-tidy.desktop` and `csv-tidy-update.desktop` in `$XDG_DATA_HOME/applications` (default `~/.local/share/applications`); `csv-tidy.desktop` on the Desktop when `$XDG_DESKTOP_DIR` (default `~/Desktop`) exists | the same |
-| macOS | not supported; start `csv-tidy-ui` | — |
+| Windows | `Datakrit.lnk` on the Desktop and in the Start Menu (Programs); `Update Datakrit.lnk` in the Start Menu | `datakrit-ui` next to the Python that runs the command; for Update: that Python with `-m datakrit update --pause` (a console window that waits for Enter) |
+| Linux | `datakrit.desktop` and `datakrit-update.desktop` in `$XDG_DATA_HOME/applications` (default `~/.local/share/applications`); `datakrit.desktop` on the Desktop when `$XDG_DESKTOP_DIR` (default `~/Desktop`) exists | the same |
+| macOS | not supported; start `datakrit-ui` | — |
 
-- `--folder DIR` puts the shortcuts in `DIR` (one "CSV Tidy" and one "Update CSV Tidy").
+- `--folder DIR` puts the shortcuts in `DIR` (one "Datakrit" and one "Update Datakrit").
   `--no-desktop` skips the Desktop.
-- A file with one of these names is replaced or removed only when it was made by CSV Tidy
-  (Windows: it starts `csv-tidy-ui` or runs `-m csv_tidy`; Linux: it contains
-  `X-CSV-Tidy=1`). Otherwise it is reported as `skipped` and left as it is.
+- A file with one of these names is replaced or removed only when it was made by Datakrit
+  (Windows: it starts `datakrit-ui` or runs `-m datakrit`; Linux: it contains
+  `X-Datakrit=1` and its `Exec` line starts `datakrit-ui` or runs `-m datakrit`). Otherwise
+  it is reported as `skipped` and left as it is.
+- Migration from 1.x: `install` and `remove` also remove the shortcuts that version 1.x made
+  under its earlier name, where it put them: on the Desktop and in the Start Menu (on the
+  Desktop also with `--no-desktop`, since their program is gone after the upgrade), or in
+  `DIR` with `--folder`. The same ownership rule applies with 1.x's program, module, and
+  marker; files with those names that belong to other programs are kept and not reported.
+  A removed old shortcut is reported as `removed`.
 - Each shortcut is reported as `created`, `updated`, `removed`, `absent`, or `skipped`; the
-  exit code is 0, or 2 if the shortcuts cannot be made (for example no `csv-tidy-ui`
+  exit code is 0, or 2 if the shortcuts cannot be made (for example no `datakrit-ui`
   program next to this Python, or Windows PowerShell is unavailable).
 - On Windows the `.lnk` files are written through the Windows Script Host by Windows
   PowerShell; nothing else on the system is changed.
 
 ## Updates
 
-`csv-tidy update [--check] [--version X.Y.Z] [--pause]` is the only command that connects to
+`datakrit update [--check] [--version X.Y.Z] [--pause]` is the only command that connects to
 the internet, and only when it is run.
 
-1. It asks the GitHub API for the latest release (or the release `vX.Y.Z`) of the trusted
-   repositories, in this order: `JudikaM/datakrit`, then `JudikaM/csv-tidy`. CSV Tidy is
-   renamed to Datakrit in 2.0.0, and its repository with it (see
-   [STABILITY.md](STABILITY.md#the-rename-to-datakrit-in-200)); before the rename the first
-   one answers 404, after it the first one answers.
-   - A 404 moves on to the next repository. "GitHub has no ... release" is reported only
-     when every repository answered 404.
-   - Any other failure stops with a hint to download the wheel by hand, and nothing is
-     installed.
+1. It asks the GitHub API of `JudikaM/datakrit` for the latest release (or the release
+   `vX.Y.Z`).
+   - A 404 means "GitHub has no ... release of Datakrit".
+   - Any other failure stops with a hint to download the wheel by hand from the Releases
+     page, and nothing is installed.
    - When GitHub redirected the request, the answer is used only if the final address is
      still on `https://api.github.com/`.
-2. It takes the wheel `datakrit-X.Y.Z-py3-none-any.whl` attached to that release, or, if
-   there is none, `csv_tidy-X.Y.Z-py3-none-any.whl`. A release without either wheel, without
-   a published `sha256:` digest for it, or whose download address does not start with
-   `https://github.com/JudikaM/datakrit/releases/download/` or
-   `https://github.com/JudikaM/csv-tidy/releases/download/` is refused. The release link and
-   the hint name the repository that answered.
+   - `--version` with a version before 2.0.0 is refused before anything is asked (exit code
+     2), with a hint to download that wheel from the Releases page and install it with
+     `python -m pip install <path-to-wheel>`.
+2. It takes the wheel `datakrit-X.Y.Z-py3-none-any.whl` attached to that release. A release
+   without that wheel, without a published `sha256:` digest for it, or whose download address
+   does not start with `https://github.com/JudikaM/datakrit/releases/download/` is refused.
 3. If the release is newer than the installed version (or `--version` was given), it runs
    `python -m pip install --upgrade <wheel URL>#sha256=<digest>` with the Python that runs
-   CSV Tidy. pip refuses a file whose SHA-256 differs. pip also installs missing
+   Datakrit. pip refuses a file whose SHA-256 differs. pip also installs missing
    dependencies (`tomli-w`) from PyPI.
 
-**The switch to Datakrit.** A release with the `datakrit` wheel is a switch release. For it,
-`update` runs these steps with the Python that runs CSV Tidy and prints what happened in
-each:
-
-1. It installs the Datakrit wheel exactly as in step 3 above. CSV Tidy and Datakrit share no
-   files (different module and program names). If this fails, nothing else runs and CSV Tidy
-   stays installed.
-2. Only if this computer has shortcuts that CSV Tidy made (in the places of
-   `shortcut install`, by the ownership rule of [Shortcuts](#shortcuts)), it runs
-   `python -m datakrit shortcut install`, with `--no-desktop` when there was no CSV Tidy
-   shortcut on the Desktop. Datakrit's command replaces CSV Tidy's shortcuts with its own.
-   Shortcuts made with `--folder` are not looked for.
-3. It removes CSV Tidy with `python -m pip uninstall -y csv-tidy`. On Windows a running
-   program cannot be removed (pip would stop halfway), so while `csv-tidy.exe` or
-   `csv-tidy-ui.exe` runs, for example when the update was started as `csv-tidy update`, the
-   command is printed instead, to run after CSV Tidy is closed. The **Update CSV Tidy**
-   shortcut runs `python -m csv_tidy update`, so from there the removal runs by itself. If
-   step 2 failed, this step is skipped and its command printed, so that CSV Tidy's icons keep
-   working.
-4. It says how to start Datakrit: the **Datakrit** icon or `datakrit ui`.
-
-When a step after the first fails, `update` prints the exact command that finishes it.
-`--check` describes the switch (or, for a CSV Tidy release, announces the rename) and changes
-nothing.
+The upgrade from version 1.x, published under the earlier name, is described in the
+[changelog](../CHANGELOG.md#upgrading-to-200).
 
 `--check` only reports. `--pause` waits for Enter at the end (used by the shortcut). Exit
 codes: 0 updated, up to date, or `--check`; 2 if GitHub cannot be reached, the release is
-unusable, pip fails (the installed version is kept), or a later step of the switch to
-Datakrit fails (its command is printed). Close CSV Tidy before updating.
+unusable, pip fails (the installed version is kept), or the version asked for is before
+2.0.0. Close Datakrit before updating.
 
 ## Batch processing
 
-`csv-tidy batch check INPUT...` and `csv-tidy batch clean INPUT...` apply one profile and one
+`datakrit batch check INPUT...` and `datakrit batch clean INPUT...` apply one profile and one
 set of options to several files through the same functions as the single-file commands.
 
 - **Selection.** An `INPUT` that is a file is taken as given, whatever its name. An `INPUT`
@@ -385,21 +365,23 @@ set of options to several files through the same functions as the single-file co
 
 ## Local interface
 
-`csv-tidy ui [--port N] [--no-browser] [--max-file-mb N] [--idle-minutes N]` serves one page
+`datakrit ui [--port N] [--no-browser] [--max-file-mb N] [--idle-minutes N]` serves one page
 from a server bound to `127.0.0.1` and opens it in the default browser.
 
-- **Without a console.** The `csv-tidy-ui` program (a standard pip `gui-scripts` entry point)
+- **Without a console.** The `datakrit-ui` program (a standard pip `gui-scripts` entry point)
   starts the same interface without a console window, opens the browser, and stops by itself
   10 minutes after the page last contacted it; the page checks in every minute while it is
   open, including in a background tab. `--idle-minutes N` gives the console command the same
   behavior (default 0: run until Quit or Ctrl+C). Only requests that carry the session key
-  count as contact. If `csv-tidy-ui` cannot start, the reason is written to
-  `csv-tidy-ui-error.txt` in the temporary folder, because there is no window to show it.
+  count as contact. If `datakrit-ui` cannot start, the reason is written to
+  `datakrit-ui-error.txt` in the temporary folder, because there is no window to show it.
 - **Plain suggestions.** The page explains problems with its own controls, based on each
   issue's `remedy` (see Reports); for other issues it shows the suggestion text.
 - **Look.** A dark theme (default, in the colors of VS Code's "Dark Modern") and a light theme
   (in the colors of VS Code's "Light+"), switched in the side bar and remembered
-  in the browser's local storage for this address. Lists show a chevron that turns while
+  in the browser's local storage for this address (`datakrit-theme`, `datakrit-nav`, and
+  `datakrit-howto` for "How to use"; a choice that 1.x stored under its earlier keys moves to
+  these keys when the page loads). Lists show a chevron that turns while
   they are open, and scroll bars are thin (a 6-pixel thumb). Quit asks for confirmation. Files can be
   dropped onto the file area. The page uses only its own style sheet and scripts
   (`app.css`, `theme.js`, `app.js`); no fonts or styles are loaded from elsewhere.
@@ -444,7 +426,7 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   **How to use** is a short guide that is closed until it is opened (a native disclosure,
   so the keyboard and screen readers get its open or closed state): the six steps in one
   line each, every step name leading to its step like the step navigation, and a tip that
-  saved profiles also work with the `csv-tidy` command. Whether it is open is remembered
+  saved profiles also work with the `datakrit` command. Whether it is open is remembered
   like the theme (where the browser allows storage). Opening it makes the panel longer, not
   wider; in wide windows the panel scrolls on its own when it is taller than the window.
 - **Accessibility.** One `h1`; the landmarks `nav`, `main`, `aside`, and `header` (narrow
@@ -495,16 +477,16 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   changing any setting discards it on the page, and the server refuses to serve a download
   for a result whose settings no longer match.
 - **Several files with the same rules.** The page sends the rules once and the server calls
-  `run_batch` (the function behind `csv-tidy batch clean`/`check`, as a preview) on all chosen
+  `run_batch` (the function behind `datakrit batch clean`/`check`, as a preview) on all chosen
   files, labelled with their own names. Statuses, counts, and the aggregate exit code are the
-  same as `csv-tidy batch` reports for the same files and rules: `valid`/`invalid` (check),
+  same as `datakrit batch` reports for the same files and rules: `valid`/`invalid` (check),
   `ready`/`blocked` (clean), `incomplete`, or `failed`, with the reason. **Details** recomputes
   one file with `check_file`/`clean_file`. Two chosen files whose names differ only in the
   extension or in letter case are refused, because their results would share a name.
-- **Batch downloads.** Per ready file: `NAME.clean.csv`. All results: `csv-tidy-batch.zip`
+- **Batch downloads.** Per ready file: `NAME.clean.csv`. All results: `datakrit-batch.zip`
   with `NAME.clean.csv` and `NAME.output.toml` for every ready file (written by
   `export_clean`), `NAME.report.json` for every file, `batch-summary.json`, and
-  `batch-summary.txt` (the same summary as `csv-tidy batch --format json|text`). Blocked or
+  `batch-summary.txt` (the same summary as `datakrit batch --format json|text`). Blocked or
   incomplete files are never exported. The ZIP is built in memory.
 - **More settings.** `max_field_chars` (1 to 100,000,000, validated by the profile loader,
   applied to the preview, saved in profiles) and three display limits: problems listed (0 to
@@ -524,7 +506,7 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
 - Two artifacts may not refer to the same file.
 - Existing files are refused unless `--overwrite` is given (which still never allows writing
   an input). Without `--overwrite` the final rename itself refuses an existing destination,
-  so a file created by another process while CSV Tidy is writing is never replaced.
+  so a file created by another process while Datakrit is writing is never replaced.
 - `export_clean` refuses a result that is not export-ready and states the actual reason:
   an incomplete scan (with the fatal code and line), a missing header row, or the number of
   remaining output errors (`CleanResult.export_blocked_reason`).
@@ -583,7 +565,8 @@ only the source can be corrected. Text reports do not show it. Source issues kee
 | `batch` | `ok`, `ok_structure_only`, `data_errors`, `failed` (a file failed or was not fully read) | none; `summary` has only `exit_code` |
 
 `--format text|json` selects the report format for stdout and `--report PATH`. JSON contains
-`schema_version` (2 since 1.0.0; 0.x wrote 1), `tool`, `command`, `source`, `scan` (`complete`,
+`schema_version` (3 since 2.0.0; 1.x wrote 2, 0.x wrote 1), `tool` (`name` is
+`datakrit`, `version`), `command`, `source`, `scan` (`complete`,
 `data_records`, `physical_lines`, `blank_lines`, `fatal_error`), `summary`, issue lists, and
 `details` (`limit`, totals, `shown`, `truncated`). `clean` adds `mode`, `output`,
 `transformations` (`order`, `trim`, `normalize`, `neutralize_formulas`, `deduplicate`;
@@ -605,6 +588,7 @@ the same input and settings produce the same report. Status messages go to stder
 
 `schema_version` (profiles) and the report `schema_version` change only for incompatible
 changes; compatible additions keep the version. Profiles are at version 1. Reports went from
-version 1 to 2 in CSV Tidy 1.0.0 (`dry_run`, identifier artifact kinds,
-`output_field_too_large`; see the changelog). The Python API follows the package version.
+version 1 to 2 in 1.0.0 (`dry_run`, identifier artifact kinds, `output_field_too_large`)
+and from 2 to 3 in 2.0.0 (`tool.name` is `datakrit`; nothing else changed); see the
+changelog. The Python API follows the package version.
 See [RELEASE.md](RELEASE.md), and [STABILITY.md](STABILITY.md) for what is covered from 1.0.0.

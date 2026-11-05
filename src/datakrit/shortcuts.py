@@ -1,10 +1,16 @@
 """Shortcuts that start the local interface or run the update, without a command line.
 
-Windows: "CSV Tidy" on the Desktop and in the Start Menu, and "Update CSV Tidy" in the Start
+Windows: "Datakrit" on the Desktop and in the Start Menu, and "Update Datakrit" in the Start
 Menu (``.lnk`` files written through the Windows Script Host). Linux: desktop entries in the
-applications menu (and "CSV Tidy" on the Desktop when that folder exists). A file with one of
-these names that was not made by CSV Tidy is never changed or removed. Functions here never
+applications menu (and "Datakrit" on the Desktop when that folder exists). A file with one of
+these names that was not made by Datakrit is never changed or removed. Functions here never
 print; the CLI reports the outcomes.
+
+Migration: Datakrit was called CSV Tidy until 1.2.0, and that version made the shortcuts
+"CSV Tidy" and "Update CSV Tidy". ``install`` and ``remove`` also remove those, in the places
+where CSV Tidy put them, when they start ``csv-tidy-ui`` or run ``-m csv_tidy``; files with
+those names that belong to another program are kept. CSV Tidy 1.2.0's update switches an
+installation by running ``python -m datakrit shortcut install [--no-desktop]``.
 """
 
 from __future__ import annotations
@@ -14,12 +20,27 @@ import os
 import subprocess
 import sys
 import sysconfig
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
-from .errors import CsvTidyError
+from .errors import DatakritError
 
-MARKER = "X-CSV-Tidy=1"
+MARKER = "X-Datakrit=1"
+
+
+@dataclass(frozen=True)
+class Owner:
+    """How a shortcut is recognized as made by a program: the program it starts, or the
+    module that its Python runs, and on Linux the marker line in the desktop entry."""
+
+    program: str
+    module: str
+    marker: str
+
+
+OWNER = Owner("datakrit-ui", "-m datakrit", MARKER)
+# Migration: the shortcuts that CSV Tidy (1.2.0 and earlier) made.
+LEGACY_OWNER = Owner("csv-tidy-ui", "-m csv_tidy", "X-CSV-Tidy=1")
 
 
 @dataclass(frozen=True)
@@ -30,25 +51,32 @@ class Shortcut:
     description: str
     place: str  # "desktop" or "menu"
     console: bool
+    # Linux file name; Windows uses NAME.lnk.
+    entry: str = ""
+    # A legacy shortcut is only ever removed.
+    legacy: bool = False
+
+    @property
+    def owner(self) -> Owner:
+        return LEGACY_OWNER if self.legacy else OWNER
 
 
 @dataclass(frozen=True)
 class Outcome:
     path: str
-    # created, updated, removed, absent, skipped (belongs to another program), or found
-    # (made by CSV Tidy; only from existing())
+    # created, updated, removed, absent, or skipped (belongs to another program)
     status: str
 
 
 def ui_program() -> Path:
-    """The ``csv-tidy-ui`` program that pip installed next to this Python."""
-    name = "csv-tidy-ui.exe" if sys.platform == "win32" else "csv-tidy-ui"
+    """The ``datakrit-ui`` program that pip installed next to this Python."""
+    name = "datakrit-ui.exe" if sys.platform == "win32" else "datakrit-ui"
     for folder in (Path(sysconfig.get_path("scripts")), Path(sys.executable).parent):
         if (folder / name).exists():
             return folder / name
-    raise CsvTidyError(
-        "the csv-tidy-ui program was not found next to this Python; reinstall CSV Tidy 0.4.0 "
-        "or newer with pip, then run this command again"
+    raise DatakritError(
+        "the datakrit-ui program was not found next to this Python; reinstall Datakrit with "
+        "pip, then run this command again"
     )
 
 
@@ -62,22 +90,40 @@ def console_python() -> Path:
 
 def planned(ui: Path, python: Path, desktop: bool = True) -> list[Shortcut]:
     start = Shortcut(
-        "CSV Tidy", ui, "", "Check and clean CSV files on this computer", "menu", False
+        "Datakrit",
+        ui,
+        "",
+        "Check and clean table files on this computer",
+        "menu",
+        False,
+        "datakrit.desktop",
     )
     items = [start]
     if desktop:
-        items.insert(0, Shortcut(start.name, ui, "", start.description, "desktop", False))
+        items.insert(0, replace(start, place="desktop"))
     items.append(
         Shortcut(
-            "Update CSV Tidy",
+            "Update Datakrit",
             python,
-            "-m csv_tidy update --pause",
-            "Install the latest CSV Tidy release from GitHub",
+            "-m datakrit update --pause",
+            "Install the latest Datakrit release from GitHub",
             "menu",
             True,
+            "datakrit-update.desktop",
         )
     )
     return items
+
+
+def legacy() -> list[Shortcut]:
+    """Migration: the shortcuts that CSV Tidy made, where it made them (also on the Desktop
+    when ``--no-desktop`` is given now, since their program is gone after the switch)."""
+    placeholder = Path("csv-tidy")
+    start = Shortcut("CSV Tidy", placeholder, "", "", "desktop", False, "csv-tidy.desktop", True)
+    update = Shortcut(
+        "Update CSV Tidy", placeholder, "", "", "menu", True, "csv-tidy-update.desktop", True
+    )
+    return [start, replace(start, place="menu"), update]
 
 
 def install(
@@ -87,53 +133,59 @@ def install(
     ui: Path | None = None,
     python: Path | None = None,
 ) -> list[Outcome]:
-    """Create or refresh the shortcuts. With ``folder`` every shortcut goes there."""
+    """Create or refresh the shortcuts, and remove CSV Tidy's. With ``folder`` every
+    shortcut goes there (and only CSV Tidy's shortcuts in that folder are removed)."""
     _supported(platform)
     items = planned(ui or ui_program(), python or console_python(), desktop)
-    if folder is not None:
-        items = [item for item in items if item.place != "desktop"]
-    if platform == "win32":
-        return _windows("install", items, folder)
-    return [_write_entry(item, path) for item, path in _linux_places(items, folder)]
+    return _apply("install", items, folder, platform)
 
 
 def remove(folder: str | Path | None = None, platform: str = sys.platform) -> list[Outcome]:
-    """Remove the shortcuts that CSV Tidy made; others with the same name are kept."""
+    """Remove the shortcuts that Datakrit (or CSV Tidy) made; others with the same name are
+    kept."""
     _supported(platform)
-    placeholder = Path("csv-tidy")
+    placeholder = Path("datakrit")
     items = planned(placeholder, placeholder, desktop=folder is None)
+    return _apply("remove", items, folder, platform)
+
+
+def _apply(
+    action: str, items: list[Shortcut], folder: str | Path | None, platform: str
+) -> list[Outcome]:
+    old = legacy()
     if folder is not None:
         items = [item for item in items if item.place != "desktop"]
+        old = [item for item in old if item.place != "desktop"]
+    every = [*items, *old]
     if platform == "win32":
-        return _windows("remove", items, folder)
-    return [_remove_entry(path) for _, path in _linux_places(items, folder)]
-
-
-def existing(folder: str | Path | None = None, platform: str = sys.platform) -> list[Shortcut]:
-    """The shortcuts that CSV Tidy made, in the places ``install`` uses; nothing is changed.
-
-    The same ownership rule as ``install`` and ``remove`` applies, so a file with one of these
-    names that belongs to another program is not counted. Systems without shortcuts have none.
-    """
-    if platform != "win32" and not platform.startswith("linux"):
-        return []
-    placeholder = Path("csv-tidy")
-    items = planned(placeholder, placeholder, desktop=folder is None)
-    if folder is not None:
-        items = [item for item in items if item.place != "desktop"]
-    if platform == "win32":
-        found = _windows("find", items, folder)
-        return [
-            item for item, outcome in zip(items, found, strict=True) if outcome.status == "found"
+        outcomes = _windows(action, every, folder)
+    else:
+        outcomes = [
+            _remove_entry(path, item.owner)
+            if item.legacy or action == "remove"
+            else _write_entry(item, path)
+            for item, path in _linux_places(every, folder)
         ]
-    return [item for item, path in _linux_places(items, folder) if path.exists() and _ours(path)]
+    # Old shortcuts are reported only when one was actually removed.
+    done = []
+    for outcome, item in zip(outcomes, _placed(every, folder, platform), strict=True):
+        if not item.legacy or outcome.status == "removed":
+            done.append(outcome)
+    return done
+
+
+def _placed(items: list[Shortcut], folder: str | Path | None, platform: str) -> list[Shortcut]:
+    """The items in the order of their outcomes (Linux skips a missing Desktop folder)."""
+    if platform == "win32":
+        return items
+    return [item for item, _ in _linux_places(items, folder)]
 
 
 def _supported(platform: str) -> None:
     if platform != "win32" and not platform.startswith("linux"):
-        raise CsvTidyError(
+        raise DatakritError(
             "shortcuts are made on Windows and Linux; on this system start the interface "
-            "with the csv-tidy-ui program (or csv-tidy ui)"
+            "with the datakrit-ui program (or datakrit ui)"
         )
 
 
@@ -143,7 +195,7 @@ def _supported(platform: str) -> None:
 def _linux_places(items: list[Shortcut], folder: str | Path | None) -> list[tuple[Shortcut, Path]]:
     if folder is not None:
         base = Path(folder)
-        return [(item, base / _entry_name(item)) for item in items]
+        return [(item, base / item.entry) for item in items]
     home = Path(os.environ.get("HOME") or Path.home())
     menu = Path(os.environ.get("XDG_DATA_HOME") or home / ".local" / "share") / "applications"
     desktop = Path(os.environ.get("XDG_DESKTOP_DIR") or home / "Desktop")
@@ -151,14 +203,10 @@ def _linux_places(items: list[Shortcut], folder: str | Path | None) -> list[tupl
     for item in items:
         if item.place == "desktop":
             if desktop.is_dir():
-                places.append((item, desktop / _entry_name(item)))
+                places.append((item, desktop / item.entry))
         else:
-            places.append((item, menu / _entry_name(item)))
+            places.append((item, menu / item.entry))
     return places
-
-
-def _entry_name(item: Shortcut) -> str:
-    return "csv-tidy-update.desktop" if item.console else "csv-tidy.desktop"
 
 
 def _quote(value: str) -> str:
@@ -167,11 +215,18 @@ def _quote(value: str) -> str:
     return f'"{escaped}"'
 
 
-def _ours(path: Path) -> bool:
+def _ours(path: Path, owner: Owner = OWNER) -> bool:
+    """A desktop entry is ours when it has our marker line and starts our program or
+    module."""
     try:
-        return MARKER in path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         return False
+    starts = any(
+        line.startswith("Exec=") and (owner.program in line or owner.module in line)
+        for line in lines
+    )
+    return owner.marker in lines and starts
 
 
 def _write_entry(item: Shortcut, path: Path) -> Outcome:
@@ -198,10 +253,10 @@ def _write_entry(item: Shortcut, path: Path) -> Outcome:
     return Outcome(str(path), "updated" if existed else "created")
 
 
-def _remove_entry(path: Path) -> Outcome:
+def _remove_entry(path: Path, owner: Owner = OWNER) -> Outcome:
     if not path.exists():
         return Outcome(str(path), "absent")
-    if not _ours(path):
+    if not _ours(path, owner):
         return Outcome(str(path), "skipped")
     path.unlink()
     return Outcome(str(path), "removed")
@@ -210,12 +265,13 @@ def _remove_entry(path: Path) -> Outcome:
 # --------------------------------------------------------------------------- Windows
 
 # The shortcut data is passed as JSON in an environment variable, so no value is ever
-# pasted into the script text. A shortcut counts as CSV Tidy's when it starts csv-tidy-ui or
-# runs "-m csv_tidy".
+# pasted into the script text. A shortcut counts as made by its owner when it starts the
+# owner's program or runs its module ("-m datakrit"; for CSV Tidy's: csv-tidy-ui or
+# "-m csv_tidy"). CSV Tidy's shortcuts are only ever removed.
 _WINDOWS_SCRIPT = r"""
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$request = $env:CSV_TIDY_SHORTCUTS | ConvertFrom-Json
+$request = $env:DATAKRIT_SHORTCUTS | ConvertFrom-Json
 $shell = New-Object -ComObject WScript.Shell
 $results = @()
 foreach ($item in $request.items) {
@@ -226,13 +282,12 @@ foreach ($item in $request.items) {
     $ours = $false
     if ($exists) {
         $old = $shell.CreateShortcut($path)
-        $ours = ($old.TargetPath -like '*csv-tidy-ui*') -or ($old.Arguments -like '*-m csv_tidy*')
+        $ours = ($old.TargetPath -like ('*' + $item.program + '*')) -or
+                ($old.Arguments -like ('*' + $item.module + '*'))
     }
-    if ($request.action -eq 'find') {
-        if (-not $exists) { $status = 'absent' }
-        elseif (-not $ours) { $status = 'skipped' }
-        else { $status = 'found' }
-    } elseif ($request.action -eq 'remove') {
+    $action = $request.action
+    if ($item.legacy) { $action = 'remove' }
+    if ($action -eq 'remove') {
         if (-not $exists) { $status = 'absent' }
         elseif (-not $ours) { $status = 'skipped' }
         else { Remove-Item -LiteralPath $path; $status = 'removed' }
@@ -267,11 +322,14 @@ def _windows(action: str, items: list[Shortcut], folder: str | Path | None) -> l
                 "arguments": item.arguments,
                 "description": item.description,
                 "special": "Desktop" if item.place == "desktop" else "Programs",
+                "program": item.owner.program,
+                "module": item.owner.module,
+                "legacy": item.legacy,
             }
             for item in items
         ],
     }
-    env = {**os.environ, "CSV_TIDY_SHORTCUTS": json.dumps(request)}
+    env = {**os.environ, "DATAKRIT_SHORTCUTS": json.dumps(request)}
     try:
         proc = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", _WINDOWS_SCRIPT],
@@ -281,11 +339,11 @@ def _windows(action: str, items: list[Shortcut], folder: str | Path | None) -> l
             check=False,
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        raise CsvTidyError(f"could not run Windows PowerShell to make shortcuts: {exc}") from None
+        raise DatakritError(f"could not run Windows PowerShell to make shortcuts: {exc}") from None
     output = proc.stdout.decode("utf-8", "replace").strip()
     if proc.returncode != 0 or not output:
         detail = proc.stderr.decode("utf-8", "replace").strip().splitlines()
-        raise CsvTidyError(
+        raise DatakritError(
             "Windows could not make the shortcuts"
             + (f": {detail[0]}" if detail else "")
             + ". Nothing else was changed."

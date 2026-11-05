@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="csv-tidy-token" content="{{token}}">
-<meta name="csv-tidy-max-file-mb" content="{{max_file_mb}}">
-<title>CSV Tidy {{version}}: check and clean a CSV file</title>
+<meta name="datakrit-token" content="{{token}}">
+<meta name="datakrit-max-file-mb" content="{{max_file_mb}}">
+<title>Datakrit {{version}}: check and clean a CSV file</title>
 <link rel="icon" type="image/png" href="logo-mark.png">
 <link rel="stylesheet" href="app.css">
 <script src="theme.js"></script>
@@ -46,12 +46,12 @@
   <section class="session" aria-labelledby="session-title">
     <h2 class="nav-heading" id="session-title">In this session</h2>
     <ul class="session-list" id="session-files"></ul>
-    <p class="nav-hint" id="session-hint">Files stay here only while CSV Tidy runs. Nothing is kept after you quit, so there is no list of recent files.</p>
+    <p class="nav-hint" id="session-hint">Files stay here only while Datakrit runs. Nothing is kept after you quit, so there is no list of recent files.</p>
   </section>
   <div class="nav-foot">
     <div class="brand">
       <img class="logo" src="logo-mark.png" alt="" width="28" height="28">
-      <span class="nav-label brand-name">CSV Tidy</span>
+      <span class="nav-label brand-name">Datakrit</span>
       <span class="nav-label chip mono version">{{version}}</span>
     </div>
     <p class="nav-label"><span class="pill pill-ok"><span class="pulse" aria-hidden="true"></span>Offline &amp; local</span></p>
@@ -64,7 +64,7 @@
     </button>
     <button type="button" id="quit" class="nav-row danger-hover">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
-      <span class="nav-label">Quit CSV Tidy</span>
+      <span class="nav-label">Quit Datakrit</span>
     </button>
   </div>
 </nav>
@@ -77,7 +77,7 @@
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
   </button>
   <img class="logo" src="logo-mark.png" alt="" width="24" height="24">
-  <span class="brand-name">CSV Tidy</span>
+  <span class="brand-name">Datakrit</span>
 </header>
 
 <main id="main" tabindex="-1">
@@ -211,7 +211,7 @@
   <h2 id="h-rules"><span class="num" aria-hidden="true">3</span> Describe the columns</h2>
   <div id="rules-empty" class="empty">
     <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg>
-    <p>After a file is loaded, each column is listed here. Every column starts as plain text: CSV Tidy never guesses which columns are numbers or dates. You decide, or you load a profile that already contains the rules.</p>
+    <p>After a file is loaded, each column is listed here. Every column starts as plain text: Datakrit never guesses which columns are numbers or dates. You decide, or you load a profile that already contains the rules.</p>
   </div>
   <div id="rules" hidden>
     <div class="row tools">
@@ -408,7 +408,7 @@
 
 <aside class="side-panel" aria-labelledby="side-panel-title">
   <h2 id="side-panel-title" class="panel-title">About this page</h2>
-  <p>CSV Tidy never guesses types or formats and repairs only what you select. The same engine runs behind the <code class="chip">csv-tidy</code> command; profiles saved here work there.</p>
+  <p>Datakrit never guesses types or formats and repairs only what you select. The same engine runs behind the <code class="chip">datakrit</code> command; profiles saved here work there.</p>
   <dl class="panel-rows">
     <div class="panel-row">
       <dt><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>Profile</dt>
@@ -446,7 +446,7 @@
       <li><a href="#step-5" data-step="5">Preview</a>: See which values will change.</li>
       <li><a href="#step-6" data-step="6">Save</a>: Download the clean copy and the report.</li>
     </ol>
-    <p class="howto-tip">Save your rules as a profile to reuse them here or with the <code class="chip">csv-tidy</code> command.</p>
+    <p class="howto-tip">Save your rules as a profile to reuse them here or with the <code class="chip">datakrit</code> command.</p>
   </details>
   <p class="panel-foot">Local only — nothing leaves this computer</p>
 </aside>
@@ -459,12 +459,12 @@
     <span class="dialog-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
     </span>
-    <h2 id="quit-title">Quit CSV Tidy?</h2>
+    <h2 id="quit-title">Quit Datakrit?</h2>
   </div>
-  <p>This stops CSV Tidy on this computer and removes its temporary copies. Rules and previews that you did not save are cleared. Your original files are not changed.</p>
+  <p>This stops Datakrit on this computer and removes its temporary copies. Rules and previews that you did not save are cleared. Your original files are not changed.</p>
   <div class="dialog-actions">
-    <button type="button" id="quit-cancel" class="secondary" autofocus>Stay in CSV Tidy</button>
-    <button type="button" id="quit-confirm" class="danger">Quit CSV Tidy</button>
+    <button type="button" id="quit-cancel" class="secondary" autofocus>Stay in Datakrit</button>
+    <button type="button" id="quit-confirm" class="danger">Quit Datakrit</button>
   </div>
 </dialog>
 

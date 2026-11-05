@@ -1,0 +1,279 @@
+{
+ "customers-us.toml batch check": [
+  1,
+  "bd48f2197a78a84f5ae2da95c82b175d41ffa0caa6a8f75982ad9c79e52079bc"
+ ],
+ "customers-us.toml batch clean": [
+  1,
+  "66ee134bf5dc93eea4a874c362cf85370452599392ff086dfb75dc589c1af5fd"
+ ],
+ "customers-us.toml customers_fixable.csv": {
+  "check": [
+   1,
+   "ef5cfc179b597e6f8fdd43d9cc6b1fe031f74a7eef1f5e7a060b73c995209c91"
+  ],
+  "clean": [
+   0,
+   "3fbf61b5952f185b39611916abab83989a151855c699b018d87869c0cfd367e7"
+  ],
+  "csv": "de1d7eaa22fdcfcfee15fce99628b908315b9dc0fe26763804b1e00b3d59bc35",
+  "output_profile": "5ff874a8371283dc246aec9b7b2ecf00f5dc093b15c145230fb748b96e8361a3"
+ },
+ "customers-us.toml customers_trim_duplicates.csv": {
+  "check": [
+   0,
+   "d80faf203c4b4e82318ec019509672d657da90342c9836edb6ede71e25d54769"
+  ],
+  "clean": [
+   1,
+   "df2b823c93b7eebbd25fe12cd0cf67cc1b04efc6edab1f5a0f061664d077875b"
+  ],
+  "csv": "03e8d0a443c03cd4b956825f10f9a2cb4a3b8519e18b8629a71df0c36af96675",
+  "output_profile": "5ff874a8371283dc246aec9b7b2ecf00f5dc093b15c145230fb748b96e8361a3"
+ },
+ "customers-us.toml customers_valid.csv": {
+  "check": [
+   0,
+   "2cda37f188f509801c45a63b9352136cfe5dea2aab5fc60d269b225ad05e538b"
+  ],
+  "clean": [
+   0,
+   "1099ac0195dcec084e52bfa4c5b0f9b35812d37d6a21bc324b96210d9dbd4be1"
+  ],
+  "csv": "de1d7eaa22fdcfcfee15fce99628b908315b9dc0fe26763804b1e00b3d59bc35",
+  "output_profile": "5ff874a8371283dc246aec9b7b2ecf00f5dc093b15c145230fb748b96e8361a3"
+ },
+ "customers-us.toml transactions_canonical.csv": {
+  "check": [
+   1,
+   "c31a5367977b8ed8f2fa78ab9e104b3c7b12a6dc3e7beaafa7816f975303e575"
+  ],
+  "clean": [
+   1,
+   "91b5a0f7e4f6d836145eb19e3ed8347471e1d562adf8c43224c2dd3d9dcacbbd"
+  ],
+  "csv": "bab7900751beb80200bbbc9a6cd75b3c618967b93b241bebb5ba248ab2c05bfd",
+  "output_profile": "5ff874a8371283dc246aec9b7b2ecf00f5dc093b15c145230fb748b96e8361a3"
+ },
+ "customers-us.toml transactions_fixable.csv": {
+  "check": [
+   1,
+   "cb4e46f502ee4e9557a6601dad0eb39dd6b5c92040808fe455f85e645043592c"
+  ],
+  "clean": [
+   1,
+   "f8757fb5338df66bfc34ac0d467ce8e5fff43d45752d363fe3b5defce53bc4d5"
+  ],
+  "csv": "2065b81606e198915e684b1a0d94a1caed32ff26837e1559c5946d917e05e48e",
+  "output_profile": "5ff874a8371283dc246aec9b7b2ecf00f5dc093b15c145230fb748b96e8361a3"
+ },
+ "customers-us.toml transactions_unfixable.csv": {
+  "check": [
+   1,
+   "ca8355d30f595d6ee948a490bd600c2ad4869ebd6480de1c42ccb635ed93152e"
+  ],
+  "clean": [
+   1,
+   "228636c10f605c9b690c532ab8dc8ca604f67beb543c495f0c7c42373cbbdd24"
+  ],
+  "csv": "6b2fecbbccd56d664bb4eea954b0b8bf6dbfc2c2a8746615f44b76dac0547570",
+  "output_profile": "5ff874a8371283dc246aec9b7b2ecf00f5dc093b15c145230fb748b96e8361a3"
+ },
+ "customers-us.toml transactions_valid.csv": {
+  "check": [
+   1,
+   "9f1b038aa426ca15ad60b606b62a2f6ec567784d61d67747eefcd3b6135b47df"
+  ],
+  "clean": [
+   1,
+   "3a37cd2ea27aa0a6dcb34130b616d4d50b20ad006d555c3aec2c2bf607126842"
+  ],
+  "csv": "646272850b817ac4d5a11359d44759944d64ee5764a6fe1d0fad552bdb37c9cf",
+  "output_profile": "5ff874a8371283dc246aec9b7b2ecf00f5dc093b15c145230fb748b96e8361a3"
+ },
+ "transactions-canonical.toml batch check": [
+  1,
+  "cd5392829a2cc5a42557406f25cf795328280cf22d29c6d1ce7e4dfbec3cd73a"
+ ],
+ "transactions-canonical.toml batch clean": [
+  1,
+  "8a519496f73d7e7486111b6acf4de5f8a532d6aa41acba64135c7a8f5e55c5ff"
+ ],
+ "transactions-canonical.toml customers_fixable.csv": {
+  "check": [
+   1,
+   "a77aa805610b4eff02220f607b7c7da6e73cc9371d8e62ae06806c926639e7c0"
+  ],
+  "clean": [
+   1,
+   "fd427dbbae8393801cb5635c7c5023a839259b4c2f26dac7dae9781d041e7f4e"
+  ],
+  "csv": "11e6700d886657ae7b8f5e1994fbb61f17d02e287e6624a19e546531d6fdfa3b",
+  "output_profile": "51f13bdfaec7a971933ba8148aa160889300a9255355923ec479819a0550520e"
+ },
+ "transactions-canonical.toml customers_trim_duplicates.csv": {
+  "check": [
+   1,
+   "5240ce0654d60317bb9683df30d42559909a34f0df9335ef5885049f887bb9e0"
+  ],
+  "clean": [
+   1,
+   "6f3701622944dd2c15b606af411951b9302f1da48d414eb34b2c24ff7e2dcffe"
+  ],
+  "csv": "2e3603ee514131d11cc31f691f67118bac7303949569fa9f89e6049614d05299",
+  "output_profile": "51f13bdfaec7a971933ba8148aa160889300a9255355923ec479819a0550520e"
+ },
+ "transactions-canonical.toml customers_valid.csv": {
+  "check": [
+   1,
+   "23c8a19cd0211ac27f56c22d3dc438c62b5e20e3e4ae57c666144cf4a9f9e972"
+  ],
+  "clean": [
+   1,
+   "c2cbf1f82380e0ba940c1f4650c124c8af30eef1a1557ac9fa0cb45c943434bc"
+  ],
+  "csv": "a09dcee478b9ab62d22a9b719311eb991b7540d20dadf24cc9177d58580910e1",
+  "output_profile": "51f13bdfaec7a971933ba8148aa160889300a9255355923ec479819a0550520e"
+ },
+ "transactions-canonical.toml transactions_canonical.csv": {
+  "check": [
+   0,
+   "ac19212aac7e25cbd9d14d5d045657d1acabdcd7a804c1112fb3eddae9a651c4"
+  ],
+  "clean": [
+   0,
+   "f42e28c2ea3bdd1e73a5cf1f805ea0bba6361740ba2ae6d2a23a740b37b80085"
+  ],
+  "csv": "bab7900751beb80200bbbc9a6cd75b3c618967b93b241bebb5ba248ab2c05bfd",
+  "output_profile": "51f13bdfaec7a971933ba8148aa160889300a9255355923ec479819a0550520e"
+ },
+ "transactions-canonical.toml transactions_fixable.csv": {
+  "check": [
+   1,
+   "cd1151c30cfabdcb44a5b4068926b8f6345dbb25498a1b32561f36bd3d244fe4"
+  ],
+  "clean": [
+   1,
+   "c547e2dc2417ee6aac25e94e515002418ba1214eb3d29fd135dce5534c87f309"
+  ],
+  "csv": "2065b81606e198915e684b1a0d94a1caed32ff26837e1559c5946d917e05e48e",
+  "output_profile": "51f13bdfaec7a971933ba8148aa160889300a9255355923ec479819a0550520e"
+ },
+ "transactions-canonical.toml transactions_unfixable.csv": {
+  "check": [
+   1,
+   "1c11079c19949c4643448082864e8c2eb74d916b0b60c4cad1de3cb83aabc52b"
+  ],
+  "clean": [
+   1,
+   "93ff618460fa6c71c1860ab6279e0dbd2498112b05febfecb9934ff830293931"
+  ],
+  "csv": "6b2fecbbccd56d664bb4eea954b0b8bf6dbfc2c2a8746615f44b76dac0547570",
+  "output_profile": "51f13bdfaec7a971933ba8148aa160889300a9255355923ec479819a0550520e"
+ },
+ "transactions-canonical.toml transactions_valid.csv": {
+  "check": [
+   1,
+   "06f314c179f0f86a4c67257a5c7ae1ebe47eeae1c52307d98f910cc344ceb18b"
+  ],
+  "clean": [
+   1,
+   "f96c676df4bc82b29929b56b7a6a58911d85968d51abacfe7b7b07ed81a07117"
+  ],
+  "csv": "646272850b817ac4d5a11359d44759944d64ee5764a6fe1d0fad552bdb37c9cf",
+  "output_profile": "51f13bdfaec7a971933ba8148aa160889300a9255355923ec479819a0550520e"
+ },
+ "transactions-id.toml batch check": [
+  1,
+  "47860e0e248d44ed9d48dcf83dd5eb1b58fbae263c53ad64c1104665050a314e"
+ ],
+ "transactions-id.toml batch clean": [
+  1,
+  "8a0150965d3621bc6f59c99737893ab22c7fa28b36f7f30c7c497a34c5b5ee6a"
+ ],
+ "transactions-id.toml customers_fixable.csv": {
+  "check": [
+   1,
+   "e2640a83416c4c0e5d3d43cab5308b35af294c07aa725014e0730bdbd2d72eea"
+  ],
+  "clean": [
+   1,
+   "1323ea72cd5335460c886643aa7fdc6d1e464b4d8aeaa98d83adb7e975ffbc6a"
+  ],
+  "csv": "9524f934150da4fca245ce82ebe1f63c13209f08fe5514a11007d7b6ed5b0eaf",
+  "output_profile": "4a0cc42daa8fe4b03368a9b1f94cc42785542f3be694926490934464d2adeda8"
+ },
+ "transactions-id.toml customers_trim_duplicates.csv": {
+  "check": [
+   1,
+   "3d0cae2c357ddb3ad26e98c80959b93ee903ff5fff1b99d5e8c6adffc764712e"
+  ],
+  "clean": [
+   1,
+   "698bd269c0f6412f4a01b04a750da618988eb37350b95a99a91eef4cd67029b3"
+  ],
+  "csv": "bb570c8631fb52e10f544a42f10ffd10c87c6650a3f4b825745853099ea07c22",
+  "output_profile": "4a0cc42daa8fe4b03368a9b1f94cc42785542f3be694926490934464d2adeda8"
+ },
+ "transactions-id.toml customers_valid.csv": {
+  "check": [
+   1,
+   "4f6a1b53e48fe79948cb6521c2de60f0e5206dc8bf6672011041890aaffc8697"
+  ],
+  "clean": [
+   1,
+   "3c014c7be4032a1fd388f32c8f5ece3884655cca366705bf19acdec82145a3ee"
+  ],
+  "csv": "1c70aad072499c37ae1fc013c58a5ef7e496ad3554ff59286429eba18966a98e",
+  "output_profile": "4a0cc42daa8fe4b03368a9b1f94cc42785542f3be694926490934464d2adeda8"
+ },
+ "transactions-id.toml transactions_canonical.csv": {
+  "check": [
+   1,
+   "2634d3bf8d1f7f85effbbd3776973326d04e9f852f3354d466c42b23032dbc22"
+  ],
+  "clean": [
+   1,
+   "90dced4b933bee1e90938d45fc8f4dc40f6db58a9cf5a452a3e9cf17c5c212b6"
+  ],
+  "csv": "3a0772448dc51af8e0e5b9d09077232c347b4bbafe4c5d462de8d6a4870f0483",
+  "output_profile": "4a0cc42daa8fe4b03368a9b1f94cc42785542f3be694926490934464d2adeda8"
+ },
+ "transactions-id.toml transactions_fixable.csv": {
+  "check": [
+   1,
+   "d56a446fd0e5e96c30515707438d76c5cfef0ccdc6e7f66b39b6b0955f7472c9"
+  ],
+  "clean": [
+   0,
+   "55b4836eb5b4fc92350ba7d3a18debc817a972f643d3cb0e1fcacf225ad23a82"
+  ],
+  "csv": "2b588629903f423704532ebde06d3245f17e363e8fc7fcac2a95c14a0848ede8",
+  "output_profile": "4a0cc42daa8fe4b03368a9b1f94cc42785542f3be694926490934464d2adeda8"
+ },
+ "transactions-id.toml transactions_unfixable.csv": {
+  "check": [
+   1,
+   "13c6e5dca318bc908dc39ed82481f05318d8bb97fae9232160ada35f75e88124"
+  ],
+  "clean": [
+   1,
+   "329861cab70a0b9604c42292399ee76b291b9ac2047a912b05585eda44466fc9"
+  ],
+  "csv": "b65839cdf7ab7ac8aba90acb81c515585cfd1dfc6048f5780b356b78ddd2d663",
+  "output_profile": "4a0cc42daa8fe4b03368a9b1f94cc42785542f3be694926490934464d2adeda8"
+ },
+ "transactions-id.toml transactions_valid.csv": {
+  "check": [
+   0,
+   "df1d2297f79a37ff64f7ad7002a831aab49726d38f5872acddfe8b2715604ceb"
+  ],
+  "clean": [
+   0,
+   "e311f0c4e6f7e3dfb1946db44e1746f38bf0de62bb014292ca396dbefff1b995"
+  ],
+  "csv": "2b588629903f423704532ebde06d3245f17e363e8fc7fcac2a95c14a0848ede8",
+  "output_profile": "4a0cc42daa8fe4b03368a9b1f94cc42785542f3be694926490934464d2adeda8"
+ },
+ "version": "1.2.0"
+}

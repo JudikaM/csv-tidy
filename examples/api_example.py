@@ -5,7 +5,7 @@ Run it from anywhere: python examples/api_example.py
 
 from pathlib import Path
 
-from csv_tidy import check_file, clean_file, load_profile
+from datakrit import check_file, clean_file, load_profile
 
 HERE = Path(__file__).resolve().parent
 profile = load_profile(HERE / "profiles" / "transactions-id.toml")

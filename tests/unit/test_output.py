@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from csv_tidy import OutputError, clean_file, export_clean
-from csv_tidy import output as output_module
-from csv_tidy.output import render_csv, validate_artifact_paths, write_atomic
+from datakrit import OutputError, clean_file, export_clean
+from datakrit import output as output_module
+from datakrit.output import render_csv, validate_artifact_paths, write_atomic
 
 
 def test_render_csv_quotes_and_line_endings():
@@ -119,7 +119,7 @@ def test_profile_write_failure_after_csv_is_reported(write, tmp_path, monkeypatc
 
 
 def test_unencodable_output_fails_before_writing(write, tmp_path):
-    from csv_tidy import Overrides
+    from datakrit import Overrides
 
     result = clean_file(
         write("u.csv", "name\nZoë 日本\n"), overrides=Overrides(output_encoding="latin-1")

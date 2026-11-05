@@ -6,9 +6,9 @@ import tomllib
 import pytest
 from conftest import run_cli
 
-from csv_tidy import Overrides, ProfileError, clean_file, load_profile, run_batch, select_inputs
-from csv_tidy.reporting import clean_report, render_clean_text
-from csv_tidy.schema import profile_from_dict, profile_to_toml
+from datakrit import Overrides, ProfileError, clean_file, load_profile, run_batch, select_inputs
+from datakrit.reporting import clean_report, render_clean_text
+from datakrit.schema import profile_from_dict, profile_to_toml
 
 # Values that start with a formula trigger (OWASP: = + - @ tab CR), and values that do not.
 CSV = (

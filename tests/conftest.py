@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from csv_tidy.cli import main
+from datakrit.cli import main
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "examples"

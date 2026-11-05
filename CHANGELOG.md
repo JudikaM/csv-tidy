@@ -4,7 +4,97 @@ All notable changes are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as described in [docs/RELEASE.md](docs/RELEASE.md).
 
+Datakrit was called CSV Tidy until 1.2.0.
+
 ## [Unreleased]
+
+## [2.0.0] - 2026-11-05
+
+The product is called **Datakrit**: check and clean table files, explicitly. Every program,
+module, distribution, error class, report `tool.name`, shortcut, interface storage key, and
+the repository address carry the new name, and there are no aliases for the old names. The
+aliases deprecated in 1.0.0 are removed. Data behavior is unchanged: profiles keep
+`schema_version = 1` and give the same results, and reports change only in `tool.name` and
+`schema_version`. Supported input is still CSV with the delimiters `,`, `;`, and tab.
+
+### Upgrading to 2.0.0
+
+| Item | 1.x | 2.0.0 |
+|------|-----|-------|
+| Commands | `csv-tidy`, `csv-tidy-ui` | `datakrit`, `datakrit-ui` |
+| Module | `python -m csv_tidy`, `import csv_tidy` | `python -m datakrit`, `import datakrit` |
+| Distribution and wheel | `csv-tidy`, `csv_tidy-X.Y.Z-py3-none-any.whl` | `datakrit`, `datakrit-X.Y.Z-py3-none-any.whl` |
+| Error class | `CsvTidyError` | `DatakritError` |
+| Options removed (deprecated in 1.0.0) | `--schema`, `--output-schema`, `--output-schemas` | `--profile`, `--output-profile`, `--output-profiles` |
+| Keywords removed (deprecated in 1.0.0) | `export_clean(output_schema=...)`, `run_batch(output_schemas=...)` | `output_profile=...`, `output_profiles=...` |
+| Reports | `tool.name` `csv-tidy`, `schema_version` 2 | `tool.name` `datakrit`, `schema_version` 3 |
+| Shortcuts | "CSV Tidy", "Update CSV Tidy" (`csv-tidy.desktop`, `csv-tidy-update.desktop` on Linux) | "Datakrit", "Update Datakrit" (`datakrit.desktop`, `datakrit-update.desktop`) |
+| Interface storage (browser) | `csv-tidy-theme`, `csv-tidy-nav`, `csv-tidy-howto` | `datakrit-theme`, `datakrit-nav`, `datakrit-howto` (moved on the first load) |
+| Repository | `https://github.com/JudikaM/csv-tidy` | `https://github.com/JudikaM/datakrit` (the old address redirects) |
+
+Unchanged: profiles (`schema_version = 1`, including output profiles written by 1.x), every
+option and keyword other than the removed ones, exit codes, issue codes, and every report
+field other than `tool.name` and `schema_version`. Programs that read reports and accept
+`schema_version` 2 can accept 3 the same way.
+
+**From CSV Tidy 1.2.0**, `csv-tidy update` (or the **Update CSV Tidy** entry) switches by
+itself: it installs Datakrit 2.0.0 from its release, verified with the published SHA-256;
+if the computer has shortcuts that CSV Tidy made, it runs
+`python -m datakrit shortcut install` (with `--no-desktop` when there was no icon on the
+Desktop), which replaces them with Datakrit's; it removes CSV Tidy with
+`python -m pip uninstall -y csv-tidy` (on Windows, when CSV Tidy is still running, it prints
+that command instead); and it says how to start Datakrit. `csv-tidy update --check` describes
+the switch first.
+
+**From CSV Tidy 1.1.x or older**, switch by hand:
+
+1. Download `datakrit-2.0.0-py3-none-any.whl` from the
+   [Releases page](https://github.com/JudikaM/datakrit/releases).
+2. Run `python -m pip install <path-to-wheel>` with the Python that has CSV Tidy.
+3. If you made shortcuts, run `datakrit shortcut install` (add `--no-desktop` if you had no
+   icon on the Desktop); it replaces the old shortcuts.
+4. Run `python -m pip uninstall csv-tidy`.
+
+Then replace `csv-tidy` with `datakrit` in scripts, `csv_tidy` with `datakrit` in imports, and
+`CsvTidyError` with `DatakritError`.
+
+### Changed
+
+- The programs are `datakrit` and `datakrit-ui`, the module and distribution `datakrit`
+  (`python -m datakrit`), and the wheel `datakrit-X.Y.Z-py3-none-any.whl`. The package
+  description carries the tagline "Check and clean table files, explicitly."
+- The base exception is `DatakritError` (`ProfileError`, `InputError`, and `OutputError`
+  derive from it as before).
+- Reports: `tool.name` is `datakrit` and `schema_version` is `3`. Nothing else in the reports
+  changed; the results of every example profile were compared with those of 1.2.0.
+- Generated text names Datakrit: help, epilogs, messages, the error prefix
+  `datakrit: error:`, profile header comments, the temporary-file suffix `.datakrit.tmp`, and
+  the User-Agent `datakrit/<version>` of `update`.
+- `update` installs only releases of `JudikaM/datakrit` with the wheel
+  `datakrit-X.Y.Z-py3-none-any.whl`, with the same SHA-256 and download-address checks as
+  before. `update --version` with a version before 2.0.0 is refused (exit code 2) with a hint
+  to install that wheel by hand from the Releases page.
+- Shortcuts are called "Datakrit" and "Update Datakrit", with the description "Check and
+  clean table files on this computer". `shortcut install` and `shortcut remove` also remove
+  the shortcuts that 1.x made, where 1.x put them (on the Desktop also with `--no-desktop`, or
+  in the `--folder` given), when they start the 1.x programs; files with those names that
+  belong to other programs are kept.
+- The local interface shows Datakrit in the page title, the side bar, the "About this page"
+  text, the dialogs, and the version chip, and uses Datakrit's icon as the page icon and in
+  the side bar (`logo-mark.png`, 64 x 64). Its theme, side-bar, and "How to use" choices are
+  stored as `datakrit-theme`, `datakrit-nav`, and `datakrit-howto`; a choice stored by 1.x
+  moves to its new key when the page loads.
+- The repository is `https://github.com/JudikaM/datakrit`.
+
+### Removed
+
+- The options `--schema`, `--output-schema`, and `--output-schemas`, and the keyword
+  arguments `export_clean(output_schema=...)` and `run_batch(output_schemas=...)`, deprecated
+  in 1.0.0. A removed option is a usage error (exit code 2) that names its replacement; a
+  removed keyword raises `TypeError`.
+- `logo.png` (the logo with the old name) from the interface files.
+- The update path of 1.2.0 that looked in two repositories and switched installations; 2.0.0
+  updates only itself.
 
 ## [1.2.0] - 2026-11-05
 
@@ -550,3 +640,17 @@ before this release:
 
 - Clarified that parsing follows Python's `csv` module in strict mode: a quote inside an
   unquoted field is kept literally.
+
+[Unreleased]: https://github.com/JudikaM/datakrit/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/JudikaM/datakrit/compare/v1.2.0...v2.0.0
+[1.2.0]: https://github.com/JudikaM/datakrit/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/JudikaM/datakrit/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/JudikaM/datakrit/compare/v1.0.1...v1.1.0
+[1.0.1]: https://github.com/JudikaM/datakrit/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/JudikaM/datakrit/compare/v0.5.0...v1.0.0
+[0.5.0]: https://github.com/JudikaM/datakrit/compare/v0.4.1...v0.5.0
+[0.4.1]: https://github.com/JudikaM/datakrit/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/JudikaM/datakrit/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/JudikaM/datakrit/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/JudikaM/datakrit/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/JudikaM/datakrit/releases/tag/v0.1.0

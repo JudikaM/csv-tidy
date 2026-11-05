@@ -1,12 +1,12 @@
-"""`csv-tidy profile init`: explicit templates, guided answers, and safe writing."""
+"""`datakrit profile init`: explicit templates, guided answers, and safe writing."""
 
 import io
 
 import pytest
 from conftest import EXAMPLES, run_cli, sha256
 
-from csv_tidy import check_file, clean_file, load_profile
-from csv_tidy.schema import resolve_settings
+from datakrit import check_file, clean_file, load_profile
+from datakrit.schema import resolve_settings
 
 FIXABLE = EXAMPLES / "transactions_fixable.csv"
 

@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from csv_tidy.formats import (
+from datakrit.formats import (
     compile_date_format,
     explain_invalid_number,
     format_number,

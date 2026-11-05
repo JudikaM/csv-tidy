@@ -1,4 +1,4 @@
-/* CSV Tidy local interface. Two themes: "cosmos" (dark, the default) and "light".
+/* Datakrit local interface. Two themes: "cosmos" (dark, the default) and "light".
    Everything is local: system fonts are used when Inter or JetBrains Mono are not installed. */
 
 /* Dark (the default; stored as "cosmos" so a saved choice keeps working) follows VS Code's

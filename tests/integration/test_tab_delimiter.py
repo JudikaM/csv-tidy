@@ -4,9 +4,9 @@ import tomllib
 
 from conftest import run_cli
 
-from csv_tidy import check_file, clean_file
-from csv_tidy.reader import read_csv
-from csv_tidy.schema import profile_from_dict
+from datakrit import check_file, clean_file
+from datakrit.reader import read_csv
+from datakrit.schema import profile_from_dict
 
 TSV = 'id\tamount\tnote\n1\t1.250,50\tsays "hi", ok\n2\t 980,00 \tsemi;colon\n'
 PROFILE = """

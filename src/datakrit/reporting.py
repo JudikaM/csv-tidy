@@ -12,7 +12,7 @@ from .output import OUTPUT_CSV, OUTPUT_PROFILE, ArtifactOutcome, artifact_label
 from .schema import DEFAULT_DELIMITER, DEFAULT_ENCODING, Settings, delimiter_option
 from .validation import ERROR, FATAL, WARNING, Issue
 
-REPORT_SCHEMA_VERSION = 2
+REPORT_SCHEMA_VERSION = 3
 VALUE_LIMIT = 200
 
 
@@ -116,7 +116,7 @@ def shown_arg(value: str) -> str:
 def _command(action: str, source: dict[str, Any], *extra: str) -> str:
     """A command for the same input. Without a profile, the non-default source settings are
     repeated; with one, options given on the command line must be repeated by the user."""
-    parts = ["csv-tidy", action, shown_arg(source["path"])]
+    parts = ["datakrit", action, shown_arg(source["path"])]
     if source["profile"]:
         parts += ["--profile", shown_arg(source["profile"])]
     else:
@@ -230,7 +230,7 @@ def check_report(
     coverage = coverage_dict(result.settings, result.header)
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
-        "tool": {"name": "csv-tidy", "version": __version__},
+        "tool": {"name": "datakrit", "version": __version__},
         "command": "check",
         "verdict": _check_verdict(status, result.errors, result.warnings, scan, coverage),
         "source": source,
@@ -345,7 +345,7 @@ def clean_report(
         ]
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
-        "tool": {"name": "csv-tidy", "version": __version__},
+        "tool": {"name": "datakrit", "version": __version__},
         "command": "clean",
         "mode": mode,
         "verdict": {"state": status, "headline": verdict},
@@ -550,7 +550,7 @@ def _scan_line(scan: dict[str, Any]) -> str:
 def render_check_text(report: dict[str, Any]) -> str:
     s, d = report["summary"], report["details"]
     lines = [
-        f"CSV Tidy {report['tool']['version']} - check",
+        f"Datakrit {report['tool']['version']} - check",
         f"Verdict: {report['verdict']['headline']}",
         *_source_lines(report["source"]),
         _scan_line(report["scan"]),
@@ -592,7 +592,7 @@ def render_clean_text(report: dict[str, Any]) -> str:
     mode = "dry run, nothing written" if report["mode"] == "dry_run" else "apply"
     o, t, c = report["output"], report["transformations"], report["changes"]
     lines = [
-        f"CSV Tidy {report['tool']['version']} - clean ({mode})",
+        f"Datakrit {report['tool']['version']} - clean ({mode})",
         f"Verdict: {report['verdict']['headline']}",
         *_source_lines(report["source"]),
         f"Output: delimiter {o['delimiter']!r}, encoding {o['encoding']}, "

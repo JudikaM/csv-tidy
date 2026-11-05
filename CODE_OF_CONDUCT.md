@@ -59,8 +59,8 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the maintainer of CSV Tidy. Open a
-[public issue](https://github.com/JudikaM/csv-tidy/issues/new) titled
+reported to the maintainer of Datakrit. Open a
+[public issue](https://github.com/JudikaM/datakrit/issues/new) titled
 "Conduct contact request" **without any details**, and the maintainer will
 arrange a private way to share them. Content on GitHub can also be reported
 directly to GitHub with **Report content** in the menu of a comment, issue, or

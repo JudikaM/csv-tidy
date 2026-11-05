@@ -1,9 +1,9 @@
-# Contributing to CSV Tidy
+# Contributing to Datakrit
 
 Thank you for helping. Bug reports with a small synthetic reproducer are as valuable as code.
 Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md);
 questions and early ideas are welcome in
-[Discussions](https://github.com/JudikaM/csv-tidy/discussions).
+[Discussions](https://github.com/JudikaM/datakrit/discussions).
 
 ## Development setup
 
@@ -12,8 +12,8 @@ Python 3.11 or newer. The tested tool versions are pinned in `constraints-dev.tx
 Windows PowerShell:
 
 ```powershell
-git clone https://github.com/JudikaM/csv-tidy.git
-cd csv-tidy
+git clone https://github.com/JudikaM/datakrit.git
+cd datakrit
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -c constraints-dev.txt -e ".[dev]"
 ```
@@ -39,10 +39,10 @@ python scripts/smoke_dist.py dist
 Use the virtual environment's interpreter (`.\.venv\Scripts\python.exe` or
 `.venv/bin/python`). `scripts/smoke_dist.py` installs the built wheel into a fresh temporary
 environment and runs the documented commands; delete old files in `dist/` first so that it
-finds exactly one wheel. Its last check runs the switch to Datakrit that `csv-tidy update`
-performs, with a dummy `datakrit` wheel built on the spot (nothing is downloaded), and then
-removes CSV Tidy from that environment. On Windows, `--work-dir DIR` with DIR on another drive
-than TEMP also covers pip moving files between drives.
+finds exactly one wheel. It also checks that the wheel holds only the `datakrit` package,
+that `python -m datakrit shortcut install --no-desktop --folder DIR` (the command that the
+1.2.0 update runs) replaces shortcuts made by 1.x, and that `update --version 1.2.0` is
+refused (nothing is downloaded). `--work-dir DIR` puts the temporary environment into DIR.
 
 CI also audits the packages pinned in `constraints-dev.txt` for known vulnerabilities, on
 every pull request and weekly. To run the audit yourself, install `pip-audit` in a separate
@@ -54,8 +54,8 @@ appear in the repository's Security tab.
 
 ## Working on the local interface
 
-The interface is `src/csv_tidy/ui.py` (server) and `src/csv_tidy/ui_static/` (`index.html`,
-`app.css`, `theme.js`, `app.js`, `logo.png`, `logo-mark.png`). Its structure is described in
+The interface is `src/datakrit/ui.py` (server) and `src/datakrit/ui_static/` (`index.html`,
+`app.css`, `theme.js`, `app.js`, `logo-mark.png`). Its structure is described in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-local-page) and its behavior in
 [docs/CONFIGURATION.md](docs/CONFIGURATION.md#local-interface).
 

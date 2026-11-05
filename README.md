@@ -1,17 +1,19 @@
 <div align="center">
 
-# CSV Tidy
+# Datakrit
 
-**Validate and explicitly clean CSV files: numbers and dates in the formats you declare,
-nothing guessed.**
+**Check and clean table files, explicitly.**
 
-A Python CLI, library, and local browser interface. Offline, typed, and MIT licensed.
+CSV files with numbers and dates in the formats you declare, nothing guessed. A Python CLI,
+library, and local browser interface. Offline, typed, and MIT licensed.
 
-[![CI](https://github.com/JudikaM/csv-tidy/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JudikaM/csv-tidy/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/JudikaM/csv-tidy?label=release&color=6d5dfc)](https://github.com/JudikaM/csv-tidy/releases/latest)
+Datakrit was called CSV Tidy until 1.2.0.
+
+[![CI](https://github.com/JudikaM/datakrit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JudikaM/datakrit/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/JudikaM/datakrit?label=release&color=6d5dfc)](https://github.com/JudikaM/datakrit/releases/latest)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](#installation)
-[![Typed](https://img.shields.io/badge/typing-typed-2f855a)](src/csv_tidy/py.typed)
-[![License: MIT](https://img.shields.io/github/license/JudikaM/csv-tidy?color=blue)](LICENSE)
+[![Typed](https://img.shields.io/badge/typing-typed-2f855a)](src/datakrit/py.typed)
+[![License: MIT](https://img.shields.io/github/license/JudikaM/datakrit?color=blue)](LICENSE)
 
 [Quick start](#quick-start) ·
 [Local interface](#local-interface-for-people-who-prefer-forms) ·
@@ -24,21 +26,22 @@ A Python CLI, library, and local browser interface. Offline, typed, and MIT lice
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/interface-dark.png">
-  <img src="docs/images/interface-light.png" alt="The CSV Tidy local interface with a semicolon-separated file loaded: a side bar with New check, Find, and the file in this session marked ready to save; in the middle the file card with the Save button and the status line saying 4 rows are ready with 9 values changed; on the right a panel with the loaded profile, 4 of 5 columns with rules, the unique key, and the output settings.">
+  <img src="docs/images/interface-light.png" alt="The Datakrit local interface with a semicolon-separated file loaded: a side bar with New check, Find, and the file in this session marked ready to save; in the middle the file card with the Save button and the status line saying 4 rows are ready with 9 values changed; on the right a panel with the loaded profile, 4 of 5 columns with rules, the unique key, and the output settings.">
 </picture>
 
-CSV Tidy helps you find, understand, and explicitly repair CSV data problems before importing
+Datakrit helps you find, understand, and explicitly repair CSV data problems before importing
 the data elsewhere: inconsistent field counts, missing required values, duplicate records and
 keys, numbers in Indonesian (`1.250,50`), US (`1,250.50`), or canonical (`1250.50`) notation,
 and numeric dates such as `DD/MM/YYYY`. It never guesses: it repairs only what you select,
 reports everything else with record and line locations, and refuses to export a result that
 still has errors.
 
-**Status:** 1.0. Profiles, command-line options, exit codes, issue codes, JSON reports, and
+**Status:** 2.0. Profiles, command-line options, exit codes, issue codes, JSON reports, and
 the Python API follow Semantic Versioning; [docs/STABILITY.md](docs/STABILITY.md) lists
-exactly what stays compatible in 1.x. The look and layout of the local interface are not part
-of that promise. Coming from 0.x? See [Migrating from 0.x](#migrating-from-0x). It works
-locally and offline, with no telemetry or AI services; only the explicit `csv-tidy update`
+exactly what stays compatible in 2.x. The look and layout of the local interface are not part
+of that promise. Coming from an earlier version? See the upgrade section near the end, or
+[Migrating from 0.x](#migrating-from-0x). It works
+locally and offline, with no telemetry or AI services; only the explicit `datakrit update`
 command goes online. It has not yet been tested in sessions with outside users; that is
 planned after 1.0, and feedback is welcome (see [Feedback](#feedback-and-bug-reports)).
 
@@ -46,9 +49,9 @@ There are three ways to use the same engine:
 
 | You are | Use | Start with |
 |---------|-----|------------|
-| A developer automating imports | the `csv-tidy` command or the Python API | [Quick start](#quick-start) |
-| Someone who works in Excel and prefers forms | the local interface, `csv-tidy ui` (one file or several files) | [Local interface](#local-interface-for-people-who-prefer-forms) |
-| Processing a folder of exports | `csv-tidy batch`, or several files in `csv-tidy ui` | [Many files](#many-files-at-once) |
+| A developer automating imports | the `datakrit` command or the Python API | [Quick start](#quick-start) |
+| Someone who works in Excel and prefers forms | the local interface, `datakrit ui` (one file or several files) | [Local interface](#local-interface-for-people-who-prefer-forms) |
+| Processing a folder of exports | `datakrit batch`, or several files in `datakrit ui` | [Many files](#many-files-at-once) |
 
 ## Features
 
@@ -58,7 +61,7 @@ There are three ways to use the same engine:
 - Structure checks: empty file, header-only file, blank lines, empty/duplicate headers, and
   records with too few or too many fields.
 - Reusable TOML profiles: required columns, `text`/`decimal`/`date` types, number grammars,
-  date formats, duplicate-row policy, and uniqueness keys. `csv-tidy profile init` writes a
+  date formats, duplicate-row policy, and uniqueness keys. `datakrit profile init` writes a
   starting profile from a file's header, with optional guided questions.
 - Identifiers such as `00123` and `081234567890` stay text; nothing is converted to numbers.
 - Explicit transformations: trim selected columns, normalize selected numbers/dates,
@@ -77,60 +80,68 @@ There are three ways to use the same engine:
 
 ## Installation
 
-Requires Python 3.11 or newer. CSV Tidy is **not published on PyPI**. Published versions and
+Requires Python 3.11 or newer. Datakrit is **not published on PyPI**. Published versions and
 installation files (a wheel and a source distribution) are listed on the
-[GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); a downloaded wheel
-installs with `python -m pip install <path-to-wheel>` inside a virtual environment. This
-README describes version 1.2.0; changes made after a release are listed under "Unreleased"
-in the [changelog](CHANGELOG.md). You can also install from a source checkout:
+[GitHub Releases page](https://github.com/JudikaM/datakrit/releases). Download the wheel
+`datakrit-2.0.0-py3-none-any.whl` from the latest release and install it inside a virtual
+environment:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install <path-to>\datakrit-2.0.0-py3-none-any.whl
+.\.venv\Scripts\datakrit.exe --version
+```
+
+On Linux/macOS: `python3 -m venv .venv`, then
+`.venv/bin/python -m pip install <path-to>/datakrit-2.0.0-py3-none-any.whl`. This README
+describes version 2.0.0; changes made after a release are listed under "Unreleased" in the
+[changelog](CHANGELOG.md). You can also install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's programs directly, so the
 ExecutionPolicy does not need to change):
 
 ```powershell
-git clone https://github.com/JudikaM/csv-tidy.git
-cd csv-tidy
+git clone https://github.com/JudikaM/datakrit.git
+cd datakrit
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install .
-.\.venv\Scripts\csv-tidy.exe --version
+.\.venv\Scripts\datakrit.exe --version
 ```
 
 Linux/macOS:
 
 ```bash
-git clone https://github.com/JudikaM/csv-tidy.git
-cd csv-tidy
+git clone https://github.com/JudikaM/datakrit.git
+cd datakrit
 python3 -m venv .venv
 .venv/bin/python -m pip install .
-.venv/bin/csv-tidy --version
+.venv/bin/datakrit --version
 ```
 
 **For people who do not use a command line.** After installing, run this once for each
-Windows user (or Linux user) who will use CSV Tidy:
+Windows user (or Linux user) who will use Datakrit:
 
 ```powershell
-.\.venv\Scripts\csv-tidy.exe shortcut install
+.\.venv\Scripts\datakrit.exe shortcut install
 ```
 
-It adds a **CSV Tidy** icon to the Desktop and the Start Menu, which opens the
+It adds a **Datakrit** icon to the Desktop and the Start Menu, which opens the
 [local interface](#local-interface-for-people-who-prefer-forms) in the browser without a
-console window, and an **Update CSV Tidy** entry to the Start Menu. The icons keep working
-after updates; `csv-tidy shortcut remove` removes them again.
+console window, and an **Update Datakrit** entry to the Start Menu. The icons keep working
+after updates; `datakrit shortcut remove` removes them again.
 
-**Updating.** `csv-tidy update` (or the **Update CSV Tidy** entry) installs the latest
+**Updating.** `datakrit update` (or the **Update Datakrit** entry) installs the latest
 release from GitHub with pip, which verifies the SHA-256 that GitHub publishes for the wheel.
 It is the only command that connects to the internet, and only when you run it;
-`csv-tidy update --check` just reports whether a newer version exists. Close CSV Tidy before
-updating. Profiles keep working across versions. CSV Tidy is renamed to **Datakrit** in 2.0.0;
-from 1.2.0, `csv-tidy update` switches to it by itself (see
-[Renamed to Datakrit in 2.0.0](#renamed-to-datakrit-in-200)).
+`datakrit update --check` just reports whether a newer version exists. Close Datakrit before
+updating. Profiles keep working across versions.
 
 **How the examples are written.** Every command below is written for Windows PowerShell and
-this installation, so it can be pasted as is from the `csv-tidy` folder:
-`.\.venv\Scripts\csv-tidy.exe ...`. On Linux/macOS replace that program with
-`.venv/bin/csv-tidy` (and `\` in paths with `/`). If the virtual environment is activated, or
-CSV Tidy is installed where your shell finds it, plain `csv-tidy ...` works; the hints
-printed by the tool use that short form. `python -m csv_tidy` is equivalent. For development
+this installation, so it can be pasted as is from the `datakrit` folder:
+`.\.venv\Scripts\datakrit.exe ...`. On Linux/macOS replace that program with
+`.venv/bin/datakrit` (and `\` in paths with `/`). If the virtual environment is activated, or
+Datakrit is installed where your shell finds it, plain `datakrit ...` works; the hints
+printed by the tool use that short form. `python -m datakrit` is equivalent. For development
 setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Quick start
@@ -140,16 +151,16 @@ re-check**.
 
 ```powershell
 # 1. Check: what is wrong? (exit code 1: two errors)
-.\.venv\Scripts\csv-tidy.exe check examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml
+.\.venv\Scripts\datakrit.exe check examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml
 
 # 2. Preview: what would the selected repairs change? (writes nothing)
-.\.venv\Scripts\csv-tidy.exe clean examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml
+.\.venv\Scripts\datakrit.exe clean examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml
 
 # 3. Apply: write the cleaned copy and a profile that describes it
-.\.venv\Scripts\csv-tidy.exe clean examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml --apply --output output\transactions_clean.csv --output-profile output\transactions.output.toml
+.\.venv\Scripts\datakrit.exe clean examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml --apply --output output\transactions_clean.csv --output-profile output\transactions.output.toml
 
 # 4. Re-check the result with its generated profile (exit code 0)
-.\.venv\Scripts\csv-tidy.exe check output\transactions_clean.csv --profile output\transactions.output.toml
+.\.venv\Scripts\datakrit.exe check output\transactions_clean.csv --profile output\transactions.output.toml
 ```
 
 The profile describes the source data and which repairs you allow
@@ -194,7 +205,7 @@ normalize = ["amount", "date"]
 ### 1. Check
 
 ```text
-CSV Tidy 1.2.0 - check
+Datakrit 2.0.0 - check
 Verdict: FAILED - 2 errors found in the source file.
 Source: examples\transactions_fixable.csv
 Profile: examples\profiles\transactions-id.toml
@@ -213,7 +224,7 @@ Issues (showing 2 of 2, errors first):
     Suggestion: Select trimming for 'date' (transform trim) or fix the source value.
 
 Next steps:
-  - Fix the listed values in the source file, or preview explicit repairs (a dry run that writes nothing): csv-tidy clean examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml
+  - Fix the listed values in the source file, or preview explicit repairs (a dry run that writes nothing): datakrit clean examples\transactions_fixable.csv --profile examples\profiles\transactions-id.toml
 
 Status: source validation failed (exit code 1)
 ```
@@ -224,7 +235,7 @@ checked only for columns declared in a profile, and nothing is inferred from the
 without rules says so even when it passes:
 
 ```powershell
-.\.venv\Scripts\csv-tidy.exe check examples\transactions_unfixable.csv --delimiter ";"
+.\.venv\Scripts\datakrit.exe check examples\transactions_unfixable.csv --delimiter ";"
 ```
 
 ```text
@@ -242,13 +253,13 @@ profile declares `date` and `amount` (see [Create a profile](#create-a-profile))
 JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 
 ```powershell
-.\.venv\Scripts\csv-tidy.exe check examples\transactions_unfixable.csv --profile examples\profiles\transactions-id.toml --format json --report output\report.json
+.\.venv\Scripts\datakrit.exe check examples\transactions_unfixable.csv --profile examples\profiles\transactions-id.toml --format json --report output\report.json
 ```
 
 ### 2. Preview a clean (dry run is the default)
 
 ```text
-CSV Tidy 1.2.0 - clean (dry run, nothing written)
+Datakrit 2.0.0 - clean (dry run, nothing written)
 Verdict: READY TO EXPORT - no errors remain in the cleaned result; 2 source problems repaired.
 ...
 Transformations (applied in this order):
@@ -299,13 +310,13 @@ The generated output profile describes the cleaned file, so step 4 reports
 no changes:
 
 ```powershell
-.\.venv\Scripts\csv-tidy.exe clean output\transactions_clean.csv --profile output\transactions.output.toml
+.\.venv\Scripts\datakrit.exe clean output\transactions_clean.csv --profile output\transactions.output.toml
 ```
 
 ### Problems that cannot be repaired block the export
 
 ```powershell
-.\.venv\Scripts\csv-tidy.exe clean examples\transactions_unfixable.csv --profile examples\profiles\transactions-id.toml --apply --output output\invalid_result.csv
+.\.venv\Scripts\datakrit.exe clean examples\transactions_unfixable.csv --profile examples\profiles\transactions-id.toml --apply --output output\invalid_result.csv
 ```
 
 ```text
@@ -335,13 +346,13 @@ column is text**. It never guesses types from values or column names; you choose
 
 ```powershell
 # A template to edit by hand (never prompts; safe in scripts and CI)
-.\.venv\Scripts\csv-tidy.exe profile init examples\transactions_fixable.csv --delimiter ";" --output output\my-profile.toml
+.\.venv\Scripts\datakrit.exe profile init examples\transactions_fixable.csv --delimiter ";" --output output\my-profile.toml
 
 # Guided questions: which columns are numbers or dates, required, unique, and what to repair
-.\.venv\Scripts\csv-tidy.exe profile init examples\transactions_fixable.csv --output output\my-profile.toml --interactive
+.\.venv\Scripts\datakrit.exe profile init examples\transactions_fixable.csv --output output\my-profile.toml --interactive
 
 # Everything as options, for automation
-.\.venv\Scripts\csv-tidy.exe profile init examples\transactions_fixable.csv --delimiter ";" --output output\my-profile.toml --decimal amount --date date --number-format id --date-format DD/MM/YYYY --required transaction_id --key transaction_id --trim amount --trim date --normalize amount --normalize date --output-number-format canonical --output-date-format YYYY-MM-DD
+.\.venv\Scripts\datakrit.exe profile init examples\transactions_fixable.csv --delimiter ";" --output output\my-profile.toml --decimal amount --date date --number-format id --date-format DD/MM/YYYY --required transaction_id --key transaction_id --trim amount --trim date --normalize amount --normalize date --output-number-format canonical --output-date-format YYYY-MM-DD
 ```
 
 A column whose format differs from the rest of the file gets its own with
@@ -356,11 +367,11 @@ work with `check`, `clean`, `batch`, and the local interface. Details:
 
 ## Local interface (for people who prefer forms)
 
-Start it with the **CSV Tidy** icon (see [Installation](#installation)), the `csv-tidy-ui`
+Start it with the **Datakrit** icon (see [Installation](#installation)), the `datakrit-ui`
 program, or from a command line:
 
 ```powershell
-.\.venv\Scripts\csv-tidy.exe ui
+.\.venv\Scripts\datakrit.exe ui
 ```
 
 This starts a small web server **on this computer only** and opens a page in your browser.
@@ -372,7 +383,7 @@ The page is laid out like a desktop application:
   **Profiles**, **Reports**, and **Settings** (each leads to where that part lives), and
   **In this session**: every loaded file with its row count and whether it is not checked
   yet, has problems, or is fine. Clicking a file opens its latest result. At the bottom: the
-  version, the theme switch (Dark Modern and Light+), and **Quit CSV Tidy**.
+  version, the theme switch (Dark Modern and Light+), and **Quit Datakrit**.
 - **Main column**: a card takes the file (drop it, or use **+**) with its separator,
   encoding, and one file or several files, and one button that does the next thing:
   **Check**, then **Preview cleaning**, then **Save**. Under it, the steps show one at a
@@ -421,14 +432,14 @@ saved reports use the same limits).
 The page always shows the current status and the next step, clears results that no longer
 match when the file or a setting changes, and explains why saving is blocked while problems
 remain. It uses the same functions as the commands; a profile saved from the page works with
-`csv-tidy check`, and a profile written for the commands can be loaded into the page.
+`datakrit check`, and a profile written for the commands can be loaded into the page.
 
 Privacy and safety: the server listens on `127.0.0.1` only, the page loads nothing from the
 internet, and the address contains a one-time key without which other programs and web pages
 cannot use it. The chosen files are copied into a private temporary folder that is removed
 when you select **Quit** (or press Ctrl+C in the window that started it). Started from the icon,
 without a console window, it also stops by itself 10 minutes after its page was closed
-(`csv-tidy ui --idle-minutes N` does the same from a command line). Your original files
+(`datakrit ui --idle-minutes N` does the same from a command line). Your original files
 are never written to. Options: `--port N`, `--no-browser`, `--max-file-mb N` (largest file,
 and largest total of several files together; default 200). The limits of the interface are
 listed under [Supported conventions and limits](#supported-conventions-and-limits). A
@@ -439,14 +450,14 @@ step-by-step guide for first-time users is in
 
 ```powershell
 # Preview every transactions_*.csv file directly inside examples\ with one profile
-.\.venv\Scripts\csv-tidy.exe batch clean examples --pattern "transactions_*.csv" --profile examples\profiles\transactions-id.toml
+.\.venv\Scripts\datakrit.exe batch clean examples --pattern "transactions_*.csv" --profile examples\profiles\transactions-id.toml
 
 # Write the files that are ready, their output profiles, and one report per file
-.\.venv\Scripts\csv-tidy.exe batch clean examples --pattern "transactions_*.csv" --profile examples\profiles\transactions-id.toml --apply --output-dir output\cleaned --output-profiles --report-dir output\reports --format json
+.\.venv\Scripts\datakrit.exe batch clean examples --pattern "transactions_*.csv" --profile examples\profiles\transactions-id.toml --apply --output-dir output\cleaned --output-profiles --report-dir output\reports --format json
 ```
 
 ```text
-CSV Tidy 1.2.0 - batch clean (dry run, nothing written)
+Datakrit 2.0.0 - batch clean (dry run, nothing written)
 Verdict: 2 of 4 files need attention (2 with data errors).
 Profile: examples\profiles\transactions-id.toml
 
@@ -471,7 +482,7 @@ Status: exit code 1
   written and never removes the results of the others.
 - **Exit code:** 2 if any file failed or could not be fully read or written; otherwise 1 if
   any file has data errors; otherwise 0. `batch check` works the same way without writing.
-- **Without a command line:** the several-files mode of `csv-tidy ui` runs the same batch
+- **Without a command line:** the several-files mode of `datakrit ui` runs the same batch
   function and gives the same status per file.
 
 ## Options
@@ -499,49 +510,55 @@ in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). What stays compatible in 1.x 
 options, exit codes, issue codes, JSON reports, the Python API) is listed in
 [docs/STABILITY.md](docs/STABILITY.md).
 
-The 0.x names `--schema`, `--output-schema`, and `--output-schemas` still work in 1.x but
-print a warning; they are removed in 2.0.0.
+The 0.x names `--schema`, `--output-schema`, and `--output-schemas` were removed in 2.0.0.
 
-## Renamed to Datakrit in 2.0.0
+## Upgrading from CSV Tidy
 
-1.2.0 is the last CSV Tidy release. In 2.0.0 the product is renamed to **Datakrit**: the
-commands become `datakrit` and `datakrit-ui`, the module `datakrit`, the shortcuts
-"Datakrit" and "Update Datakrit", and the repository `JudikaM/datakrit`. Profiles keep
-working unchanged; JSON reports get `schema_version` 3 with `tool.name` `datakrit`. The full
-list is in [docs/STABILITY.md](docs/STABILITY.md#the-rename-to-datakrit-in-200).
+Profiles keep working unchanged. The programs, the module, the error class, the shortcuts,
+and the repository have the new name, and JSON reports carry `schema_version` 3 with
+`tool.name` `datakrit` (nothing else in them changed):
 
-- **From 1.2.0:** run `csv-tidy update` (or the **Update CSV Tidy** entry) once Datakrit is
-  released; `csv-tidy update --check` tells you when. It installs Datakrit with the same
-  SHA-256 check, replaces CSV Tidy's shortcuts if you have any, and removes CSV Tidy. On
-  Windows, `csv-tidy update` cannot remove its own running program, so it prints the command
-  to run afterwards (`python -m pip uninstall -y csv-tidy`); the **Update CSV Tidy** entry
-  does it by itself. Then start Datakrit with the **Datakrit** icon or `datakrit ui`.
-- **From 1.1.1 or older:** update to 1.2.0 first with `csv-tidy update`, before the
-  repository is renamed. Afterwards these versions cannot find new releases; switch by hand:
-  download the Datakrit wheel from the
-  [Releases page](https://github.com/JudikaM/csv-tidy/releases), run
-  `python -m pip install <path-to-wheel>`, then `python -m pip uninstall csv-tidy`.
+| CSV Tidy 1.x | Datakrit 2.0 |
+|--------------|--------------|
+| `csv-tidy`, `csv-tidy-ui`, `python -m csv_tidy` | `datakrit`, `datakrit-ui`, `python -m datakrit` |
+| `import csv_tidy`, `CsvTidyError` | `import datakrit`, `DatakritError` |
+| shortcuts "CSV Tidy" and "Update CSV Tidy" | "Datakrit" and "Update Datakrit" |
+| `https://github.com/JudikaM/csv-tidy` | `https://github.com/JudikaM/datakrit` |
+
+- **From CSV Tidy 1.2.0:** run `csv-tidy update` (or the **Update CSV Tidy** entry). It
+  installs Datakrit with the same SHA-256 check, replaces the old shortcuts if you have any,
+  and removes CSV Tidy. On Windows, `csv-tidy update` cannot remove its own running program,
+  so it prints the command to run afterwards (`python -m pip uninstall -y csv-tidy`); the
+  **Update CSV Tidy** entry does it by itself. Then start Datakrit with the **Datakrit** icon
+  or `datakrit ui`.
+- **From CSV Tidy 1.1.x or older:** download `datakrit-2.0.0-py3-none-any.whl` from the
+  [Releases page](https://github.com/JudikaM/datakrit/releases), run
+  `python -m pip install <path-to-wheel>`, then `datakrit shortcut install` if you used the
+  icons (it replaces the old ones), then `python -m pip uninstall csv-tidy`.
+
+The full table, with the removed options and keywords, is in the
+[changelog](CHANGELOG.md#upgrading-to-200).
 
 ## Migrating from 0.x
 
-Profiles need no change, and commands written for 0.x keep working. What differs:
+Profiles need no change. What differs:
 
-| 0.x | 1.0 |
-|-----|-----|
-| `--schema`, `--output-schema`, `--output-schemas` | `--profile`, `--output-profile`, `--output-profiles` (the old names warn) |
+| 0.x | 1.0 and later |
+|-----|---------------|
+| `--schema`, `--output-schema`, `--output-schemas` | `--profile`, `--output-profile`, `--output-profiles` (the old names were removed in 2.0.0) |
 | JSON reports: `schema_version: 1` | `schema_version: 2` |
 | `"mode": "dry-run"`; artifact kinds `"output CSV"`, `"output profile"` | `"mode": "dry_run"`; `"output_csv"`, `"output_profile"` |
 | a cleaned value longer than `max_field_chars`: code `field_too_large` | `output_field_too_large` (reading still stops with `field_too_large`) |
-| `export_clean(output_schema=...)`, `run_batch(output_schemas=...)` | `output_profile=...`, `output_profiles=...` (the old names raise `DeprecationWarning`) |
+| `export_clean(output_schema=...)`, `run_batch(output_schemas=...)` | `output_profile=...`, `output_profiles=...` (the old names were removed in 2.0.0) |
 
-Programs that read JSON reports should accept `schema_version` 2; clean reports also have a
-top-level `artifacts` list now. The full list, with the reasons, is in the
+Programs that read JSON reports should accept `schema_version` 3 (2.x; 1.x wrote 2); clean
+reports also have a top-level `artifacts` list. The full list, with the reasons, is in the
 [changelog](CHANGELOG.md#100---2026-11-04).
 
 ## Library
 
 ```python
-from csv_tidy import check_file, clean_file, export_clean, load_profile
+from datakrit import check_file, clean_file, export_clean, load_profile
 
 profile = load_profile("examples/profiles/transactions-id.toml")
 check = check_file("examples/transactions_fixable.csv", profile)
@@ -577,7 +594,7 @@ in [examples/api_example.py](examples/api_example.py). See
   CSV directly. Import the file instead and set identifier columns to Text (in Excel: Data >
   From Text/CSV > Transform Data, then change the column type to Text).
 - Cells starting with `=`, `+`, `-` or `@` may be interpreted as formulas by spreadsheet
-  programs (CSV injection). CSV Tidy changes such values only when you select
+  programs (CSV injection). Datakrit changes such values only when you select
   `--neutralize-formulas COLUMN` (or `neutralize_formulas` in the profile, or **Repair:
   protect formulas** in the local interface): it then puts a `'` in front of them in text
   columns. Otherwise review untrusted data before opening it in a spreadsheet.
@@ -585,7 +602,7 @@ in [examples/api_example.py](examples/api_example.py). See
   are kept in memory (and in a private temporary folder) only while it runs, nothing is kept
   after **Quit**, and there is no list of recent files. Each file, or several files together,
   may be up to 200 MB (`--max-file-mb N`). Larger or many files are better handled by
-  `csv-tidy batch`.
+  `datakrit batch`.
 - Reports include source values. Keep them local if the data is private.
 - Not included: Excel (`.xlsx`) files, hosted or multi-user web access, accounts, databases,
   streaming for very large files, delimiter detection. See
@@ -593,9 +610,9 @@ in [examples/api_example.py](examples/api_example.py). See
 
 ## Feedback and bug reports
 
-Please open an [issue](https://github.com/JudikaM/csv-tidy/issues) using the templates. Use
+Please open an [issue](https://github.com/JudikaM/datakrit/issues) using the templates. Use
 synthetic or anonymized data only, and never attach real personal or customer data. Security
-issues: see [SECURITY.md](SECURITY.md). If you try CSV Tidy on real-world exports, the task
+issues: see [SECURITY.md](SECURITY.md). If you try Datakrit on real-world exports, the task
 lists in [docs/USER_TESTING.md](docs/USER_TESTING.md) and the questions in
 [docs/USER_VALIDATION.md](docs/USER_VALIDATION.md) describe the feedback that helps most.
 
@@ -603,4 +620,4 @@ lists in [docs/USER_TESTING.md](docs/USER_TESTING.md) and the questions in
 
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [CHANGELOG.md](CHANGELOG.md). Everyone taking part is expected to follow the
-[Code of Conduct](CODE_OF_CONDUCT.md). CSV Tidy is released under the [MIT License](LICENSE).
+[Code of Conduct](CODE_OF_CONDUCT.md). Datakrit is released under the [MIT License](LICENSE).

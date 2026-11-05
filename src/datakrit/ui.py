@@ -1,4 +1,4 @@
-"""Local browser interface (``csv-tidy ui``) for people who prefer forms to a command line.
+"""Local browser interface (``datakrit ui``) for people who prefer forms to a command line.
 
 A small HTTP server bound to the loopback address serves one page and a JSON API. Every
 operation calls the same functions as the CLI (``check_file``, ``clean_file``,
@@ -42,7 +42,7 @@ from urllib.parse import parse_qs, quote, unquote, urlsplit
 from . import __version__
 from .api import CheckResult, CleanResult, check_file, clean_file, export_clean
 from .batch import BatchInput, BatchResult, batch_report, render_batch_text, run_batch
-from .errors import CsvTidyError, ProfileError
+from .errors import DatakritError, ProfileError
 from .reporting import (
     check_report,
     clean_report,
@@ -60,7 +60,7 @@ from .schema import (
 )
 
 LOOPBACK = "127.0.0.1"
-TOKEN_HEADER = "X-CSV-Tidy-Token"
+TOKEN_HEADER = "X-Datakrit-Token"
 PREVIEW_ROWS = 50
 DETAIL_LIMIT = 200
 MAX_JSON_BYTES = 5 * 1024 * 1024
@@ -77,7 +77,6 @@ STATIC = {
     "/app.css": ("app.css", "text/css; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/theme.js": ("theme.js", "text/javascript; charset=utf-8"),
-    "/logo.png": ("logo.png", "image/png"),
     "/logo-mark.png": ("logo-mark.png", "image/png"),
 }
 SECURITY_HEADERS = {
@@ -153,7 +152,7 @@ class StoredBatch:
 
 
 def _static(name: str) -> bytes:
-    return resources.files("csv_tidy").joinpath("ui_static", name).read_bytes()
+    return resources.files("datakrit").joinpath("ui_static", name).read_bytes()
 
 
 def _safe_name(name: str) -> str:
@@ -196,7 +195,7 @@ class Session:
     def __init__(self, max_file_bytes: int) -> None:
         self.token = secrets.token_urlsafe(32)
         self.max_file_bytes = max_file_bytes
-        self._dir = Path(tempfile.mkdtemp(prefix="csv-tidy-ui-"))
+        self._dir = Path(tempfile.mkdtemp(prefix="datakrit-ui-"))
         self._lock = threading.Lock()
         self._counter = 0
         self._files: dict[int, LoadedFile] = {}
@@ -509,7 +508,7 @@ class Session:
                 info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
                 info.compress_type = zipfile.ZIP_DEFLATED
                 archive.writestr(info, data)
-        return "csv-tidy-batch.zip", "application/zip", buffer.getvalue()
+        return "datakrit-batch.zip", "application/zip", buffer.getvalue()
 
     # ----------------------------------------------------------------- profiles
 
@@ -531,8 +530,8 @@ class Session:
         profile = _profile(body.get("profile"))
         stem = Path(_safe_name(str(body.get("file_name") or "data.csv"))).stem
         header = (
-            f"CSV Tidy profile saved from the local interface (csv-tidy {__version__}).\n"
-            "Reuse it with: csv-tidy check FILE --profile THIS_FILE"
+            f"Datakrit profile saved from the local interface (datakrit {__version__}).\n"
+            "Reuse it with: datakrit check FILE --profile THIS_FILE"
         )
         text = profile_to_toml(profile, header)
         return f"{stem}.profile.toml", "application/toml", text.encode("utf-8")
@@ -593,7 +592,7 @@ def _rows(
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "csv-tidy-ui"
+    server_version = "datakrit-ui"
     sys_version = ""
     protocol_version = "HTTP/1.1"
     session: Session  # set on the subclass made by ``create_server``
@@ -687,8 +686,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(
                 HTTPStatus.FORBIDDEN,
                 "text/plain; charset=utf-8",
-                b"This page needs the address printed by `csv-tidy ui` (it contains a "
-                b"one-time key). Start `csv-tidy ui` again and use the address it shows.\n",
+                b"This page needs the address printed by `datakrit ui` (it contains a "
+                b"one-time key). Start `datakrit ui` again and use the address it shows.\n",
             )
         else:
             self.session.touch()
@@ -702,7 +701,7 @@ class Handler(BaseHTTPRequestHandler):
         self._body_read = False
         url = urlsplit(self.path)
         if not self._local() or not self._token_ok(self.headers.get(TOKEN_HEADER)):
-            self._refuse(HTTPStatus.FORBIDDEN, "This request was not sent by the CSV Tidy page.")
+            self._refuse(HTTPStatus.FORBIDDEN, "This request was not sent by the Datakrit page.")
             return
         session = self.session
         session.touch()
@@ -756,14 +755,14 @@ class Handler(BaseHTTPRequestHandler):
                 raise ApiError(HTTPStatus.NOT_FOUND, "Not found.")
         except ApiError as exc:
             self._refuse(exc.status, str(exc))
-        except CsvTidyError as exc:
+        except DatakritError as exc:
             self._refuse(HTTPStatus.BAD_REQUEST, str(exc))
         except Exception as exc:  # the page must get an answer instead of a dropped socket
-            print(f"csv-tidy ui: unexpected error: {exc!r}", file=sys.stderr)
+            print(f"datakrit ui: unexpected error: {exc!r}", file=sys.stderr)
             self._refuse(
                 HTTPStatus.INTERNAL_SERVER_ERROR,
                 "Something unexpected went wrong. Nothing was saved. Details are in the "
-                "window where csv-tidy ui is running.",
+                "window where datakrit ui is running.",
             )
 
 
@@ -792,7 +791,7 @@ def create_server(
         server = LocalServer((LOOPBACK, port), handler)
     except OSError as exc:
         session.close()
-        raise CsvTidyError(
+        raise DatakritError(
             f"cannot start the local interface on port {port}: {exc.strerror or exc}. "
             "Choose another port with --port, or omit --port to pick a free one."
         ) from None
@@ -813,7 +812,7 @@ def start_idle_watch(
                 server.shutdown()
                 return
 
-    thread = threading.Thread(target=watch, name="csv-tidy-idle", daemon=True)
+    thread = threading.Thread(target=watch, name="datakrit-idle", daemon=True)
     thread.start()
     return thread
 
@@ -835,7 +834,7 @@ def run_ui(
     """Serve the interface until the page's Quit button or Ctrl+C stops it, or, with
     ``idle_minutes``, until the page has not been in contact for that long."""
     server, session, url = create_server(port, max_file_mb)
-    _say("CSV Tidy is running on this computer only (nothing is sent to the internet).", quiet)
+    _say("Datakrit is running on this computer only (nothing is sent to the internet).", quiet)
     _say(f"Open this address in your browser:\n\n  {url}\n", quiet)
     _say("Keep this window open while you work. To stop: use Quit on the page, or Ctrl+C.", quiet)
     if idle_minutes > 0:
@@ -851,19 +850,19 @@ def run_ui(
     finally:
         server.server_close()
         session.close()
-    _say("CSV Tidy stopped. Temporary copies were removed.", quiet)
+    _say("Datakrit stopped. Temporary copies were removed.", quiet)
     return 0
 
 
 def gui_main() -> int:
-    """Entry point of the ``csv-tidy-ui`` program: no console window, the browser opens, and
+    """Entry point of the ``datakrit-ui`` program: no console window, the browser opens, and
     the server stops by itself when the page is no longer open. A start-up problem is written
-    to ``csv-tidy-ui-error.txt`` in the temporary folder, as there is no window to show it."""
+    to ``datakrit-ui-error.txt`` in the temporary folder, as there is no window to show it."""
     try:
         return run_ui(0, True, DEFAULT_MAX_FILE_MB, idle_minutes=GUI_IDLE_MINUTES, quiet=True)
     except Exception as exc:
         with contextlib.suppress(OSError):
-            Path(tempfile.gettempdir(), "csv-tidy-ui-error.txt").write_text(
-                f"CSV Tidy could not start its local interface: {exc}\n", encoding="utf-8"
+            Path(tempfile.gettempdir(), "datakrit-ui-error.txt").write_text(
+                f"Datakrit could not start its local interface: {exc}\n", encoding="utf-8"
             )
         return 2

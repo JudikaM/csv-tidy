@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from conftest import EXAMPLES, run_cli
 
-from csv_tidy import __version__, check_file, clean_file, load_profile
+from datakrit import __version__, check_file, clean_file, load_profile
 
 ID_PROFILE = str(EXAMPLES / "profiles" / "transactions-id.toml")
 FIXABLE = str(EXAMPLES / "transactions_fixable.csv")
@@ -16,7 +16,7 @@ FIXABLE = str(EXAMPLES / "transactions_fixable.csv")
 
 def test_version_and_help():
     with pytest.raises(SystemExit) as excinfo:
-        from csv_tidy.cli import main
+        from datakrit.cli import main
 
         main(["--version"])
     assert excinfo.value.code == 0
@@ -28,9 +28,9 @@ def test_version_and_help():
 
 def test_python_dash_m_runs_the_cli():
     proc = subprocess.run(
-        [sys.executable, "-m", "csv_tidy", "--version"], capture_output=True, text=True
+        [sys.executable, "-m", "datakrit", "--version"], capture_output=True, text=True
     )
-    assert proc.returncode == 0 and proc.stdout.strip() == f"csv-tidy {__version__}"
+    assert proc.returncode == 0 and proc.stdout.strip() == f"datakrit {__version__}"
 
 
 def test_dry_run_and_apply_are_exclusive(tmp_path):
@@ -150,7 +150,7 @@ def test_json_report_contract_and_truncation(write):
     )
     data = json.loads(result.out)
     assert result.code == 1
-    assert data["schema_version"] == 2 and data["command"] == "check"
+    assert data["schema_version"] == 3 and data["command"] == "check"
     assert data["summary"] == {
         "status": "invalid",
         "errors": 7,

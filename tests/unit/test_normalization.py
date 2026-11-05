@@ -2,8 +2,8 @@
 
 import tomllib
 
-from csv_tidy import Overrides, clean_file
-from csv_tidy.schema import profile_from_dict
+from datakrit import Overrides, clean_file
+from datakrit.schema import profile_from_dict
 
 PROFILE = """
 schema_version = 1

@@ -13,7 +13,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from . import __version__
-from .errors import CsvTidyError, InputError, ProfileError
+from .errors import DatakritError, InputError, ProfileError
 from .formats import NUMBER_EXAMPLES, NUMBER_FORMATS
 from .reader import read_csv
 from .schema import (
@@ -35,7 +35,7 @@ UNUSABLE_HEADER_CODES = ("empty_header", "duplicate_header", "possible_wrong_del
 QUIT_WORDS = ("q", "quit", "cancel")
 
 
-class Cancelled(CsvTidyError):
+class Cancelled(DatakritError):
     """The guided questions were stopped before the profile was confirmed."""
 
 
@@ -196,7 +196,7 @@ def _per_column(pairs: tuple[tuple[str, str], ...], option: str) -> dict[str, st
 def render_profile(profile: Profile, source_name: str) -> str:
     """TOML text for a new profile, written by the shared profile serializer."""
     lines = [
-        f"CSV Tidy profile for {source_name}, created by csv-tidy {__version__} (profile init).",
+        f"Datakrit profile for {source_name}, created by datakrit {__version__} (profile init).",
         "Column types were chosen explicitly; nothing was inferred from the data or the",
         "column names. Columns left as text are not checked as numbers or dates.",
         'To change a column: type = "text" | "decimal" | "date", required = true | false.',
@@ -249,7 +249,7 @@ def guided_choices(header: Header, base: Choices, ask: Ask, say: Say) -> Choices
         say(f"  {number}. {name.ljust(width)}  {shown}")
     for warning in header.warnings:
         say(f"  Note: {warning}")
-    say("Example values are shown to help you answer. CSV Tidy does not infer types from them.")
+    say("Example values are shown to help you answer. Datakrit does not infer types from them.")
     say("Answer with column numbers (1,3 or 2-4), 'all', or press Enter for none; q cancels.")
     say("")
 

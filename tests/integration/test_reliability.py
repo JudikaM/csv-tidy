@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from csv_tidy import InputError, OutputError, check_file, clean_file, export_clean
-from csv_tidy.reader import read_csv
+from datakrit import InputError, OutputError, check_file, clean_file, export_clean
+from datakrit.reader import read_csv
 
 
 def read(path, delimiter=",", encoding="utf-8", max_field_chars=131072):
