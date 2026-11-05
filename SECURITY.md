@@ -35,8 +35,10 @@ CodeQL analyzes the Python code and the interface's JavaScript; see
 
 CSV Tidy runs locally and executes no code from CSV content or profiles. It makes no outgoing
 network connections, except `csv-tidy update` when a user runs it: that command reads the
-release information from the GitHub API and has pip install the release wheel, checked
-against the SHA-256 that GitHub publishes for it. `csv-tidy ui` opens a listening socket on the loopback address
+release information from the GitHub API (`JudikaM/datakrit`, then `JudikaM/csv-tidy`) and
+has pip install the release wheel, checked against the SHA-256 that GitHub publishes for it.
+For a Datakrit release it then runs Datakrit's own `shortcut install` (only if CSV Tidy made
+shortcuts) and pip's uninstall of CSV Tidy. `csv-tidy ui` opens a listening socket on the loopback address
 (`127.0.0.1`) only, for the browser on the same computer; requests need the session key
 printed at start-up. Relevant issues include, for example: a way to use the local interface
 from another computer, from a web page of another origin, or without the session key; cell

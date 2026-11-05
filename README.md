@@ -81,7 +81,7 @@ Requires Python 3.11 or newer. CSV Tidy is **not published on PyPI**. Published 
 installation files (a wheel and a source distribution) are listed on the
 [GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); a downloaded wheel
 installs with `python -m pip install <path-to-wheel>` inside a virtual environment. This
-README describes version 1.1.1; changes made after a release are listed under "Unreleased"
+README describes version 1.2.0; changes made after a release are listed under "Unreleased"
 in the [changelog](CHANGELOG.md). You can also install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's programs directly, so the
@@ -121,7 +121,9 @@ after updates; `csv-tidy shortcut remove` removes them again.
 release from GitHub with pip, which verifies the SHA-256 that GitHub publishes for the wheel.
 It is the only command that connects to the internet, and only when you run it;
 `csv-tidy update --check` just reports whether a newer version exists. Close CSV Tidy before
-updating. Profiles keep working across versions.
+updating. Profiles keep working across versions. CSV Tidy is renamed to **Datakrit** in 2.0.0;
+from 1.2.0, `csv-tidy update` switches to it by itself (see
+[Renamed to Datakrit in 2.0.0](#renamed-to-datakrit-in-200)).
 
 **How the examples are written.** Every command below is written for Windows PowerShell and
 this installation, so it can be pasted as is from the `csv-tidy` folder:
@@ -192,7 +194,7 @@ normalize = ["amount", "date"]
 ### 1. Check
 
 ```text
-CSV Tidy 1.1.1 - check
+CSV Tidy 1.2.0 - check
 Verdict: FAILED - 2 errors found in the source file.
 Source: examples\transactions_fixable.csv
 Profile: examples\profiles\transactions-id.toml
@@ -246,7 +248,7 @@ JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 ### 2. Preview a clean (dry run is the default)
 
 ```text
-CSV Tidy 1.1.1 - clean (dry run, nothing written)
+CSV Tidy 1.2.0 - clean (dry run, nothing written)
 Verdict: READY TO EXPORT - no errors remain in the cleaned result; 2 source problems repaired.
 ...
 Transformations (applied in this order):
@@ -444,7 +446,7 @@ step-by-step guide for first-time users is in
 ```
 
 ```text
-CSV Tidy 1.1.1 - batch clean (dry run, nothing written)
+CSV Tidy 1.2.0 - batch clean (dry run, nothing written)
 Verdict: 2 of 4 files need attention (2 with data errors).
 Profile: examples\profiles\transactions-id.toml
 
@@ -499,6 +501,26 @@ options, exit codes, issue codes, JSON reports, the Python API) is listed in
 
 The 0.x names `--schema`, `--output-schema`, and `--output-schemas` still work in 1.x but
 print a warning; they are removed in 2.0.0.
+
+## Renamed to Datakrit in 2.0.0
+
+1.2.0 is the last CSV Tidy release. In 2.0.0 the product is renamed to **Datakrit**: the
+commands become `datakrit` and `datakrit-ui`, the module `datakrit`, the shortcuts
+"Datakrit" and "Update Datakrit", and the repository `JudikaM/datakrit`. Profiles keep
+working unchanged; JSON reports get `schema_version` 3 with `tool.name` `datakrit`. The full
+list is in [docs/STABILITY.md](docs/STABILITY.md#the-rename-to-datakrit-in-200).
+
+- **From 1.2.0:** run `csv-tidy update` (or the **Update CSV Tidy** entry) once Datakrit is
+  released; `csv-tidy update --check` tells you when. It installs Datakrit with the same
+  SHA-256 check, replaces CSV Tidy's shortcuts if you have any, and removes CSV Tidy. On
+  Windows, `csv-tidy update` cannot remove its own running program, so it prints the command
+  to run afterwards (`python -m pip uninstall -y csv-tidy`); the **Update CSV Tidy** entry
+  does it by itself. Then start Datakrit with the **Datakrit** icon or `datakrit ui`.
+- **From 1.1.1 or older:** update to 1.2.0 first with `csv-tidy update`, before the
+  repository is renamed. Afterwards these versions cannot find new releases; switch by hand:
+  download the Datakrit wheel from the
+  [Releases page](https://github.com/JudikaM/csv-tidy/releases), run
+  `python -m pip install <path-to-wheel>`, then `python -m pip uninstall csv-tidy`.
 
 ## Migrating from 0.x
 

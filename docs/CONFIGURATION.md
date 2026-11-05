@@ -293,19 +293,57 @@ column that no profile declares as a date. Reports make this explicit: the text 
 `csv-tidy update [--check] [--version X.Y.Z] [--pause]` is the only command that connects to
 the internet, and only when it is run.
 
-1. It asks the GitHub API for the latest release of `JudikaM/csv-tidy` (or the release
-   `vX.Y.Z`).
-2. It takes the wheel `csv_tidy-X.Y.Z-py3-none-any.whl` attached to that release. A release
-   without that wheel, without a published `sha256:` digest for it, or whose download address
-   is not under `https://github.com/JudikaM/csv-tidy/releases/download/` is refused.
+1. It asks the GitHub API for the latest release (or the release `vX.Y.Z`) of the trusted
+   repositories, in this order: `JudikaM/datakrit`, then `JudikaM/csv-tidy`. CSV Tidy is
+   renamed to Datakrit in 2.0.0, and its repository with it (see
+   [STABILITY.md](STABILITY.md#the-rename-to-datakrit-in-200)); before the rename the first
+   one answers 404, after it the first one answers.
+   - A 404 moves on to the next repository. "GitHub has no ... release" is reported only
+     when every repository answered 404.
+   - Any other failure stops with a hint to download the wheel by hand, and nothing is
+     installed.
+   - When GitHub redirected the request, the answer is used only if the final address is
+     still on `https://api.github.com/`.
+2. It takes the wheel `datakrit-X.Y.Z-py3-none-any.whl` attached to that release, or, if
+   there is none, `csv_tidy-X.Y.Z-py3-none-any.whl`. A release without either wheel, without
+   a published `sha256:` digest for it, or whose download address does not start with
+   `https://github.com/JudikaM/datakrit/releases/download/` or
+   `https://github.com/JudikaM/csv-tidy/releases/download/` is refused. The release link and
+   the hint name the repository that answered.
 3. If the release is newer than the installed version (or `--version` was given), it runs
    `python -m pip install --upgrade <wheel URL>#sha256=<digest>` with the Python that runs
    CSV Tidy. pip refuses a file whose SHA-256 differs. pip also installs missing
    dependencies (`tomli-w`) from PyPI.
 
+**The switch to Datakrit.** A release with the `datakrit` wheel is a switch release. For it,
+`update` runs these steps with the Python that runs CSV Tidy and prints what happened in
+each:
+
+1. It installs the Datakrit wheel exactly as in step 3 above. CSV Tidy and Datakrit share no
+   files (different module and program names). If this fails, nothing else runs and CSV Tidy
+   stays installed.
+2. Only if this computer has shortcuts that CSV Tidy made (in the places of
+   `shortcut install`, by the ownership rule of [Shortcuts](#shortcuts)), it runs
+   `python -m datakrit shortcut install`, with `--no-desktop` when there was no CSV Tidy
+   shortcut on the Desktop. Datakrit's command replaces CSV Tidy's shortcuts with its own.
+   Shortcuts made with `--folder` are not looked for.
+3. It removes CSV Tidy with `python -m pip uninstall -y csv-tidy`. On Windows a running
+   program cannot be removed (pip would stop halfway), so while `csv-tidy.exe` or
+   `csv-tidy-ui.exe` runs, for example when the update was started as `csv-tidy update`, the
+   command is printed instead, to run after CSV Tidy is closed. The **Update CSV Tidy**
+   shortcut runs `python -m csv_tidy update`, so from there the removal runs by itself. If
+   step 2 failed, this step is skipped and its command printed, so that CSV Tidy's icons keep
+   working.
+4. It says how to start Datakrit: the **Datakrit** icon or `datakrit ui`.
+
+When a step after the first fails, `update` prints the exact command that finishes it.
+`--check` describes the switch (or, for a CSV Tidy release, announces the rename) and changes
+nothing.
+
 `--check` only reports. `--pause` waits for Enter at the end (used by the shortcut). Exit
 codes: 0 updated, up to date, or `--check`; 2 if GitHub cannot be reached, the release is
-unusable, or pip fails (the installed version is kept). Close CSV Tidy before updating.
+unusable, pip fails (the installed version is kept), or a later step of the switch to
+Datakrit fails (its command is printed). Close CSV Tidy before updating.
 
 ## Batch processing
 

@@ -39,7 +39,10 @@ python scripts/smoke_dist.py dist
 Use the virtual environment's interpreter (`.\.venv\Scripts\python.exe` or
 `.venv/bin/python`). `scripts/smoke_dist.py` installs the built wheel into a fresh temporary
 environment and runs the documented commands; delete old files in `dist/` first so that it
-finds exactly one wheel.
+finds exactly one wheel. Its last check runs the switch to Datakrit that `csv-tidy update`
+performs, with a dummy `datakrit` wheel built on the spot (nothing is downloaded), and then
+removes CSV Tidy from that environment. On Windows, `--work-dir DIR` with DIR on another drive
+than TEMP also covers pip moving files between drives.
 
 CI also audits the packages pinned in `constraints-dev.txt` for known vulnerabilities, on
 every pull request and weekly. To run the audit yourself, install `pip-audit` in a separate

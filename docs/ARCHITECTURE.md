@@ -39,7 +39,7 @@ entry points that all call api.check_file / clean_file / export_clean:
 | `batch.py` | Input selection, artifact planning and collision checks, per-file isolation, batch summary |
 | `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page: `index.html`, `app.css`, `theme.js` (theme and folded side bar before the first paint), `app.js`, `logo.png` (the full logo), `logo-mark.png` (the logo without its text, for the page icon and the side bar); no dependencies (see "The local page" below) |
 | `shortcuts.py` | Desktop and Start Menu shortcuts (Windows `.lnk` through PowerShell and the Windows Script Host, Linux desktop entries) |
-| `update.py` | `csv-tidy update`: GitHub release lookup, wheel and SHA-256 selection, the pip command; the only network access |
+| `update.py` | `csv-tidy update`: GitHub release lookup in the trusted repositories (`JudikaM/datakrit`, then `JudikaM/csv-tidy`), wheel and SHA-256 selection, the pip commands, the commands of the switch to Datakrit, and the check for running CSV Tidy programs; the only network access |
 | `cli.py` | Argument parsing, exit codes, stdout/stderr separation |
 
 ## Result model and public API
@@ -156,6 +156,14 @@ if result.export_ready:
 - **Updates are explicit and verified.** Only `csv-tidy update` connects to the internet.
   It installs the wheel attached to a GitHub release and passes GitHub's SHA-256 digest to
   pip in the URL fragment, which pip checks before installing.
+- **The rename to Datakrit is prepared in 1.x.** `update` asks the new repository name first
+  and the old one second, so it works before and after the repository rename, and accepts an
+  answer only from the GitHub API, also after a redirect. A release with a `datakrit` wheel
+  switches the installation (`cli._switch`): pip installs Datakrit next to CSV Tidy (no
+  shared files), Datakrit's own `shortcut install` replaces CSV Tidy's shortcuts, and pip
+  removes CSV Tidy last. On Windows a running program cannot be moved or deleted, and pip's
+  uninstall then stops halfway without undoing what it moved, so CSV Tidy is removed only
+  when none of its programs runs; otherwise the command is printed.
 - **Remedies, not interface text, come from validation.** Issues carry a short `remedy`
   code. The CLI keeps its English suggestions; the interface writes its own instructions
   that name its controls.

@@ -42,6 +42,25 @@ New number grammars, date tokens, or profile keys are additive and keep `schema_
 Removing or changing the meaning of existing keys requires a new schema version and a
 migration note.
 
+## Renaming to Datakrit
+
+2.0.0 renames CSV Tidy to Datakrit (decision in
+[STABILITY.md](STABILITY.md#the-rename-to-datakrit-in-200)). The repository is renamed in
+this order, so that `csv-tidy update` keeps working for installed versions:
+
+1. Release 1.2.0 and wait until it is the latest release (`csv-tidy update --check` sees it).
+2. Rename the repository under **Settings → General → Repository name** to `datakrit`.
+   GitHub then redirects the old address `JudikaM/csv-tidy`, also in its API.
+3. Never create a new repository called `csv-tidy` afterwards: it would take the old address
+   and break that redirect.
+4. Update the repository description and topics.
+5. Then do the 2.0.0 work (the rename of the code, the documentation, and the release).
+
+Installs from 1.2.0 on find Datakrit releases by themselves and switch with
+`csv-tidy update`. Installs older than 1.2.0 cannot follow the rename. They need these
+manual steps: download the Datakrit wheel from the Releases page, run
+`python -m pip install <path-to-wheel>`, then `python -m pip uninstall csv-tidy`.
+
 ## Roadmap (driven by feedback)
 
 Candidates, to be prioritized by real user requests rather than built speculatively:

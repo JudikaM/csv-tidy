@@ -150,3 +150,54 @@ def test_cli_explains_a_missing_interface_program(tmp_path, monkeypatch):
     result = run_cli("shortcut", "install", "--folder", str(tmp_path))
     assert result.code == 2 and "csv-tidy-ui program was not found" in result.err
     assert list(tmp_path.iterdir()) == []
+
+
+def test_existing_finds_only_the_entries_csv_tidy_made(tmp_path):
+    assert shortcuts.existing(folder=tmp_path, platform="linux") == []
+    shortcuts.install(folder=tmp_path, platform="linux", ui=UI, python=PY)
+    found = shortcuts.existing(folder=tmp_path, platform="linux")
+    assert sorted(item.name for item in found) == ["CSV Tidy", "Update CSV Tidy"]
+    assert {item.place for item in found} == {"menu"}
+    foreign = tmp_path / "csv-tidy.desktop"
+    foreign.write_text("[Desktop Entry]\nName=Someone else\nExec=other\n", encoding="utf-8")
+    assert [item.name for item in shortcuts.existing(folder=tmp_path, platform="linux")] == [
+        "Update CSV Tidy"
+    ]
+    assert foreign.read_text(encoding="utf-8").endswith("Exec=other\n")  # only read
+
+
+def test_existing_looks_in_the_default_places_and_reports_the_desktop(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    monkeypatch.delenv("XDG_DESKTOP_DIR", raising=False)
+    assert shortcuts.existing(platform="linux") == []
+    (tmp_path / "Desktop").mkdir()
+    shortcuts.install(platform="linux", ui=UI, python=PY, desktop=False)
+    assert {item.place for item in shortcuts.existing(platform="linux")} == {"menu"}
+    shortcuts.install(platform="linux", ui=UI, python=PY)
+    places = sorted(item.place for item in shortcuts.existing(platform="linux"))
+    assert places == ["desktop", "menu", "menu"]
+
+
+def test_existing_is_empty_where_shortcuts_are_not_made():
+    assert shortcuts.existing(platform="darwin") == []
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows shortcuts (.lnk) need Windows")
+def test_existing_reads_windows_shortcuts_without_changing_them(tmp_path):
+    assert shortcuts.existing(folder=tmp_path, platform="win32") == []
+    ui = Path(sys.executable).with_name("csv-tidy-ui.exe")
+    shortcuts.install(folder=tmp_path, platform="win32", ui=ui, python=Path(sys.executable))
+    before = {p.name: p.stat().st_mtime_ns for p in tmp_path.iterdir()}
+    found = shortcuts.existing(folder=tmp_path, platform="win32")
+    assert sorted(item.name for item in found) == ["CSV Tidy", "Update CSV Tidy"]
+    assert {p.name: p.stat().st_mtime_ns for p in tmp_path.iterdir()} == before
+    other = tmp_path / "other"
+    other.mkdir()
+    foreign = (
+        "$s = New-Object -ComObject WScript.Shell; "
+        f"$f = $s.CreateShortcut('{other / 'CSV Tidy.lnk'}'); "
+        "$f.TargetPath = 'C:\\Windows\\notepad.exe'; $f.Save()"
+    )
+    subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", foreign], check=True)
+    assert shortcuts.existing(folder=other, platform="win32") == []

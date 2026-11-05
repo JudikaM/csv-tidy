@@ -6,6 +6,80 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-05
+
+The last CSV Tidy release. In 2.0.0 the product is renamed to **Datakrit**, and the repository
+`JudikaM/csv-tidy` becomes `JudikaM/datakrit`. 1.2.0 prepares `csv-tidy update` for that
+rename, so that it keeps working and can switch an installation over to Datakrit, and it
+announces the rename. Commands, the Python API, profiles, reports, and the interface are
+unchanged.
+
+**Upgrade notes (from 1.1.1).** Profiles, CLI, reports, and the Python API are unchanged.
+Update to 1.2.0 with `csv-tidy update` now: installs older than 1.2.0 cannot follow the
+repository rename. From 1.2.0, `csv-tidy update` (or the **Update CSV Tidy** entry) finds
+Datakrit 2.0.0 once it is released and switches to it:
+
+1. it installs Datakrit from its release, verified with the published SHA-256 like any
+   update (CSV Tidy and Datakrit share no files, so nothing is overwritten);
+2. if this computer has shortcuts that CSV Tidy made, it runs
+   `python -m datakrit shortcut install` (with `--no-desktop` when there was no CSV Tidy icon
+   on the Desktop), which replaces them with Datakrit's;
+3. it removes CSV Tidy with `python -m pip uninstall -y csv-tidy`. On Windows a running
+   program cannot be removed, so when the update runs as `csv-tidy update` (or while the
+   interface is open), it prints that command instead; run it after closing CSV Tidy. From
+   the **Update CSV Tidy** entry the removal runs by itself;
+4. it says how to start Datakrit: the **Datakrit** icon or `datakrit ui`.
+
+`csv-tidy update --check` describes the switch before anything is installed. Profiles keep
+working with Datakrit. **Installs older than 1.2.0** need these steps by hand after the
+rename: download the Datakrit wheel from the
+[Releases page](https://github.com/JudikaM/csv-tidy/releases), run
+`python -m pip install <path-to-wheel>`, then `python -m pip uninstall csv-tidy`.
+
+### Changed
+
+- `csv-tidy update` follows the repository rename. It asks the trusted repositories in a fixed
+  order, `JudikaM/datakrit` first and then `JudikaM/csv-tidy`: a 404 moves on to the next one,
+  "GitHub has no ... release" is reported only when both answer 404, and any other failure
+  stops with the offline hint and installs nothing. When the request was redirected, the
+  answer is accepted only if the final address is still on `https://api.github.com/`. A wheel
+  is accepted only from `https://github.com/JudikaM/datakrit/releases/download/` or
+  `https://github.com/JudikaM/csv-tidy/releases/download/`; the published SHA-256 and pip's
+  `#sha256=` check are required exactly as before. The release link and the offline hint name
+  the repository that answered (with no answer at all, the hint names
+  `JudikaM/csv-tidy`, whose address keeps working after the rename).
+- `csv-tidy update` switches to Datakrit when the release found carries the wheel
+  `datakrit-X.Y.Z-py3-none-any.whl` (looked for before `csv_tidy-X.Y.Z-py3-none-any.whl`), in
+  the steps described in the upgrade notes. It prints what happened in each step; when a step
+  after the installation fails, it prints the exact command that finishes it and exits with
+  code 2. When the installation fails, nothing else runs and CSV Tidy stays installed. When
+  looking for the shortcuts or replacing them fails, CSV Tidy stays installed too, so that its
+  icons keep working, and both remaining commands are printed.
+- `csv-tidy update --check` names the repository that answered, describes the switch for a
+  Datakrit release, and otherwise announces the rename.
+
+### Deprecated
+
+- The name CSV Tidy. **2.0.0 renames the product to Datakrit**; nothing named CSV Tidy or
+  `csv-tidy` is left:
+
+  | 1.x | 2.0.0 |
+  |-----|-------|
+  | commands `csv-tidy`, `csv-tidy-ui` | `datakrit`, `datakrit-ui` |
+  | `python -m csv_tidy` | `python -m datakrit` |
+  | module `csv_tidy`; exception `CsvTidyError` | `datakrit`; `DatakritError` |
+  | distribution `csv-tidy`; wheel `csv_tidy-X.Y.Z-py3-none-any.whl` | `datakrit`; `datakrit-X.Y.Z-py3-none-any.whl` |
+  | report `tool.name` `csv-tidy`; report `schema_version` 2 | `datakrit`; report `schema_version` 3 |
+  | shortcuts "CSV Tidy" and "Update CSV Tidy" | "Datakrit" and "Update Datakrit" |
+  | repository `JudikaM/csv-tidy` | `JudikaM/datakrit` |
+
+  2.0.0 also removes the aliases deprecated in 1.0.0, as planned: `--schema`,
+  `--output-schema`, `--output-schemas`, `export_clean(output_schema=...)`, and
+  `run_batch(output_schemas=...)`. Profiles keep `schema_version = 1`, and 1.x profiles keep
+  working unchanged. There is no warning at run time, because the new names do not exist in
+  1.x; the rename is announced here, in [docs/STABILITY.md](docs/STABILITY.md#the-rename-to-datakrit-in-200),
+  and by `csv-tidy update --check`.
+
 ## [1.1.1] - 2026-11-04
 
 Small fixes to the look of the local interface.
