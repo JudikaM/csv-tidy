@@ -193,7 +193,7 @@ def test_fetch_json_reports_the_address_after_redirects(monkeypatch):
     assert final == "https://api.github.com/repositories/1/releases/latest"
     assert data == {"tag_name": "v2.0.0"}
     assert seen == [(LATEST, f"datakrit/{__version__}", 30)]
-    assert __version__ == "2.0.0"
+    assert __version__ == "2.1.0"
 
 
 @pytest.mark.parametrize(
@@ -311,11 +311,11 @@ def test_up_to_date_and_check_only_never_run_pip(github, pip):
 def test_older_releases_are_installed_only_when_asked_for(github, pip):
     answers, _ = github
     _, calls = pip
-    answers[LATEST] = release_json("2.0.0")
-    answers[api("tags/v2.0.0")] = release_json("2.0.0")
+    answers[LATEST] = release_json(__version__)
+    answers[api(f"tags/v{__version__}")] = release_json(__version__)
     assert "up to date" in run_cli("update").out and calls == []
     # The installed version is asked for explicitly: nothing to do either.
-    assert "up to date" in run_cli("update", "--version", "2.0.0").out and calls == []
+    assert "up to date" in run_cli("update", "--version", __version__).out and calls == []
 
 
 def test_update_version_before_2_0_0_is_a_usage_hint(github, pip):
@@ -352,6 +352,53 @@ def test_pause_waits_for_enter_so_a_shortcut_window_stays_readable(github, pip, 
     assert seen and "Enter" in seen[0]
     answers[LATEST] = OSError("offline")
     assert run_cli("update", "--pause").code == 2 and len(seen) == 2
+
+
+# ------------------------------------------------------------------ the Windows app (frozen)
+
+
+@pytest.fixture
+def frozen(monkeypatch):
+    """Run as the Windows app does: PyInstaller sets ``sys.frozen``."""
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    assert update.frozen()
+
+
+def test_a_pip_install_is_not_frozen():
+    assert not getattr(sys, "frozen", False) and not update.frozen()
+
+
+def test_the_windows_app_reports_the_zip_and_never_runs_pip(github, pip, frozen):
+    answers, asked = github
+    _, calls = pip
+    answers[LATEST] = release_json("9.9.9")
+    page = "https://github.com/JudikaM/datakrit/releases/tag/v9.9.9"
+    for args in (("update",), ("update", "--check")):
+        result = run_cli(*args)
+        assert result.code == 0, result.err
+        assert result.out.splitlines() == [
+            f"Installed: Datakrit {__version__} (Windows app). Latest release: 9.9.9.",
+            f"Download Datakrit-9.9.9-windows-x64.zip from {page}, check its SHA-256 against "
+            "the release notes, and replace the Datakrit folder with the one in the zip. The "
+            "Windows app does not update itself; nothing was installed.",
+        ]
+    assert asked == [LATEST, LATEST] and calls == []
+
+
+def test_the_windows_app_up_to_date_and_chosen_versions(github, pip, frozen):
+    answers, _ = github
+    _, calls = pip
+    answers[LATEST] = release_json(__version__)
+    current = run_cli("update")
+    assert current.code == 0 and current.out.splitlines()[-1] == "Datakrit is up to date."
+    answers[api("tags/v2.0.0")] = release_json("2.0.0")
+    if __version__ != "2.0.0":
+        chosen = run_cli("update", "--version", "2.0.0")
+        assert chosen.code == 0 and "Download Datakrit-2.0.0-windows-x64.zip" in chosen.out
+    answers[LATEST] = OSError("offline")
+    offline = run_cli("update")
+    assert offline.code == 2 and "could not reach GitHub" in offline.err
+    assert calls == []
 
 
 def test_only_the_update_command_uses_the_network(monkeypatch, examples):

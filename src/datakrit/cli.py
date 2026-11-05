@@ -806,6 +806,8 @@ def _update(args: argparse.Namespace) -> int:
         return 2
     current = __version__
     newer = update.version_key(release.version) > update.version_key(current)
+    if update.frozen():
+        return _report_app_update(release, current, newer, args.target_version is not None)
     if args.check:
         print(f"Installed: Datakrit {current}. Latest release: {release.version}.")
         if newer:
@@ -833,6 +835,21 @@ def _update(args: argparse.Namespace) -> int:
         )
         return 2
     print(f"Updated to {release.version}. Start Datakrit again to use the new version.")
+    return 0
+
+
+def _report_app_update(release: update.Release, current: str, newer: bool, chosen: bool) -> int:
+    """The Windows app has no pip and cannot replace its own folder: report where the zip
+    of the release is, and install nothing."""
+    print(f"Installed: Datakrit {current} (Windows app). Latest release: {release.version}.")
+    if release.version == current or (not newer and not chosen):
+        print("Datakrit is up to date.")
+        return 0
+    print(
+        f"Download {update.app_zip(release)} from {release.page_url}, check its SHA-256 "
+        "against the release notes, and replace the Datakrit folder with the one in the zip. "
+        "The Windows app does not update itself; nothing was installed."
+    )
     return 0
 
 

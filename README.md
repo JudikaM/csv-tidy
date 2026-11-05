@@ -11,22 +11,22 @@ Datakrit was called CSV Tidy until 1.2.0.
 
 [![CI](https://github.com/JudikaM/datakrit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JudikaM/datakrit/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/JudikaM/datakrit?label=release&color=6d5dfc)](https://github.com/JudikaM/datakrit/releases/latest)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](#installation)
-[![Typed](https://img.shields.io/badge/typing-typed-2f855a)](src/datakrit/py.typed)
-[![License: MIT](https://img.shields.io/github/license/JudikaM/datakrit?color=blue)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](https://github.com/JudikaM/datakrit/blob/main/README.md#installation)
+[![Typed](https://img.shields.io/badge/typing-typed-2f855a)](https://github.com/JudikaM/datakrit/blob/main/src/datakrit/py.typed)
+[![License: MIT](https://img.shields.io/github/license/JudikaM/datakrit?color=blue)](https://github.com/JudikaM/datakrit/blob/main/LICENSE)
 
-[Quick start](#quick-start) ·
-[Local interface](#local-interface-for-people-who-prefer-forms) ·
-[Profiles](#create-a-profile) ·
-[Library](#library) ·
-[Configuration](docs/CONFIGURATION.md) ·
-[Changelog](CHANGELOG.md)
+[Quick start](https://github.com/JudikaM/datakrit/blob/main/README.md#quick-start) ·
+[Local interface](https://github.com/JudikaM/datakrit/blob/main/README.md#local-interface-for-people-who-prefer-forms) ·
+[Profiles](https://github.com/JudikaM/datakrit/blob/main/README.md#create-a-profile) ·
+[Library](https://github.com/JudikaM/datakrit/blob/main/README.md#library) ·
+[Configuration](https://github.com/JudikaM/datakrit/blob/main/docs/CONFIGURATION.md) ·
+[Changelog](https://github.com/JudikaM/datakrit/blob/main/CHANGELOG.md)
 
 </div>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/interface-dark.png">
-  <img src="docs/images/interface-light.png" alt="The Datakrit local interface with a semicolon-separated file loaded: a side bar with New check, Find, and the file in this session marked ready to save; in the middle the file card with the Save button and the status line saying 4 rows are ready with 9 values changed; on the right a panel with the loaded profile, 4 of 5 columns with rules, the unique key, and the output settings.">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/JudikaM/datakrit/main/docs/images/interface-dark.png">
+  <img src="https://raw.githubusercontent.com/JudikaM/datakrit/main/docs/images/interface-light.png" alt="The Datakrit local interface with a semicolon-separated file loaded: a side bar with New check, Find, and the file in this session marked ready to save; in the middle the file card with the Save button and the status line saying 4 rows are ready with 9 values changed; on the right a panel with the loaded profile, 4 of 5 columns with rules, the unique key, and the output settings.">
 </picture>
 
 Datakrit helps you find, understand, and explicitly repair CSV data problems before importing
@@ -36,22 +36,22 @@ and numeric dates such as `DD/MM/YYYY`. It never guesses: it repairs only what y
 reports everything else with record and line locations, and refuses to export a result that
 still has errors.
 
-**Status:** 2.0. Profiles, command-line options, exit codes, issue codes, JSON reports, and
-the Python API follow Semantic Versioning; [docs/STABILITY.md](docs/STABILITY.md) lists
+**Status:** 2.1. Profiles, command-line options, exit codes, issue codes, JSON reports, and
+the Python API follow Semantic Versioning; [docs/STABILITY.md](https://github.com/JudikaM/datakrit/blob/main/docs/STABILITY.md) lists
 exactly what stays compatible in 2.x. The look and layout of the local interface are not part
 of that promise. Coming from an earlier version? See the upgrade section near the end, or
-[Migrating from 0.x](#migrating-from-0x). It works
+[Migrating from 0.x](https://github.com/JudikaM/datakrit/blob/main/README.md#migrating-from-0x). It works
 locally and offline, with no telemetry or AI services; only the explicit `datakrit update`
 command goes online. It has not yet been tested in sessions with outside users; that is
-planned after 1.0, and feedback is welcome (see [Feedback](#feedback-and-bug-reports)).
+planned after 1.0, and feedback is welcome (see [Feedback](https://github.com/JudikaM/datakrit/blob/main/README.md#feedback-and-bug-reports)).
 
 There are three ways to use the same engine:
 
 | You are | Use | Start with |
 |---------|-----|------------|
-| A developer automating imports | the `datakrit` command or the Python API | [Quick start](#quick-start) |
-| Someone who works in Excel and prefers forms | the local interface, `datakrit ui` (one file or several files) | [Local interface](#local-interface-for-people-who-prefer-forms) |
-| Processing a folder of exports | `datakrit batch`, or several files in `datakrit ui` | [Many files](#many-files-at-once) |
+| A developer automating imports | the `datakrit` command or the Python API | [Quick start](https://github.com/JudikaM/datakrit/blob/main/README.md#quick-start) |
+| Someone who works in Excel and prefers forms | the local interface, `datakrit ui` (one file or several files) | [Local interface](https://github.com/JudikaM/datakrit/blob/main/README.md#local-interface-for-people-who-prefer-forms) |
+| Processing a folder of exports | `datakrit batch`, or several files in `datakrit ui` | [Many files](https://github.com/JudikaM/datakrit/blob/main/README.md#many-files-at-once) |
 
 ## Features
 
@@ -80,22 +80,68 @@ There are three ways to use the same engine:
 
 ## Installation
 
-Requires Python 3.11 or newer. Datakrit is **not published on PyPI**. Published versions and
-installation files (a wheel and a source distribution) are listed on the
-[GitHub Releases page](https://github.com/JudikaM/datakrit/releases). Download the wheel
-`datakrit-2.0.0-py3-none-any.whl` from the latest release and install it inside a virtual
-environment:
+There are three ways to install Datakrit. This README describes version 2.1.0; changes made
+after a release are listed under "Unreleased" in the [changelog](https://github.com/JudikaM/datakrit/blob/main/CHANGELOG.md).
+
+### From PyPI
+
+Requires Python 3.11 or newer. Install Datakrit from
+[PyPI](https://pypi.org/project/datakrit/) inside a virtual environment:
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install <path-to>\datakrit-2.0.0-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install datakrit
+.\.venv\Scripts\datakrit.exe --version
+```
+
+On Linux/macOS: `python3 -m venv .venv`, then `.venv/bin/python -m pip install datakrit`.
+If you use [pipx](https://pipx.pypa.io/), `pipx install datakrit` installs the programs into
+their own environment and puts them on your `PATH`.
+
+### Windows app (no Python needed)
+
+The Windows app contains the local interface only: no Python, no terminal, and no console
+window. For the `datakrit` command or the Python API, install from PyPI instead.
+
+1. Open the latest release on the
+   [Releases page](https://github.com/JudikaM/datakrit/releases) and download
+   `Datakrit-2.1.0-windows-x64.zip`.
+2. Check the file. In PowerShell, in the folder that holds the download, run
+
+   ```powershell
+   Get-FileHash .\Datakrit-2.1.0-windows-x64.zip -Algorithm SHA256
+   ```
+
+   and compare the hash with the SHA-256 of the zip in the release notes. If they differ, do
+   not run the app; delete the file and download it again from the Releases page.
+3. Unzip the file (right-click, **Extract All...**), open the `Datakrit` folder, and
+   double-click `Datakrit.exe`. The local interface opens in your browser. It stops when you
+   press **Quit** on the page, or by itself 10 minutes after its page was closed.
+
+The app is not code-signed, so Windows SmartScreen may say "Windows protected your PC" the
+first time. Only for a file you downloaded from the official release page and checked as
+above: choose **More info**, then **Run anyway**. Never do this for a copy from anywhere
+else.
+
+To update the app, download the zip of the new release, check it in the same way, and
+replace the old `Datakrit` folder. Profiles keep working.
+
+### From the GitHub release (wheel) or a source checkout
+
+Requires Python 3.11 or newer. Every release on the
+[GitHub Releases page](https://github.com/JudikaM/datakrit/releases) also carries a wheel and
+a source distribution. Download the wheel `datakrit-2.1.0-py3-none-any.whl` from the latest
+release and install it inside a virtual environment:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install <path-to>\datakrit-2.1.0-py3-none-any.whl
 .\.venv\Scripts\datakrit.exe --version
 ```
 
 On Linux/macOS: `python3 -m venv .venv`, then
-`.venv/bin/python -m pip install <path-to>/datakrit-2.0.0-py3-none-any.whl`. This README
-describes version 2.0.0; changes made after a release are listed under "Unreleased" in the
-[changelog](CHANGELOG.md). You can also install from a source checkout:
+`.venv/bin/python -m pip install <path-to>/datakrit-2.1.0-py3-none-any.whl`. You can also
+install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's programs directly, so the
 ExecutionPolicy does not need to change):
@@ -118,31 +164,35 @@ python3 -m venv .venv
 .venv/bin/datakrit --version
 ```
 
-**For people who do not use a command line.** After installing, run this once for each
-Windows user (or Linux user) who will use Datakrit:
+### After installing with pip
+
+**For people who do not use a command line.** After installing with pip, run this once for
+each Windows user (or Linux user) who will use Datakrit:
 
 ```powershell
 .\.venv\Scripts\datakrit.exe shortcut install
 ```
 
 It adds a **Datakrit** icon to the Desktop and the Start Menu, which opens the
-[local interface](#local-interface-for-people-who-prefer-forms) in the browser without a
+[local interface](https://github.com/JudikaM/datakrit/blob/main/README.md#local-interface-for-people-who-prefer-forms) in the browser without a
 console window, and an **Update Datakrit** entry to the Start Menu. The icons keep working
 after updates; `datakrit shortcut remove` removes them again.
 
 **Updating.** `datakrit update` (or the **Update Datakrit** entry) installs the latest
-release from GitHub with pip, which verifies the SHA-256 that GitHub publishes for the wheel.
-It is the only command that connects to the internet, and only when you run it;
-`datakrit update --check` just reports whether a newer version exists. Close Datakrit before
-updating. Profiles keep working across versions.
+release from GitHub with pip, which verifies the SHA-256 that GitHub publishes for the wheel;
+it is the same file as on PyPI, so `python -m pip install --upgrade datakrit` works as well.
+`datakrit update` is the only command that connects to the internet, and only when you run
+it; `datakrit update --check` just reports whether a newer version exists. Close Datakrit
+before updating. Profiles keep working across versions.
 
 **How the examples are written.** Every command below is written for Windows PowerShell and
-this installation, so it can be pasted as is from the `datakrit` folder:
+a virtual environment named `.venv`, so it can be pasted as is from the folder that holds
+it:
 `.\.venv\Scripts\datakrit.exe ...`. On Linux/macOS replace that program with
 `.venv/bin/datakrit` (and `\` in paths with `/`). If the virtual environment is activated, or
 Datakrit is installed where your shell finds it, plain `datakrit ...` works; the hints
 printed by the tool use that short form. `python -m datakrit` is equivalent. For development
-setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
+setup, see [CONTRIBUTING.md](https://github.com/JudikaM/datakrit/blob/main/CONTRIBUTING.md).
 
 ## Quick start
 
@@ -164,7 +214,7 @@ re-check**.
 ```
 
 The profile describes the source data and which repairs you allow
-([examples/profiles/transactions-id.toml](examples/profiles/transactions-id.toml)):
+([examples/profiles/transactions-id.toml](https://github.com/JudikaM/datakrit/blob/main/examples/profiles/transactions-id.toml)):
 
 ```toml
 schema_version = 1
@@ -205,7 +255,7 @@ normalize = ["amount", "date"]
 ### 1. Check
 
 ```text
-Datakrit 2.0.0 - check
+Datakrit 2.1.0 - check
 Verdict: FAILED - 2 errors found in the source file.
 Source: examples\transactions_fixable.csv
 Profile: examples\profiles\transactions-id.toml
@@ -248,7 +298,7 @@ Status: structure check passed; values were not checked (exit code 0)
 ```
 
 That file contains the date `31/02/2026` and the amount `abc`; they are reported as soon as a
-profile declares `date` and `amount` (see [Create a profile](#create-a-profile)).
+profile declares `date` and `amount` (see [Create a profile](https://github.com/JudikaM/datakrit/blob/main/README.md#create-a-profile)).
 
 JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 
@@ -259,7 +309,7 @@ JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 ### 2. Preview a clean (dry run is the default)
 
 ```text
-Datakrit 2.0.0 - clean (dry run, nothing written)
+Datakrit 2.1.0 - clean (dry run, nothing written)
 Verdict: READY TO EXPORT - no errors remain in the cleaned result; 2 source problems repaired.
 ...
 Transformations (applied in this order):
@@ -333,9 +383,9 @@ Export: blocked by 3 remaining output errors; no CSV is written.
   output CSV: output\invalid_result.csv - not_written (output errors remain)
 ```
 
-Other examples: US-format customers ([customers-us.toml](examples/profiles/customers-us.toml)
+Other examples: US-format customers ([customers-us.toml](https://github.com/JudikaM/datakrit/blob/main/examples/profiles/customers-us.toml)
 with `customers_valid.csv`, `customers_fixable.csv`), canonical data
-([transactions-canonical.toml](examples/profiles/transactions-canonical.toml)), and
+([transactions-canonical.toml](https://github.com/JudikaM/datakrit/blob/main/examples/profiles/transactions-canonical.toml)), and
 `customers_trim_duplicates.csv`, where trimming creates a duplicate key. That file is blocked
 until you add `--deduplicate keys`.
 
@@ -363,11 +413,11 @@ refused unless `--overwrite` is given, the input can never be the output, unknow
 names and inconsistent choices are rejected before anything is written, and the guided mode
 can be cancelled with `q` or Ctrl+C (exit code 130, nothing written). Profiles made this way
 work with `check`, `clean`, `batch`, and the local interface. Details:
-[docs/CONFIGURATION.md](docs/CONFIGURATION.md#creating-profiles).
+[docs/CONFIGURATION.md](https://github.com/JudikaM/datakrit/blob/main/docs/CONFIGURATION.md#creating-profiles).
 
 ## Local interface (for people who prefer forms)
 
-Start it with the **Datakrit** icon (see [Installation](#installation)), the `datakrit-ui`
+Start it with the **Datakrit** icon (see [Installation](https://github.com/JudikaM/datakrit/blob/main/README.md#installation)), the `datakrit-ui`
 program, or from a command line:
 
 ```powershell
@@ -383,7 +433,7 @@ The page is laid out like a desktop application:
   **Profiles**, **Reports**, and **Settings** (each leads to where that part lives), and
   **In this session**: every loaded file with its row count and whether it is not checked
   yet, has problems, or is fine. Clicking a file opens its latest result. At the bottom: the
-  version, the theme switch (Dark Modern and Light+), and **Quit Datakrit**.
+  version, the theme switch (dark and light), and **Quit Datakrit**.
 - **Main column**: a card takes the file (drop it, or use **+**) with its separator,
   encoding, and one file or several files, and one button that does the next thing:
   **Check**, then **Preview cleaning**, then **Save**. Under it, the steps show one at a
@@ -414,8 +464,8 @@ The steps:
    not be read are never exported; they are in the ZIP as reports only.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/interface-preview-dark.png">
-  <img src="docs/images/interface-preview-light.png" alt="Step 5 of the local interface: the cleaned copy has no problems, a table lists every changed value before and after with the repair that changed it, and the cleaned rows are shown with changed values highlighted.">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/JudikaM/datakrit/main/docs/images/interface-preview-dark.png">
+  <img src="https://raw.githubusercontent.com/JudikaM/datakrit/main/docs/images/interface-preview-light.png" alt="Step 5 of the local interface: the cleaned copy has no problems, a table lists every changed value before and after with the repair that changed it, and the cleaned rows are shown with changed values highlighted.">
 </picture>
 
 Dates are chosen from a list of common formats (with an example such as `31/12/2026`), and
@@ -442,9 +492,9 @@ without a console window, it also stops by itself 10 minutes after its page was 
 (`datakrit ui --idle-minutes N` does the same from a command line). Your original files
 are never written to. Options: `--port N`, `--no-browser`, `--max-file-mb N` (largest file,
 and largest total of several files together; default 200). The limits of the interface are
-listed under [Supported conventions and limits](#supported-conventions-and-limits). A
+listed under [Supported conventions and limits](https://github.com/JudikaM/datakrit/blob/main/README.md#supported-conventions-and-limits). A
 step-by-step guide for first-time users is in
-[docs/USER_TESTING.md](docs/USER_TESTING.md#guide-for-administrative-staff).
+[docs/USER_TESTING.md](https://github.com/JudikaM/datakrit/blob/main/docs/USER_TESTING.md#guide-for-administrative-staff).
 
 ## Many files at once
 
@@ -457,7 +507,7 @@ step-by-step guide for first-time users is in
 ```
 
 ```text
-Datakrit 2.0.0 - batch clean (dry run, nothing written)
+Datakrit 2.1.0 - batch clean (dry run, nothing written)
 Verdict: 2 of 4 files need attention (2 with data errors).
 Profile: examples\profiles\transactions-id.toml
 
@@ -506,9 +556,9 @@ replace the profile list (repeat for several columns); `--no-trim`/`--no-normali
 Exit codes: `0` no blocking errors (warnings allowed), `1` data errors (`check`: in the source;
 `clean`: remaining in the cleaned result), `2` usage, configuration, decoding/parsing, read or
 write failure, `130` cancelled by the user. Every command has `--help`. The full reference is
-in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). What stays compatible in 1.x (profiles,
+in [docs/CONFIGURATION.md](https://github.com/JudikaM/datakrit/blob/main/docs/CONFIGURATION.md). What stays compatible in 1.x (profiles,
 options, exit codes, issue codes, JSON reports, the Python API) is listed in
-[docs/STABILITY.md](docs/STABILITY.md).
+[docs/STABILITY.md](https://github.com/JudikaM/datakrit/blob/main/docs/STABILITY.md).
 
 The 0.x names `--schema`, `--output-schema`, and `--output-schemas` were removed in 2.0.0.
 
@@ -531,13 +581,12 @@ and the repository have the new name, and JSON reports carry `schema_version` 3 
   so it prints the command to run afterwards (`python -m pip uninstall -y csv-tidy`); the
   **Update CSV Tidy** entry does it by itself. Then start Datakrit with the **Datakrit** icon
   or `datakrit ui`.
-- **From CSV Tidy 1.1.x or older:** download `datakrit-2.0.0-py3-none-any.whl` from the
-  [Releases page](https://github.com/JudikaM/datakrit/releases), run
-  `python -m pip install <path-to-wheel>`, then `datakrit shortcut install` if you used the
+- **From CSV Tidy 1.1.x or older:** run `python -m pip install datakrit` (or install the
+  wheel from the [Releases page](https://github.com/JudikaM/datakrit/releases)), then `datakrit shortcut install` if you used the
   icons (it replaces the old ones), then `python -m pip uninstall csv-tidy`.
 
 The full table, with the removed options and keywords, is in the
-[changelog](CHANGELOG.md#upgrading-to-200).
+[changelog](https://github.com/JudikaM/datakrit/blob/main/CHANGELOG.md#upgrading-to-200).
 
 ## Migrating from 0.x
 
@@ -553,7 +602,7 @@ Profiles need no change. What differs:
 
 Programs that read JSON reports should accept `schema_version` 3 (2.x; 1.x wrote 2); clean
 reports also have a top-level `artifacts` list. The full list, with the reasons, is in the
-[changelog](CHANGELOG.md#100---2026-11-04).
+[changelog](https://github.com/JudikaM/datakrit/blob/main/CHANGELOG.md#100---2026-11-04).
 
 ## Library
 
@@ -573,9 +622,9 @@ else:
 ```
 
 Many files: `run_batch("clean", select_inputs(["exports/"]), profile)`. A runnable example is
-in [examples/api_example.py](examples/api_example.py). See
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for result types and exceptions, and
-[docs/STABILITY.md](docs/STABILITY.md) for the names that form the public API.
+in [examples/api_example.py](https://github.com/JudikaM/datakrit/blob/main/examples/api_example.py). See
+[docs/ARCHITECTURE.md](https://github.com/JudikaM/datakrit/blob/main/docs/ARCHITECTURE.md) for result types and exceptions, and
+[docs/STABILITY.md](https://github.com/JudikaM/datakrit/blob/main/docs/STABILITY.md) for the names that form the public API.
 
 ## Supported conventions and limits
 
@@ -589,7 +638,7 @@ in [examples/api_example.py](examples/api_example.py). See
 - Files are processed in memory, one file at a time. Duplicate detection memory grows with
   distinct rows/keys. The default field limit is 131,072 characters (`max_field_chars`).
   Measured times and memory for up to 500,000 rows are in
-  [docs/BENCHMARKS.md](docs/BENCHMARKS.md); larger files have not been measured.
+  [docs/BENCHMARKS.md](https://github.com/JudikaM/datakrit/blob/main/docs/BENCHMARKS.md); larger files have not been measured.
 - CSV has no column types. Spreadsheet programs may turn `00123` into `123` when opening a
   CSV directly. Import the file instead and set identifier columns to Text (in Excel: Data >
   From Text/CSV > Transform Data, then change the column type to Text).
@@ -606,18 +655,20 @@ in [examples/api_example.py](examples/api_example.py). See
 - Reports include source values. Keep them local if the data is private.
 - Not included: Excel (`.xlsx`) files, hosted or multi-user web access, accounts, databases,
   streaming for very large files, delimiter detection. See
-  [docs/MAINTENANCE.md](docs/MAINTENANCE.md) for the roadmap.
+  [docs/MAINTENANCE.md](https://github.com/JudikaM/datakrit/blob/main/docs/MAINTENANCE.md) for the roadmap.
 
 ## Feedback and bug reports
 
 Please open an [issue](https://github.com/JudikaM/datakrit/issues) using the templates. Use
 synthetic or anonymized data only, and never attach real personal or customer data. Security
-issues: see [SECURITY.md](SECURITY.md). If you try Datakrit on real-world exports, the task
-lists in [docs/USER_TESTING.md](docs/USER_TESTING.md) and the questions in
-[docs/USER_VALIDATION.md](docs/USER_VALIDATION.md) describe the feedback that helps most.
+issues: see [SECURITY.md](https://github.com/JudikaM/datakrit/blob/main/SECURITY.md). If you try Datakrit on real-world exports, the task
+lists in [docs/USER_TESTING.md](https://github.com/JudikaM/datakrit/blob/main/docs/USER_TESTING.md) and the questions in
+[docs/USER_VALIDATION.md](https://github.com/JudikaM/datakrit/blob/main/docs/USER_VALIDATION.md) describe the feedback that helps most.
 
 ## Contributing and license
 
-Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and
-[CHANGELOG.md](CHANGELOG.md). Everyone taking part is expected to follow the
-[Code of Conduct](CODE_OF_CONDUCT.md). Datakrit is released under the [MIT License](LICENSE).
+Contributions are welcome; see [CONTRIBUTING.md](https://github.com/JudikaM/datakrit/blob/main/CONTRIBUTING.md) and
+[CHANGELOG.md](https://github.com/JudikaM/datakrit/blob/main/CHANGELOG.md). Everyone taking part is expected to follow the
+[Code of Conduct](https://github.com/JudikaM/datakrit/blob/main/CODE_OF_CONDUCT.md). Datakrit is released under the [MIT License](https://github.com/JudikaM/datakrit/blob/main/LICENSE). The icons of the local
+interface are covered by the copyright and license notices in [NOTICE.md](https://github.com/JudikaM/datakrit/blob/main/NOTICE.md),
+which the wheel and the sdist include.

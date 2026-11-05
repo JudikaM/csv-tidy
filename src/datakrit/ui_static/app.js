@@ -1784,7 +1784,7 @@ new MutationObserver(applyFind).observe(document.querySelector(".step-area"), { 
 /* The SVG namespace, taken from an icon of the page (the script names no addresses). */
 const SVG = $("nav-toggle").querySelector("svg").namespaceURI;
 const circle = ["circle", { cx: "12", cy: "12", r: "10" }];
-/* Lucide circle-check, circle-alert, and circle-dashed. */
+/* Inline SVG status icons: a circle with a check, with an exclamation mark, and dashed. */
 const STATE_ICONS = {
   ok: [circle, ["path", { d: "m9 12 2 2 4-4" }]],
   bad: [circle, ["line", { x1: "12", x2: "12", y1: "8", y2: "12" }], ["line", { x1: "12", x2: "12.01", y1: "16", y2: "16" }]],

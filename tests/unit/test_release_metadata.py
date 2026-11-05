@@ -38,3 +38,44 @@ def test_interface_assets_are_package_data():
         assert f'"{name}"' in page
         assert len(static.joinpath(name).read_bytes()) > 1000
     assert "{{token}}" in page and "{{version}}" in page
+
+
+def test_readme_links_and_images_work_on_the_pypi_page():
+    """README.md is the PyPI project page, where relative links and images do not work."""
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    blob = "https://github.com/JudikaM/datakrit/blob/main/"
+    raw = "https://raw.githubusercontent.com/JudikaM/datakrit/main/"
+    targets = re.findall(r"\]\(([^)\s]+)\)", text)
+    targets += re.findall(r'\b(?:src|srcset)="([^"]+)"', text)
+    assert targets
+    relative = [t for t in targets if not t.startswith(("https://", "http://"))]
+    assert relative == []
+    anchors = {
+        re.sub(r"[^\w\- ]", "", heading.lower()).replace(" ", "-")
+        for heading in re.findall(r"^#+ (.+)$", text, flags=re.M)
+    }
+    for target in targets:
+        for prefix in (blob, raw):
+            if target.startswith(prefix):
+                path, _, anchor = target.removeprefix(prefix).partition("#")
+                assert (ROOT / path).exists(), target
+                if path == "README.md":
+                    assert anchor in anchors, target
+    images = re.findall(r'\b(?:src|srcset)="([^"]+)"', text)
+    assert images and all(i.startswith(raw) for i in images)
+
+
+def test_notices_of_the_interface_icons_ship_with_the_package():
+    """The ISC License of Lucide and the MIT License of Feather ask for their notices in
+    every copy: NOTICE.md holds them in full, and the wheel and sdist include it."""
+    import tomllib
+
+    notice = (ROOT / "NOTICE.md").read_text(encoding="utf-8")
+    assert "Copyright (c) 2026 Lucide Icons and Contributors" in notice
+    assert "ISC License" in notice and "appear in all copies." in notice
+    assert notice.count("Cole Bemis") == 2 and notice.count("The MIT License (MIT)") == 2
+    assert notice.count("shall be included in all\ncopies or substantial portions") == 2
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert project["project"]["license-files"] == ["LICENSE", "NOTICE.md"]
+    sdist = project["tool"]["hatch"]["build"]["targets"]["sdist"]["include"]
+    assert "/LICENSE" in sdist and "/NOTICE.md" in sdist

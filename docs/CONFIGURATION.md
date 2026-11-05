@@ -291,6 +291,8 @@ column that no profile declares as a date. Reports make this explicit: the text 
 - Each shortcut is reported as `created`, `updated`, `removed`, `absent`, or `skipped`; the
   exit code is 0, or 2 if the shortcuts cannot be made (for example no `datakrit-ui`
   program next to this Python, or Windows PowerShell is unavailable).
+- In the [Windows app](#windows-app) `install` is refused (exit code 2) and writes nothing:
+  the shortcuts start programs that pip installs. Pin `Datakrit.exe` to Start instead.
 - On Windows the `.lnk` files are written through the Windows Script Host by Windows
   PowerShell; nothing else on the system is changed.
 
@@ -324,6 +326,12 @@ The upgrade from version 1.x, published under the earlier name, is described in 
 codes: 0 updated, up to date, or `--check`; 2 if GitHub cannot be reached, the release is
 unusable, pip fails (the installed version is kept), or the version asked for is before
 2.0.0. Close Datakrit before updating.
+
+In the [Windows app](#windows-app) (a frozen program, `sys.frozen`), `update` never runs
+pip: there is none, and the app cannot replace its own folder. It looks up the release as in
+step 1 and 2, then reports the installed version, the release, and, when that release is
+newer (or was asked for with `--version`), the zip `Datakrit-X.Y.Z-windows-x64.zip` and the
+release page to download it from (exit code 0; 2 when GitHub cannot be reached).
 
 ## Batch processing
 
@@ -375,11 +383,16 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   behavior (default 0: run until Quit or Ctrl+C). Only requests that carry the session key
   count as contact. If `datakrit-ui` cannot start, the reason is written to
   `datakrit-ui-error.txt` in the temporary folder, because there is no window to show it.
+- **Smoke mode (for automated checks).** When the environment variable
+  `DATAKRIT_UI_URL_FILE` names a file, `datakrit-ui` and the Windows app open no browser
+  and write the page address, with its session key, to that file as soon as the server
+  accepts connections (written completely or not at all). Everything else is unchanged; an
+  empty variable means a normal start. Anyone who can read that file can use the page, so
+  put it in a private folder.
 - **Plain suggestions.** The page explains problems with its own controls, based on each
   issue's `remedy` (see Reports); for other issues it shows the suggestion text.
-- **Look.** A dark theme (default, in the colors of VS Code's "Dark Modern") and a light theme
-  (in the colors of VS Code's "Light+"), switched in the side bar and remembered
-  in the browser's local storage for this address (`datakrit-theme`, `datakrit-nav`, and
+- **Look.** A dark theme (the default) and a light theme, switched in the side bar and
+  remembered in the browser's local storage for this address (`datakrit-theme`, `datakrit-nav`, and
   `datakrit-howto` for "How to use"; a choice that 1.x stored under its earlier keys moves to
   these keys when the page loads). Lists show a chevron that turns while
   they are open, and scroll bars are thin (a 6-pixel thumb). Quit asks for confirmation. Files can be
@@ -497,6 +510,26 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   key from the page address, and (when the browser sends one) a same-origin `Origin` header.
   The page uses a content security policy that allows only its own script and style sheet;
   file contents are inserted as text. No external resources are loaded.
+
+## Windows app
+
+`Datakrit-X.Y.Z-windows-x64.zip`, attached to every release from 2.1.0 on, holds the folder
+`Datakrit` with `Datakrit.exe` and its files, for 64-bit Windows. It needs no Python.
+
+- `Datakrit.exe` starts the local interface only, exactly like `datakrit-ui`: no console
+  window, the browser opens, the server stops with **Quit** or by itself 10 minutes after
+  the page last contacted it, start-up problems go to `datakrit-ui-error.txt` in the
+  temporary folder, and the smoke mode above works the same. It takes no arguments and has
+  no command line; the `datakrit` command and the Python API come with a pip install.
+- The page, its results, downloads, and the profiles it reads and writes are those of
+  `datakrit ui` of the same version. Temporary copies go to the temporary folder; nothing is
+  written into the app's folder.
+- **Updates.** The app does not update itself: download the zip of the new release, check
+  its SHA-256, and replace the `Datakrit` folder. Profiles keep working. Inside the app,
+  `update` only reports the release (see [Updates](#updates)), and shortcuts are not offered
+  (see [Shortcuts](#shortcuts)).
+- The app is not code-signed; see [SECURITY.md](../SECURITY.md#verifying-downloads) for
+  checking the file and the SmartScreen warning.
 
 ## Output safety
 

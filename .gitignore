@@ -219,11 +219,16 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# CSV Tidy: local outputs, private data and local tool settings
+# Datakrit: local outputs, private data and local tool settings
 /output/
 /data/
 /.local/
 .claude/settings.local.json
+
+# Datakrit Windows app: the local build output, and the spec that the PyInstaller rule above
+# would otherwise ignore
+/dist-exe/
+!/packaging/windows/datakrit.spec
 
 # Recommended by the publication check
 *.py[cod]

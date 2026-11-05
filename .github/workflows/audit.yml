@@ -36,3 +36,10 @@ jobs:
         run: >-
           python -m pip_audit --requirement constraints-dev.txt --no-deps --disable-pip
           --progress-spinner off
+      - name: Audit the build tools of the Windows app
+        # constraints-exe.txt pins, with hashes, what the windows-app workflow installs to
+        # build the app: PyInstaller, whose bootloader starts the app, the packages it needs,
+        # and tomli_w, which the app bundles.
+        run: >-
+          python -m pip_audit --requirement constraints-exe.txt --require-hashes
+          --disable-pip --progress-spinner off

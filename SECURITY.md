@@ -28,21 +28,52 @@ new release, and a GitHub security advisory describes it once the fix is availab
 ## Automated checks on the repository
 
 Private vulnerability reporting (above), Dependabot alerts, and malware alerts are enabled
-for the repository. CI also audits the pinned development packages with `pip-audit`, and
-CodeQL analyzes the Python code and the interface's JavaScript; see
+for the repository. CI also audits the pinned development packages and the build tools of the
+Windows app (`constraints-dev.txt`, `constraints-exe.txt`) with `pip-audit`, and CodeQL
+analyzes the Python code and the interface's JavaScript; see
 [CONTRIBUTING.md](CONTRIBUTING.md#checks-the-same-commands-run-in-ci).
+
+## Verifying downloads
+
+Every release on the [Releases page](https://github.com/JudikaM/datakrit/releases) lists the
+SHA-256 of its three files (the wheel, the sdist, and the Windows app's zip) in its release
+notes, and GitHub shows the same digest next to each file.
+
+- **PyPI.** The files of `datakrit` on PyPI are the wheel and sdist of the GitHub release,
+  byte for byte: GitHub Actions downloads them from the release, checks them against
+  GitHub's digests, and uploads them through PyPI Trusted Publishing. PyPI accepts uploads
+  only from that workflow of `JudikaM/datakrit` in its `pypi` environment; no API token or
+  password exists that could upload a version. pip checks the hashes that PyPI lists. To
+  compare a downloaded wheel with the release yourself:
+  `python -m pip download datakrit==X.Y.Z --no-deps -d DIR`, then compare the SHA-256 of the
+  file with the release notes.
+- **The Windows app.** In PowerShell:
+  `Get-FileHash .\Datakrit-X.Y.Z-windows-x64.zip -Algorithm SHA256`; on Linux or macOS:
+  `sha256sum --check Datakrit-X.Y.Z-windows-x64.zip.sha256`. Use the app only if the hash
+  equals the one in the release notes.
+- **The app is not code-signed.** Windows SmartScreen may therefore warn ("Windows protected
+  your PC") the first time it starts. Choose **More info** and **Run anyway** only for a zip
+  downloaded from the official Releases page whose hash you checked. A copy from anywhere
+  else, or one whose hash differs, may have been changed: delete it. Antivirus programs
+  sometimes flag unsigned programs made with PyInstaller; such a report about the official
+  file is welcome as an issue.
+- The app is built by GitHub Actions from the release tag (the `Windows app` workflow); the
+  workflow run is linked in the release notes.
 
 ## Scope
 
 Datakrit runs locally and executes no code from CSV content or profiles. It makes no outgoing
 network connections, except `datakrit update` when a user runs it: that command reads the
 release information from the GitHub API (`JudikaM/datakrit`) and has pip install the
-release wheel, checked against the SHA-256 that GitHub publishes for it. `datakrit ui` opens a listening socket on the loopback address
+release wheel, checked against the SHA-256 that GitHub publishes for it; in the Windows app
+it only reports the release page. `datakrit ui` opens a listening socket on the loopback address
 (`127.0.0.1`) only, for the browser on the same computer; requests need the session key
 printed at start-up. Relevant issues include, for example: a way to use the local interface
 from another computer, from a web page of another origin, or without the session key; cell
 content being interpreted as HTML or script by the page; `datakrit update` installing a
-file other than the verified release wheel; shortcuts changing files they did not create; writing outside the requested output paths,
+file other than the verified release wheel; files on PyPI or in the Windows app's zip that
+differ from the release's published hashes; the Windows app doing anything that
+`datakrit-ui` does not; shortcuts changing files they did not create; writing outside the requested output paths,
 overwriting input files, crashes or unbounded resource use on crafted input beyond the
 documented limits, and data being silently changed. Spreadsheet formula injection in CSV
 content is a known property of the CSV format (see the README); Datakrit reports values as

@@ -133,6 +133,16 @@ def test_cli_reports_each_shortcut(tmp_path):
     assert removed.code == 0 and removed.out.count("removed: ") == 2
 
 
+def test_the_windows_app_offers_no_shortcuts(tmp_path, monkeypatch):
+    """The Windows app (``sys.frozen``) is an unzipped folder, not a pip install."""
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    with pytest.raises(DatakritError, match="not offered in the Datakrit Windows app"):
+        shortcuts.install(folder=tmp_path, platform="linux", ui=UI, python=PY)
+    result = run_cli("shortcut", "install", "--folder", str(tmp_path))
+    assert result.code == 2 and "Pin to Start" in result.err
+    assert list(tmp_path.iterdir()) == []
+
+
 @pytest.mark.skipif(sys.platform != "darwin", reason="the macOS refusal")
 def test_cli_refuses_shortcuts_on_macos_and_writes_nothing(tmp_path):
     folder = tmp_path / "icons"

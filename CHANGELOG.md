@@ -8,6 +8,59 @@ Datakrit was called CSV Tidy until 1.2.0.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-05
+
+Two easier ways to install Datakrit: `pip install datakrit` from PyPI, and on Windows an app
+that needs no Python (`Datakrit-2.1.0-windows-x64.zip` on the release page). Commands,
+options, profiles, reports, and the Python API are unchanged.
+
+**Upgrade notes.** Nothing changes for profiles, CLI, reports, or the Python API. Existing
+installs update as before with `datakrit update` (or the **Update Datakrit** entry), or with
+`python -m pip install --upgrade datakrit`.
+
+### Added
+
+- PyPI: Datakrit is published on PyPI as `datakrit`. The files there are the wheel and sdist
+  of the GitHub release, with the same SHA-256. GitHub Actions uploads them
+  (`publish-pypi.yml`) through PyPI Trusted Publishing, so no upload token or password
+  exists; the workflow checks each file against the digest that GitHub publishes, runs
+  `twine check --strict`, and checks that the version is the tag's.
+- Windows app: `Datakrit-X.Y.Z-windows-x64.zip` on each release holds the folder `Datakrit`
+  with `Datakrit.exe`. Unzip it and double-click `Datakrit.exe`: the local interface starts
+  and opens in the browser, with no Python, no terminal, and no console window. It behaves
+  like `datakrit-ui` and has no command line. The `windows-app.yml` workflow builds it from
+  the release tag, smoke-tests it, and attaches it with its SHA-256 (a `.sha256` file and
+  the release notes). The app is not code-signed; the README explains the SmartScreen
+  warning and how to check the file. Its sources are in `packaging/windows/`; PyInstaller is
+  pinned with hashes in `constraints-exe.txt` and is not a dependency of Datakrit.
+- In the Windows app, `update` reports the release and the zip to download instead of
+  running pip, and `shortcut install` is refused with a hint to pin `Datakrit.exe` to Start.
+- A smoke mode for `datakrit-ui` and the app, for automated checks: when the environment
+  variable `DATAKRIT_UI_URL_FILE` names a file, no browser opens and the page address is
+  written to that file.
+- CI: `twine check --strict` after the build; the `Windows app` workflow builds and
+  smoke-tests the app on every pull request; the dependency audit also covers
+  `constraints-exe.txt`.
+- `NOTICE.md`: the copyright and license notices, in full, of the icons that the local
+  interface draws (Lucide, ISC License; Lucide's icons derived from Feather, MIT License).
+  The wheel carries it as a license file (`license-files`), and the sdist includes it.
+
+### Changed
+
+- Package metadata: `Development Status :: 5 - Production/Stable` (2.x is a stable public
+  contract), the local interface in the description, and the classifiers
+  `Environment :: Web Environment` and `Intended Audience :: End Users/Desktop`. `twine`
+  joins the `dev` extra and is pinned in `constraints-dev.txt`.
+- README: every link and image is an absolute address, so that they work on the PyPI
+  project page. "Installation" starts with PyPI, then the Windows app, then the GitHub
+  wheel.
+- The sdist also contains `packaging/` and `constraints-exe.txt`.
+- Clean-ups: comments in the interface's style sheet and script and the documentation
+  describe the themes and icons (a dark and a light theme, inline SVG icons) instead of
+  where they came from; the `.gitignore` comment names Datakrit; the description of
+  `update.py` in docs/ARCHITECTURE.md no longer names the repository twice or the steps of
+  the 1.2.0 switch.
+
 ## [2.0.0] - 2026-11-05
 
 The product is called **Datakrit**: check and clean table files, explicitly. Every program,

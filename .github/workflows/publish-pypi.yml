@@ -1,0 +1,115 @@
+name: Publish to PyPI
+
+# Uploads the wheel and sdist of a published GitHub release to PyPI through Trusted
+# Publishing: PyPI trusts this workflow in the `pypi` environment, so no token or password
+# exists anywhere. The files are the release assets themselves, checked against the SHA-256
+# that GitHub publishes for them; nothing is built here, and the Windows app's zip is never
+# uploaded. A version can be uploaded to PyPI only once (see docs/RELEASE.md).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag of a published release to upload (a retry), for example v2.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-pypi
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Upload the release files to PyPI
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: pypi
+      url: https://pypi.org/project/datakrit/
+    permissions:
+      id-token: write # Trusted Publishing
+      contents: read
+    env:
+      TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Check the tag
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$TAG' is not a release tag such as v2.1.0"
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install twine (pinned in constraints-dev.txt)
+        run: python -m pip install -c constraints-dev.txt twine
+      - name: Download the wheel and sdist of the release and check their SHA-256
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          # Only a published release has this address; a draft answers 404.
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" > "$RUNNER_TEMP/release.json"
+          if [ "$(jq '.draft or .prerelease' "$RUNNER_TEMP/release.json")" != false ]; then
+            echo "::error::$TAG is a draft or a prerelease; only published releases go to PyPI"
+            exit 1
+          fi
+          mkdir pypi-dist
+          for name in "datakrit-$version-py3-none-any.whl" "datakrit-$version.tar.gz"; do
+            digest=$(jq -r --arg n "$name" \
+              '[.assets[] | select(.name == $n)] | if length == 1 then .[0].digest // "" else "" end' \
+              "$RUNNER_TEMP/release.json")
+            if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::the release of $TAG has no single $name with a published SHA-256"
+              exit 1
+            fi
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$name" --dir pypi-dist
+            echo "${digest#sha256:}  pypi-dist/$name" | sha256sum --check --strict
+          done
+          ls -l pypi-dist
+          if [ "$(find pypi-dist -type f | wc -l)" != 2 ]; then
+            echo "::error::pypi-dist must hold exactly the wheel and the sdist"
+            exit 1
+          fi
+      - name: Check the metadata and that the version is the tag
+        run: |
+          python -m twine check --strict pypi-dist/*
+          python - <<'EOF'
+          import email.parser
+          import os
+          import tarfile
+          import zipfile
+          from pathlib import Path
+
+          version = os.environ["TAG"].removeprefix("v")
+          wheel = Path(f"pypi-dist/datakrit-{version}-py3-none-any.whl")
+          sdist = Path(f"pypi-dist/datakrit-{version}.tar.gz")
+          with zipfile.ZipFile(wheel) as archive:
+              wheel_meta = archive.read(f"datakrit-{version}.dist-info/METADATA")
+          with tarfile.open(sdist) as archive:
+              member = archive.extractfile(f"datakrit-{version}/PKG-INFO")
+              assert member is not None
+              sdist_meta = member.read()
+          for label, raw in (("wheel", wheel_meta), ("sdist", sdist_meta)):
+              meta = email.parser.BytesHeaderParser().parsebytes(raw)
+              found = (meta["Name"], meta["Version"])
+              if found != ("datakrit", version):
+                  raise SystemExit(f"the {label} is {found}, not ('datakrit', '{version}')")
+          print(f"wheel and sdist are datakrit {version}")
+          EOF
+      - name: Publish to PyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: pypi-dist/
+          print-hash: true

@@ -5,17 +5,19 @@ build-backend = "hatchling.build"
 [project]
 name = "datakrit"
 dynamic = ["version"]
-description = "Check and clean table files, explicitly: a Python CLI and library for CSV files with declared number and date formats."
+description = "Check and clean table files, explicitly: a Python CLI, library, and local browser interface for CSV files with declared number and date formats."
 readme = "README.md"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE.md"]
 requires-python = ">=3.11"
 authors = [{ name = "Judika Marpaung" }]
 keywords = ["csv", "validation", "data-cleaning", "cli", "decimal", "dates"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
+    "Environment :: Web Environment",
     "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
     "Intended Audience :: System Administrators",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -31,7 +33,14 @@ classifiers = [
 dependencies = ["tomli-w>=1.0"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "pytest-cov>=7.0", "ruff>=0.15", "mypy>=2.4", "build>=1.2"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=7.0",
+    "ruff>=0.15",
+    "mypy>=2.4",
+    "build>=1.2",
+    "twine>=6.1",
+]
 
 [project.scripts]
 datakrit = "datakrit.cli:main"
@@ -63,12 +72,15 @@ include = [
     "/scripts",
     "/README.md",
     "/LICENSE",
+    "/NOTICE.md",
     "/CHANGELOG.md",
     "/CODE_OF_CONDUCT.md",
     "/CONTRIBUTING.md",
     "/SECURITY.md",
     "/TEST_CASES.md",
     "/constraints-dev.txt",
+    "/constraints-exe.txt",
+    "/packaging",
 ]
 exclude = ["__pycache__", "*.py[cod]"]
 
