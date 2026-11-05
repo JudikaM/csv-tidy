@@ -11,8 +11,8 @@ It writes, in the ``--dist`` folder (``dist-exe`` by default, never committed):
   ``Datakrit/licenses/`` with the license notices of Datakrit and of what the app bundles
   (see ``LICENSE_FILES``);
 - ``Datakrit-<version>-windows-x64.zip``: that folder, as ``Datakrit\\...``;
-- ``Datakrit-<version>-windows-x64.zip.sha256``: ``<hash>  <zip name>``, the format that
-  ``sha256sum --check`` reads.
+- ``Datakrit-<version>-windows-x64.zip.sha256``: one line ``<hash>  <zip name>`` ending in
+  LF (not CRLF), the format that ``sha256sum --check`` and ``shasum -a 256 --check`` read.
 
 It prints the version, the zip's name, size, and SHA-256 as ``key=value`` lines, and also
 appends them to the file named by ``GITHUB_OUTPUT`` when GitHub Actions sets it.
@@ -144,6 +144,12 @@ def add_licenses(folder: Path, python_license_file: Path) -> list[Path]:
     return written
 
 
+def sha256_line(target: Path, digest: str) -> bytes:
+    """The checksum file's content. Written as bytes, so that Windows adds no CR: with CRLF,
+    coreutils 8 ``sha256sum --check`` and ``shasum --check`` look for a file name with a CR."""
+    return f"{digest}  {target.name}\n".encode("ascii")
+
+
 def make_zip(folder: Path, target: Path) -> None:
     """Zip ``folder`` so that every entry starts with its name (``Datakrit/...``)."""
     files = sorted(p for p in folder.rglob("*") if p.is_file())
@@ -180,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     target.unlink(missing_ok=True)
     make_zip(folder, target)
     digest = sha256(target)
-    Path(f"{target}.sha256").write_text(f"{digest}  {target.name}\n", encoding="ascii")
+    Path(f"{target}.sha256").write_bytes(sha256_line(target, digest))
 
     result = {
         "version": version,

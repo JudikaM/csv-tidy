@@ -193,7 +193,7 @@ def test_fetch_json_reports_the_address_after_redirects(monkeypatch):
     assert final == "https://api.github.com/repositories/1/releases/latest"
     assert data == {"tag_name": "v2.0.0"}
     assert seen == [(LATEST, f"datakrit/{__version__}", 30)]
-    assert __version__ == "2.1.0"
+    assert __version__ == "2.1.1"
 
 
 @pytest.mark.parametrize(

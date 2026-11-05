@@ -152,3 +152,20 @@ def test_the_build_refuses_a_python_license_without_the_microsoft_conditions(tmp
         build.add_licenses(folder, python_license)
     with pytest.raises(SystemExit, match="missing"):
         build.add_licenses(folder, tmp_path / "absent.txt")
+
+
+def test_the_checksum_file_is_one_lf_line(tmp_path):
+    """Regression (2.1.0 draft): written as text on Windows it ended in CRLF, and coreutils 8
+    `sha256sum --check` and `shasum --check` then looked for a file name with a CR."""
+    build, smoke = load("build_app"), load("smoke_app")
+    zip_path = tmp_path / "Datakrit-2.1.1-windows-x64.zip"
+    zip_path.write_bytes(b"PK")
+    digest = "ab" * 32
+    line = build.sha256_line(zip_path, digest)
+    assert line == f"{digest}  Datakrit-2.1.1-windows-x64.zip\n".encode()
+    checksum = tmp_path / "Datakrit-2.1.1-windows-x64.zip.sha256"
+    checksum.write_bytes(line)
+    smoke.check_sha256_file(zip_path, digest)
+    checksum.write_bytes(line.replace(b"\n", b"\r\n"))
+    with pytest.raises(smoke.SmokeError, match="LF"):
+        smoke.check_sha256_file(zip_path, digest)

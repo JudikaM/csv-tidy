@@ -109,6 +109,8 @@ jobs:
             exit 1
           fi
           echo "$SHA256  $ZIP" | sha256sum --check --strict
+          # Exactly one LF-terminated line: older sha256sum and shasum fail on a CR.
+          printf '%s  %s\n' "$SHA256" "$ZIP" | cmp - "$ZIP.sha256"
           sha256sum --check --strict "$ZIP.sha256"
           # Drafts are listed only for accounts that can push, as this job's token can.
           gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \

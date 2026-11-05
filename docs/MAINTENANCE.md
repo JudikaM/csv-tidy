@@ -71,7 +71,7 @@ Candidates, to be prioritized by real user requests rather than built speculativ
   for 0.x). The local, single-user interface (`datakrit ui`) exists; changes to it should
   come from sessions described in [USER_TESTING.md](USER_TESTING.md).
 - A native file dialog for the local interface.
-- [x] A self-contained Windows executable: done in 2.1.0 (the Windows app,
+- [x] A self-contained Windows executable: done in 2.1.1 (the Windows app,
   `Datakrit-X.Y.Z-windows-x64.zip`, built by the `Windows app` workflow).
 - Code signing for the Windows app, so that SmartScreen does not warn on its first start
   (open: needs a code-signing certificate or a signing service).

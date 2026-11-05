@@ -513,7 +513,7 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
 
 ## Windows app
 
-`Datakrit-X.Y.Z-windows-x64.zip`, attached to every release from 2.1.0 on, holds the folder
+`Datakrit-X.Y.Z-windows-x64.zip`, attached to every release from 2.1.1 on, holds the folder
 `Datakrit` with `Datakrit.exe` and its files, for 64-bit Windows. It needs no Python.
 
 - `Datakrit.exe` starts the local interface only, exactly like `datakrit-ui`: no console

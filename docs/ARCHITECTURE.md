@@ -149,7 +149,7 @@ if result.export_ready:
   (`datakrit-ui`) gives a program without a console window, made by pip itself, and
   `datakrit shortcut install` points icons at it. Updates replace the package in place, so
   the icons keep working. Without a console nobody can press Ctrl+C, so the server stops
-  itself after a period without contact from its page. From 2.1.0 a self-contained Windows
+  itself after a period without contact from its page. From 2.1.1 a self-contained Windows
   app is offered as well, for people without Python (see "Packaging and distribution"). It
   is unsigned, so SmartScreen warns on its first start, and an update replaces its whole
   folder by hand; pip installs keep the icons and `datakrit update`.
