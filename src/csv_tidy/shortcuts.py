@@ -35,7 +35,9 @@ class Shortcut:
 @dataclass(frozen=True)
 class Outcome:
     path: str
-    status: str  # created, updated, removed, absent, or skipped (belongs to another program)
+    # created, updated, removed, absent, skipped (belongs to another program), or found
+    # (made by CSV Tidy; only from existing())
+    status: str
 
 
 def ui_program() -> Path:
@@ -105,6 +107,26 @@ def remove(folder: str | Path | None = None, platform: str = sys.platform) -> li
     if platform == "win32":
         return _windows("remove", items, folder)
     return [_remove_entry(path) for _, path in _linux_places(items, folder)]
+
+
+def existing(folder: str | Path | None = None, platform: str = sys.platform) -> list[Shortcut]:
+    """The shortcuts that CSV Tidy made, in the places ``install`` uses; nothing is changed.
+
+    The same ownership rule as ``install`` and ``remove`` applies, so a file with one of these
+    names that belongs to another program is not counted. Systems without shortcuts have none.
+    """
+    if platform != "win32" and not platform.startswith("linux"):
+        return []
+    placeholder = Path("csv-tidy")
+    items = planned(placeholder, placeholder, desktop=folder is None)
+    if folder is not None:
+        items = [item for item in items if item.place != "desktop"]
+    if platform == "win32":
+        found = _windows("find", items, folder)
+        return [
+            item for item, outcome in zip(items, found, strict=True) if outcome.status == "found"
+        ]
+    return [item for item, path in _linux_places(items, folder) if path.exists() and _ours(path)]
 
 
 def _supported(platform: str) -> None:
@@ -206,7 +228,11 @@ foreach ($item in $request.items) {
         $old = $shell.CreateShortcut($path)
         $ours = ($old.TargetPath -like '*csv-tidy-ui*') -or ($old.Arguments -like '*-m csv_tidy*')
     }
-    if ($request.action -eq 'remove') {
+    if ($request.action -eq 'find') {
+        if (-not $exists) { $status = 'absent' }
+        elseif (-not $ours) { $status = 'skipped' }
+        else { $status = 'found' }
+    } elseif ($request.action -eq 'remove') {
         if (-not $exists) { $status = 'absent' }
         elseif (-not $ours) { $status = 'skipped' }
         else { Remove-Item -LiteralPath $path; $status = 'removed' }

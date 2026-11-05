@@ -136,7 +136,15 @@ and it does so only when you run it. Profiles keep working after an update.
 
 Close CSV Tidy before updating, and start it again afterwards to use the new version.
 
-exit codes: 0 updated, already up to date, or --check; 2 GitHub or pip failed
+CSV Tidy is renamed to Datakrit in 2.0.0, and its repository from JudikaM/csv-tidy to
+JudikaM/datakrit; update looks in JudikaM/datakrit first, then in JudikaM/csv-tidy. When the
+release is Datakrit's, update switches this installation: it installs Datakrit (verified the
+same way), replaces CSV Tidy's shortcuts with Datakrit's if this computer has any, removes
+CSV Tidy with pip (or prints that command while CSV Tidy is still running), and says how to
+start Datakrit. --check describes the switch first.
+
+exit codes: 0 updated, already up to date, or --check; 2 GitHub or pip failed, or a step of
+            the switch to Datakrit failed (its command is printed)
 """
 
 UI_EPILOG = """\
@@ -838,17 +846,43 @@ def _update(args: argparse.Namespace) -> int:
         return 2
     current = __version__
     newer = update.version_key(release.version) > update.version_key(current)
+    product = update.NEW_NAME if release.switch else "CSV Tidy"
     if args.check:
-        print(f"Installed: CSV Tidy {current}. Latest release: {release.version}.")
+        print(
+            f"Installed: CSV Tidy {current}. Latest release: {product} {release.version} "
+            f"(from {release.repository})."
+        )
+        if release.switch and newer:
+            print(
+                f"CSV Tidy is now called {update.NEW_NAME}. {update.NEW_NAME} "
+                f"{release.version} is available ({release.page_url})."
+            )
+            print(
+                f"`csv-tidy update` switches this installation to {update.NEW_NAME}: it "
+                f"installs {update.NEW_NAME}, replaces the CSV Tidy shortcuts, and removes "
+                "CSV Tidy."
+            )
+            print(
+                f"Afterwards the command is `{update.NEW_MODULE}` instead of `csv-tidy`. "
+                "Profiles keep working."
+            )
+            return 0
         if newer:
             print(f"CSV Tidy {release.version} is available ({release.page_url}).")
             print("Install it with: csv-tidy update")
         else:
             print("CSV Tidy is up to date.")
+        print(
+            f"Note: in 2.0.0 CSV Tidy is renamed to {update.NEW_NAME} (command "
+            f"`{update.NEW_MODULE}`). `csv-tidy update` will switch to it, and profiles keep "
+            "working."
+        )
         return 0
     if release.version == current or (not newer and args.target_version is None):
         print(f"CSV Tidy {current} is up to date (latest release: {release.version}).")
         return 0
+    if release.switch:
+        return _switch(release, current)
     print(f"Updating CSV Tidy from {current} to {release.version} ({release.page_url}).")
     print("Close CSV Tidy if it is open; start it again after the update.")
     print(
@@ -866,6 +900,107 @@ def _update(args: argparse.Namespace) -> int:
         return 2
     print(f"Updated to {release.version}. Start CSV Tidy again to use the new version.")
     return 0
+
+
+def _switch(release: update.Release, current: str) -> int:
+    """Switch this installation from CSV Tidy to Datakrit, step by step.
+
+    1. Install the hash-verified Datakrit wheel (the two distributions share no files).
+    2. Only if CSV Tidy made shortcuts here: let Datakrit make its own (it removes CSV Tidy's).
+    3. Remove CSV Tidy with pip, unless one of its programs is running (Windows cannot remove
+       a running program); then, and after a failed step 2, the command is printed instead.
+    4. Say how to start Datakrit.
+    A failed step 1 changes nothing else; a failed later step prints its exact command.
+    """
+    from . import shortcuts  # loaded now: CSV Tidy's files are gone after step 3
+
+    new = update.NEW_NAME
+    python = sys.executable
+    remove_command = update.shown(update.uninstall_command(python))
+    print(
+        f"CSV Tidy is now called {new}. Switching this installation from CSV Tidy {current} "
+        f"to {new} {release.version} ({release.page_url})."
+    )
+    print("Close CSV Tidy if it is open. Profiles keep working with Datakrit.")
+    print(
+        f"Step 1 of 3: installing {new} {release.version}. Downloading {release.wheel_name} "
+        f"from GitHub; pip verifies its SHA-256 ({release.sha256[:12]}...)."
+    )
+    sys.stdout.flush()
+    code = update.run_pip(update.pip_command(release, python))
+    if code != 0:
+        print(
+            f"csv-tidy: error: pip could not install {new} {release.version} (exit code "
+            f"{code}); see pip's messages above. CSV Tidy {current} is still installed and "
+            "nothing else was changed.",
+            file=sys.stderr,
+        )
+        return 2
+    print(f"Step 1 of 3 done: {new} {release.version} is installed.")
+
+    failed = False
+    try:
+        found = shortcuts.existing()
+    except CsvTidyError as exc:
+        command = update.shown(update.shortcut_command(python, desktop=True))
+        print(
+            f"csv-tidy: error: step 2 of 3: could not look for CSV Tidy shortcuts ({exc}). If "
+            f"this computer has CSV Tidy icons, replace them with: {command}",
+            file=sys.stderr,
+        )
+        failed = True
+    else:
+        if not found:
+            print(
+                "Step 2 of 3: this computer has no CSV Tidy shortcuts, so none were replaced. "
+                f"To add {new} icons: {update.NEW_MODULE} shortcut install"
+            )
+        else:
+            desktop = any(item.place == "desktop" for item in found)
+            command = update.shown(update.shortcut_command(python, desktop))
+            print(f"Step 2 of 3: replacing the CSV Tidy shortcuts with {new}'s: {command}")
+            sys.stdout.flush()
+            code = update.run_program(update.shortcut_command(python, desktop))
+            if code != 0:
+                print(
+                    f"csv-tidy: error: step 2 of 3: {new} could not make its shortcuts (exit "
+                    f"code {code}). Run this command to finish it: {command}",
+                    file=sys.stderr,
+                )
+                failed = True
+            else:
+                print(f"Step 2 of 3 done: the shortcuts now start {new}.")
+
+    if failed:
+        print(
+            "Step 3 of 3 skipped: CSV Tidy stays installed so that its icons keep working. "
+            f"After step 2 is done, remove CSV Tidy with: {remove_command}"
+        )
+    else:
+        busy = update.programs_in_use()
+        if busy:
+            names = ", ".join(path.name for path in busy)
+            print(
+                f"Step 3 of 3: CSV Tidy cannot be removed while it runs ({names}). When it "
+                "has stopped (this command stops by itself; close the interface if it is "
+                f"open), remove it with: {remove_command}"
+            )
+        else:
+            print(f"Step 3 of 3: removing CSV Tidy {current}: {remove_command}")
+            sys.stdout.flush()
+            code = update.run_pip(update.uninstall_command(python))
+            if code != 0:
+                print(
+                    f"csv-tidy: error: step 3 of 3: pip could not remove CSV Tidy (exit code "
+                    f"{code}); {new} is installed. Run this command to finish it: "
+                    f"{remove_command}",
+                    file=sys.stderr,
+                )
+                failed = True
+            else:
+                print(f"Step 3 of 3 done: CSV Tidy {current} was removed.")
+    print(f'Next: start {new} with the "{new}" icon or `{update.NEW_MODULE} ui`.')
+    return 2 if failed else 0
 
 
 def _ask(prompt: str) -> str:

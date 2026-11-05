@@ -1,14 +1,24 @@
 """Install the built wheel into a fresh virtual environment and exercise it end to end.
 
-Usage: python scripts/smoke_dist.py [DIST_DIR]
+Usage: python scripts/smoke_dist.py [DIST_DIR] [--work-dir DIR]
 
 The wheel is installed outside the source tree and commands run from a temporary
-directory, so the local ``src/`` package cannot hide a broken distribution.
+directory, so the local ``src/`` package cannot hide a broken distribution. ``--work-dir``
+puts that temporary directory into DIR (for example on another drive than TEMP).
+
+At the end, the switch to Datakrit that ``csv-tidy update`` performs for a Datakrit release
+is run for real with a dummy ``datakrit`` wheel built here: a small hook in the fresh
+environment answers the release lookup with that local wheel, so nothing is downloaded or
+published.
 """
 
 from __future__ import annotations
 
+import argparse
+import base64
 import hashlib
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -59,8 +69,10 @@ print("interface batch and ZIP ok")
 """
 
 
-def run(cmd: list[str], cwd: Path, expect: int) -> str:
-    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+def run(cmd: list[str], cwd: Path, expect: int, env: dict[str, str] | None = None) -> str:
+    proc = subprocess.run(
+        cmd, cwd=cwd, capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL
+    )
     shown = " ".join([Path(cmd[0]).name, *cmd[1:]])
     if proc.returncode != expect:
         sys.exit(
@@ -95,13 +107,147 @@ def check_ui_assets(wheel: Path, dist: Path) -> None:
     print(f"ok: interface assets present in {wheel.name} and {sdists[0].name}")
 
 
+# A hook for the fresh environment only: with SMOKE_SWITCH_WHEEL set, `csv-tidy update`
+# finds a Datakrit release whose wheel is that local file, pip installs it from disk with the
+# same #sha256= check, and CSV Tidy shortcuts are reported in the menu. The variable is
+# removed at once, so pip and Datakrit, started by the update, run without the hook.
+SWITCH_HOOK = """
+import os
+_wheel = os.environ.pop("SMOKE_SWITCH_WHEEL", None)
+if _wheel:
+    import hashlib, sys
+    from pathlib import Path
+    from csv_tidy import shortcuts, update
+    _path = Path(_wheel)
+    _digest = hashlib.sha256(_path.read_bytes()).hexdigest()
+    _url = "https://github.com/JudikaM/datakrit/releases/download/v2.0.0/" + _path.name
+    _real_pip = update.run_pip
+
+    def _fetch_json(address):
+        assert address == "https://api.github.com/repos/JudikaM/datakrit/releases/latest", address
+        asset = {"name": _path.name, "browser_download_url": _url, "digest": "sha256:" + _digest}
+        return address, {"tag_name": "v2.0.0", "assets": [asset]}
+
+    def _run_pip(command):
+        return _real_pip([part.replace(_url, _path.as_uri()) for part in command])
+
+    _menu = [s for s in shortcuts.planned(Path("x"), Path("x")) if s.place == "menu"]
+    update.fetch_json = _fetch_json
+    update.run_pip = _run_pip
+    shortcuts.existing = lambda folder=None, platform=sys.platform: _menu
+"""
+
+DUMMY_MAIN = """\
+import sys
+
+def main(argv=None):
+    args = list(sys.argv[1:] if argv is None else argv)
+    print("datakrit dummy:", " ".join(args))
+    return 0 if args[:2] == ["shortcut", "install"] else 2
+
+if __name__ == "__main__":
+    sys.exit(main())
+"""
+
+LEFTOVER = re.compile(r"sv[-_]tidy", re.IGNORECASE)
+
+
+def build_dummy_datakrit(folder: Path, version: str = "2.0.0") -> Path:
+    """A minimal, valid datakrit wheel: a module that answers `python -m datakrit`."""
+    info = f"datakrit-{version}.dist-info"
+    files = {
+        "datakrit/__init__.py": f'__version__ = "{version}"\n',
+        "datakrit/__main__.py": DUMMY_MAIN,
+        f"{info}/METADATA": f"Metadata-Version: 2.1\nName: datakrit\nVersion: {version}\n",
+        f"{info}/WHEEL": (
+            "Wheel-Version: 1.0\nGenerator: smoke_dist\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
+        ),
+        f"{info}/entry_points.txt": "[console_scripts]\ndatakrit = datakrit.__main__:main\n",
+    }
+    record = []
+    for name, text in files.items():
+        data = text.encode()
+        digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
+        record.append(f"{name},sha256={digest},{len(data)}")
+    record.append(f"{info}/RECORD,,")
+    wheel = folder / f"datakrit-{version}-py3-none-any.whl"
+    with zipfile.ZipFile(wheel, "w") as archive:
+        for name, text in files.items():
+            archive.writestr(name, text)
+        archive.writestr(f"{info}/RECORD", "\n".join(record) + "\n")
+    return wheel
+
+
+def pip_temp_dirs() -> set[Path]:
+    return set(Path(tempfile.gettempdir()).glob("pip-*"))
+
+
+def assert_csv_tidy_gone(env_dir: Path, temp_before: set[Path], what: str) -> None:
+    """No CSV Tidy file may stay in the environment or in pip's temporary folders."""
+    left = [p for p in env_dir.rglob("*") if LEFTOVER.search(p.name)]
+    for folder in pip_temp_dirs() - temp_before:
+        left += [p for p in folder.rglob("*") if LEFTOVER.search(p.name)]
+    if left:
+        sys.exit(f"{what} left CSV Tidy files behind: {[str(p) for p in left]}")
+    print(f"ok: {what} left no CSV Tidy files")
+
+
+def check_switch(wheel: Path, python: Path, cli: Path, env_dir: Path, work: Path) -> None:
+    """Run the switch to Datakrit from the shortcut's command line and from the console
+    program, and check that CSV Tidy is removed completely (or, while its program runs on
+    Windows, that the printed command removes it completely)."""
+    dummy = build_dummy_datakrit(work)
+    quiet = {**os.environ, "PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+    site = run(
+        [str(python), "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"], work, 0
+    )
+    hook_dir = Path(site.strip())
+    (hook_dir / "_smoke_switch.py").write_text(SWITCH_HOOK, encoding="utf-8")
+    (hook_dir / "_smoke_switch.pth").write_text("import _smoke_switch\n", encoding="utf-8")
+    env = {**quiet, "SMOKE_SWITCH_WHEEL": str(dummy)}
+    reinstall = [str(python), "-m", "pip", "install", "-q", "--no-deps", str(wheel.resolve())]
+    starts = (
+        ("the shortcut's command", [str(python), "-m", "csv_tidy", "update", "--pause"]),
+        (f"the {cli.name} program", [str(cli), "update"]),
+    )
+    for number, (what, command) in enumerate(starts):
+        if number:
+            run(reinstall, work, 0, env=quiet)
+        before = pip_temp_dirs()
+        out = run(command, work, 0, env=env)
+        for text in (
+            "CSV Tidy is now called Datakrit",
+            "Step 1 of 3 done: Datakrit 2.0.0 is installed",
+            "datakrit dummy: shortcut install --no-desktop",
+            "Step 2 of 3 done",
+            "Next: start Datakrit",
+        ):
+            if text not in out:
+                sys.exit(f"the switch from {what} did not print {text!r}:\n{out}")
+        if sys.platform == "win32" and number:
+            # Windows cannot remove the running csv-tidy.exe; the command is printed instead.
+            if "CSV Tidy cannot be removed while it runs (csv-tidy.exe)" not in out:
+                sys.exit(f"the switch from {what} should have printed the remove command:\n{out}")
+            run([str(python), "-m", "pip", "uninstall", "-y", "csv-tidy"], work, 0, env=quiet)
+        elif "Step 3 of 3 done: CSV Tidy" not in out:
+            sys.exit(f"the switch from {what} did not remove CSV Tidy:\n{out}")
+        assert_csv_tidy_gone(env_dir, before, f"the switch from {what}")
+        run([str(python), "-m", "datakrit", "shortcut", "install"], work, 0)
+
+
 def main() -> None:
-    dist = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "dist")
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument("dist", nargs="?", default=str(ROOT / "dist"))
+    parser.add_argument("--work-dir", help="make the temporary directory inside this folder")
+    options = parser.parse_args()
+    dist = Path(options.dist)
     wheels = sorted(dist.glob("csv_tidy-*.whl"))
     if len(wheels) != 1:
         sys.exit(f"expected exactly one csv_tidy wheel in {dist}, found {len(wheels)}")
     check_ui_assets(wheels[0], dist)
-    with tempfile.TemporaryDirectory(prefix="csv-tidy-smoke-") as tmp:
+    if options.work_dir:
+        Path(options.work_dir).mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="csv-tidy-smoke-", dir=options.work_dir) as tmp:
         tmp_path = Path(tmp)
         env_dir = tmp_path / "venv"
         venv.EnvBuilder(with_pip=True).create(env_dir)
@@ -284,6 +430,8 @@ def main() -> None:
         api = run([str(python), "-I", "examples/api_example.py"], work, 0)
         if "clean: export ready = True" not in api:
             sys.exit("API example output was unexpected")
+        # Last, because it removes CSV Tidy from the fresh environment.
+        check_switch(wheels[0], python, cli, env_dir, work)
     print(f"smoke test passed for {wheels[0].name}")
 
 
