@@ -1047,6 +1047,99 @@ def test_gui_entry_point_opens_the_browser_without_a_console(monkeypatch, tmp_pa
     assert "port in use" in (tmp_path / "datakrit-ui-error.txt").read_text(encoding="utf-8")
 
 
+def test_smoke_mode_writes_the_address_instead_of_opening_the_browser(monkeypatch, tmp_path):
+    import datakrit.ui as ui_module
+
+    calls = []
+    monkeypatch.setattr(ui_module, "run_ui", lambda *a, **k: calls.append((a, k)) or 0)
+    target = tmp_path / "url.txt"
+    monkeypatch.setenv(ui_module.URL_FILE_VARIABLE, str(target))
+    assert ui_module.gui_main() == 0
+    assert calls == [
+        (
+            (0, False, ui_module.DEFAULT_MAX_FILE_MB),
+            {"idle_minutes": 10, "quiet": True, "url_file": target},
+        )
+    ]
+    monkeypatch.setenv(ui_module.URL_FILE_VARIABLE, "")  # empty: the normal start
+    assert ui_module.gui_main() == 0
+    assert calls[-1] == (
+        (0, True, ui_module.DEFAULT_MAX_FILE_MB),
+        {"idle_minutes": 10, "quiet": True},
+    )
+
+
+def test_smoke_mode_serves_the_page_until_quit(monkeypatch, tmp_path):
+    """What the smoke test of the Windows app does, against the same entry point."""
+    import datakrit.ui as ui_module
+
+    def no_browser(url):
+        raise AssertionError("the smoke mode must not open a browser")
+
+    monkeypatch.setattr(ui_module.webbrowser, "open", no_browser)
+    target = tmp_path / "url.txt"
+    monkeypatch.setenv(ui_module.URL_FILE_VARIABLE, str(target))
+    codes = []
+    thread = threading.Thread(target=lambda: codes.append(ui_module.gui_main()), daemon=True)
+    thread.start()
+    for _ in range(500):
+        if target.exists():
+            break
+        thread.join(0.01)
+    url = target.read_text(encoding="utf-8").strip()
+    assert url.startswith("http://127.0.0.1:") and "/?token=" in url
+    assert not target.with_name("url.txt.part").exists()
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(url, timeout=10) as page:
+        assert page.status == 200 and b"Datakrit" in page.read()
+    base = url.split("/?", 1)[0]
+    with pytest.raises(urllib.error.HTTPError) as refused:
+        opener.open(base + "/", timeout=10)
+    assert refused.value.code == 403
+    token = url.split("token=", 1)[1]
+    quit_request = urllib.request.Request(
+        base + "/api/quit",
+        data=b"{}",
+        headers={"Content-Type": "application/json", TOKEN_HEADER: token},
+    )
+    with opener.open(quit_request, timeout=10) as answer:
+        assert json.loads(answer.read()) == {"stopped": True}
+    thread.join(10)
+    assert not thread.is_alive() and codes == [0]
+
+
+def test_the_windows_app_writes_the_start_up_error_file(monkeypatch, tmp_path):
+    """Frozen (``sys.frozen``), as in the Windows app: a start-up problem still ends up in
+    datakrit-ui-error.txt, also when the smoke mode cannot write its address file."""
+    import datakrit.ui as ui_module
+
+    monkeypatch.setattr("sys.frozen", True, raising=False)
+    monkeypatch.setattr("sys.stdout", None)
+    monkeypatch.setattr("sys.stderr", None)
+    monkeypatch.setattr(ui_module.tempfile, "gettempdir", lambda: str(tmp_path))
+    error_file = tmp_path / "datakrit-ui-error.txt"
+
+    def broken(*a, **k):
+        raise OSError("port in use")
+
+    real_run_ui = ui_module.run_ui
+    monkeypatch.setattr(ui_module, "run_ui", broken)
+    assert ui_module.gui_main() == 2
+    assert "port in use" in error_file.read_text(encoding="utf-8")
+
+    monkeypatch.setattr(ui_module, "run_ui", real_run_ui)
+    made = []
+    real_create = ui_module.create_server
+    monkeypatch.setattr(
+        ui_module, "create_server", lambda *a, **k: made.append(real_create(*a, **k)) or made[-1]
+    )
+    monkeypatch.setenv(ui_module.URL_FILE_VARIABLE, str(tmp_path / "missing" / "url.txt"))
+    assert ui_module.gui_main() == 2
+    assert "could not start" in error_file.read_text(encoding="utf-8")
+    server, session, _ = made[0]
+    assert server.socket.fileno() == -1 and not session._dir.exists()
+
+
 def test_quiet_mode_survives_a_missing_console(monkeypatch):
     import datakrit.ui as ui_module
 

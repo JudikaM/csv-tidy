@@ -1,10 +1,10 @@
 /* Datakrit local interface. Two themes: "cosmos" (dark, the default) and "light".
    Everything is local: system fonts are used when Inter or JetBrains Mono are not installed. */
 
-/* Dark (the default; stored as "cosmos" so a saved choice keeps working) follows VS Code's
-   built-in "Dark Modern" theme: #1F1F1F cards, #2B2B2B borders, #313131 inputs, #CCCCCC text,
-   #0078D4 buttons and focus, #4DAAFC links, #264F78 selection. The side bar is #1F1F1F on a
-   #191919 page (main column and side panel), divided by a #303030 line. */
+/* Dark theme (the default; stored as "cosmos" so a saved choice keeps working): #1F1F1F
+   cards, #2B2B2B borders, #313131 inputs, #CCCCCC text, #0078D4 buttons and focus, #4DAAFC
+   links, #264F78 selection. The side bar is #1F1F1F on a #191919 page (main column and side
+   panel), divided by a #303030 line. */
 :root,
 [data-theme="cosmos"] {
   color-scheme: dark;
@@ -51,9 +51,8 @@
 }
 [data-theme="cosmos"] ::selection { background: #264f78; color: #ffffff; }
 
-/* Light follows VS Code's built-in "Light+" theme (light_vs.json and the workbench defaults
-   it builds on): white editor, #F3F3F3 side bar, #D4D4D4 borders, #333333 text, #007ACC
-   buttons and status bar, #0090F1 focus, #006AB1 links, #ADD6FF selection. */
+/* Light theme: white cards, #F3F3F3 side bar, #D4D4D4 borders, #333333 text, #007ACC
+   buttons, #0090F1 focus, #006AB1 links, #ADD6FF selection. */
 [data-theme="light"] {
   color-scheme: light;
   --canvas: #f3f3f3;
@@ -186,7 +185,7 @@ button.session-row {
   width: 100%; min-height: 2.5rem; padding: 0.3125rem 0.625rem; border-radius: 8px; border-color: transparent;
   background: transparent; color: var(--ink); text-align: left; font-size: 0.8125rem; font-weight: 500;
 }
-/* Hover and the open file use --subtle, where the grey meta text keeps 4.5:1 in Dark Modern. */
+/* Hover and the open file use --subtle, where the grey meta text keeps 4.5:1 in the dark theme. */
 button.session-row:hover:not(:disabled) { background: var(--subtle); border-color: transparent; }
 button.session-row[aria-current="true"] { background: var(--subtle); box-shadow: inset 2px 0 0 var(--accent); }
 .session-row .icon { grid-row: span 2; }
@@ -272,8 +271,8 @@ button.session-row[aria-current="true"] { background: var(--subtle); box-shadow:
 .pulse { width: 0.375rem; height: 0.375rem; border-radius: 50%; background: currentColor; animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.35; } }
 .icon { width: 1rem; height: 1rem; flex: none; }
-/* Theme switch as in shadcn/ui's mode toggle: Lucide sun and moon in the text color, one
-   turning out while the other turns in. */
+/* Theme switch: inline SVG sun and moon icons in the text color, one turning out while the
+   other turns in. */
 .theme-icon { display: inline-grid; width: 1rem; height: 1rem; flex: none; }
 .theme-icon svg { grid-area: 1 / 1; transition: transform 200ms ease; }
 .theme-sun { transform: rotate(-90deg) scale(0); }

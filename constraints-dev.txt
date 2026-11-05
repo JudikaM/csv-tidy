@@ -3,12 +3,25 @@
 # Regenerate after deliberate upgrades: python -m pip freeze --exclude-editable
 ast_serialize==0.13.1
 build==1.6.1
+certifi==2026.10.23
+charset-normalizer==3.5.2
 colorama==0.4.6
 coverage==7.17.0
+docutils==0.23
+id==1.6.1
+idna==3.20
 iniconfig==2.3.1
+jaraco.classes==3.4.0
+jaraco.context==6.1.2
+jaraco.functools==4.6.0
+keyring==25.7.0
 librt==0.16.0
+markdown-it-py==4.2.0
+mdurl==0.1.2
+more-itertools==11.2.1
 mypy==2.4.0
 mypy_extensions==1.1.0
+nh3==0.3.7
 packaging==26.3
 pathspec==1.1.1
 pluggy==1.6.0
@@ -16,6 +29,25 @@ Pygments==2.21.0
 pyproject_hooks==1.3.3
 pytest==9.1.1
 pytest-cov==7.1.0
+pywin32-ctypes==0.2.3
+readme_renderer==46.0
+requests==2.34.2
+requests-toolbelt==1.0.0
+rfc3986==2.0.0
+rich==15.0.0
 ruff==0.17.0
 tomli_w==1.2.0
+twine==7.0.0
 typing_extensions==4.16.0
+urllib3==2.8.0
+# Installed only on Linux (keyring, a dependency of twine) or on Python 3.11 (keyring and
+# jaraco.context), so a freeze on Windows with a newer Python does not list them. Keep these
+# lines when regenerating, and update them with the packages above.
+backports.tarfile==1.2.0
+cffi==2.1.1
+cryptography==50.0.2
+importlib_metadata==10.1.0
+jeepney==0.9.0
+pycparser==3.12
+SecretStorage==3.5.0
+zipp==4.1.2

@@ -1,0 +1,127 @@
+name: Windows app
+
+# Builds the Windows app (packaging/windows/) and smoke-tests it. Pull requests and `main`
+# keep the zip as a workflow artifact. For a release, run it by hand with the tag
+# (`gh workflow run windows-app.yml -f tag=vX.Y.Z`): it builds that tag and attaches the zip
+# and its .sha256 file to the tag's draft release (see docs/RELEASE.md).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build; its draft release receives the zip (e.g. v2.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-app-${{ github.ref }}-${{ inputs.tag || 'build' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and smoke-test
+    runs-on: windows-latest
+    timeout-minutes: 30
+    outputs:
+      zip: ${{ steps.build.outputs.zip }}
+      sha256: ${{ steps.build.outputs.sha256 }}
+    steps:
+      - name: Check the tag
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$TAG' is not a release tag such as v2.1.0"
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || '' }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          # The newest supported Python (pyproject.toml).
+          python-version: "3.15"
+      - name: Install the build tools (pinned with hashes) and Datakrit
+        run: |
+          python -m pip install --require-hashes -r constraints-exe.txt
+          python -m pip install --no-deps .
+      - name: Check that the package version is the tag
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          version=$(python -c "import datakrit; print(datakrit.__version__)")
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error::the tag $TAG holds Datakrit $version"
+            exit 1
+          fi
+      - name: Build the app and its zip
+        id: build
+        run: python packaging/windows/build_app.py
+      - name: Smoke-test the zip
+        env:
+          ZIP: dist-exe/${{ steps.build.outputs.zip }}
+          SHA256: ${{ steps.build.outputs.sha256 }}
+        run: python packaging/windows/smoke_app.py "$env:ZIP" --sha256 "$env:SHA256"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-app
+          path: |
+            dist-exe/*.zip
+            dist-exe/*.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  attach:
+    name: Attach to the draft release
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # upload the zip to the draft release
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-app
+          path: app
+      - name: Check the files and upload them to the draft release
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          ZIP: ${{ needs.build.outputs.zip }}
+          SHA256: ${{ needs.build.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          if [ "$ZIP" != "Datakrit-${TAG#v}-windows-x64.zip" ]; then
+            echo "::error::unexpected zip name $ZIP for $TAG"
+            exit 1
+          fi
+          echo "$SHA256  $ZIP" | sha256sum --check --strict
+          sha256sum --check --strict "$ZIP.sha256"
+          # Drafts are listed only for accounts that can push, as this job's token can.
+          gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+            --jq '.[] | select(.tag_name == env.TAG)' > release.json
+          if [ "$(jq -s 'length' release.json)" != 1 ] || [ "$(jq -s '.[0].draft' release.json)" != true ]; then
+            echo "::error::$TAG has no draft release; create the draft first (docs/RELEASE.md)"
+            exit 1
+          fi
+          gh release upload "$TAG" "$ZIP" "$ZIP.sha256" --repo "$GITHUB_REPOSITORY"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$(jq -s '.[0].id' release.json)" \
+            --jq '.assets[] | select(.name == env.ZIP) | .digest' > digest.txt
+          if [ "$(cat digest.txt)" != "sha256:$SHA256" ]; then
+            echo "::error::GitHub reports $(cat digest.txt) for $ZIP, not sha256:$SHA256"
+            exit 1
+          fi
+          echo "Attached $ZIP (sha256:$SHA256) to the draft release of $TAG."

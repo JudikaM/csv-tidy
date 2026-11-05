@@ -33,6 +33,7 @@ python -m ruff format --check .
 python -m mypy
 python -m pytest --cov --cov-report=term-missing
 python -m build
+python -m twine check --strict dist/*
 python scripts/smoke_dist.py dist
 ```
 
@@ -52,6 +53,46 @@ environment) and run
 Python code and the local interface's JavaScript on pull requests and weekly; its findings
 appear in the repository's Security tab.
 
+## Building the Windows app
+
+The Windows app (`Datakrit-X.Y.Z-windows-x64.zip`, see the README) is built from
+`packaging/windows/` with PyInstaller. Its build tools are not dependencies of Datakrit:
+they are pinned with hashes in `constraints-exe.txt` and installed into a separate virtual
+environment. On 64-bit Windows with a 64-bit Python 3.11 or newer (CI uses the newest
+supported Python), from the repository root:
+
+```powershell
+py -3 -m venv build\venv-exe
+.\build\venv-exe\Scripts\python.exe -m pip install --require-hashes -r constraints-exe.txt
+.\build\venv-exe\Scripts\python.exe -m pip install --no-deps .
+.\build\venv-exe\Scripts\python.exe packaging\windows\build_app.py
+.\build\venv-exe\Scripts\python.exe packaging\windows\smoke_app.py dist-exe\Datakrit-X.Y.Z-windows-x64.zip
+```
+
+`build\` and `dist-exe\` are ignored by Git.
+
+- `build_app.py` runs PyInstaller with `packaging/windows/datakrit.spec` (a one-folder
+  build without a console window that bundles the installed `datakrit` package, its
+  interface files, the icon `datakrit.ico`, and version information from `__init__.py`),
+  then writes `dist-exe/Datakrit/` with its `licenses` folder, the zip, and its `.sha256`
+  file. The license notices come from `LICENSE`, `NOTICE.md`, the `LICENSE.txt` of the
+  Python that builds the app (it must be a Windows build from python.org, whose license
+  includes the conditions for the Microsoft runtime files), and the installed tomli-w. It refuses to build
+  when the installed package is not the version in `src/datakrit/__init__.py`: install it
+  again with `pip install --no-deps .` after a change. `dist-exe/` is never committed.
+- `smoke_app.py` starts the app (or the unzipped zip, or any `datakrit-ui` program) in smoke
+  mode: the environment variable `DATAKRIT_UI_URL_FILE` makes it write its page address to a
+  file instead of opening a browser. The script fetches the page and every file of the page
+  with the session key, checks that requests without the key are refused, presses Quit, and
+  checks that the program exits with code 0. For `Datakrit.exe` and the zip it first checks
+  the `licenses` folder. It prints the start-up time.
+- The `Windows app` workflow does the same on every pull request and keeps the zip as a
+  workflow artifact for 14 days; release builds are described in
+  [docs/RELEASE.md](docs/RELEASE.md).
+- To update PyInstaller, change its version and the versions of the packages it needs in
+  `constraints-exe.txt`, list the SHA-256 of every file PyPI publishes for each version, and
+  build and smoke-test the app again. The dependency audit covers this file too.
+
 ## Working on the local interface
 
 The interface is `src/datakrit/ui.py` (server) and `src/datakrit/ui_static/` (`index.html`,
@@ -64,13 +105,15 @@ The interface is `src/datakrit/ui.py` (server) and `src/datakrit/ui_static/` (`i
   `innerHTML`, or `eval`; build elements with `document.createElement` and set text with
   `textContent`. `test_page_is_self_contained_and_needs_the_key` checks this.
 - **No external assets.** No CDN, web fonts, remote images, or requests. Icons are inline SVG
-  paths from [Lucide](https://lucide.dev) in `currentColor`. A new static file must be added
-  to `STATIC` in `ui.py`, to `UI_ASSETS` in `scripts/smoke_dist.py`, and to the asset test.
+  paths in `currentColor`. An icon from a set that `NOTICE.md` does not cover yet needs its
+  copyright and license notice there. A new static file must be added to `STATIC` in
+  `ui.py`, to `UI_ASSETS` in `scripts/smoke_dist.py`, to `ASSETS` in
+  `packaging/windows/smoke_app.py`, and to the asset test.
 - **Accessibility.** Every control needs a name (an icon-only button an `aria-label`), a
   button that shows or hides something needs `aria-controls` and `aria-expanded`, and every
   action must work with the keyboard alone. Keep `prefers-reduced-motion` working.
 - **Contrast.** Text needs at least 4.5:1 and icons and focus rings at least 3:1 against
-  their background, in both themes (Dark Modern and Light+). Measure new color pairs in the
+  their background, in both themes (dark and light). Measure new color pairs in the
   browser (for example with the contrast checker of the browser's developer tools) and give
   the numbers in the pull request.
 - **Tests.** `python -m pytest tests/integration/test_ui.py` covers the page structure, the

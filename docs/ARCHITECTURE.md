@@ -39,7 +39,7 @@ entry points that all call api.check_file / clean_file / export_clean:
 | `batch.py` | Input selection, artifact planning and collision checks, per-file isolation, batch summary |
 | `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page: `index.html`, `app.css`, `theme.js` (theme and folded side bar before the first paint), `app.js`, `logo-mark.png` (Datakrit's icon, 64 x 64, for the page icon and the side bar); no dependencies (see "The local page" below) |
 | `shortcuts.py` | Desktop and Start Menu shortcuts (Windows `.lnk` through PowerShell and the Windows Script Host, Linux desktop entries) |
-| `update.py` | `datakrit update`: GitHub release lookup in the trusted repositories (`JudikaM/datakrit`, then `JudikaM/datakrit`), wheel and SHA-256 selection, the pip commands, the commands of the switch to Datakrit, and the check for running Datakrit programs; the only network access |
+| `update.py` | `datakrit update`: GitHub release lookup in `JudikaM/datakrit`, wheel and SHA-256 selection, the pip command, and the Windows app's report instead of pip (`frozen()`); the only network access |
 | `cli.py` | Argument parsing, exit codes, stdout/stderr separation |
 
 ## Result model and public API
@@ -145,13 +145,14 @@ if result.export_ready:
   HTTP. The browser cannot hand the server a path, so the page sends the file's bytes to
   the local process and receives results as downloads; that also means the original file
   cannot be overwritten. The server holds one session: the latest file and results.
-- **Icons instead of an installer or a bundled executable.** A `gui-scripts` entry point
+- **Icons for pip installs, and a separate Windows app.** A `gui-scripts` entry point
   (`datakrit-ui`) gives a program without a console window, made by pip itself, and
   `datakrit shortcut install` points icons at it. Updates replace the package in place, so
-  the icons keep working. A self-contained executable was not chosen: unsigned
-  executables trigger SmartScreen warnings, and every user would have to replace the file
-  on each update. Without a console nobody can press Ctrl+C, so the server stops itself
-  after a period without contact from its page.
+  the icons keep working. Without a console nobody can press Ctrl+C, so the server stops
+  itself after a period without contact from its page. From 2.1.0 a self-contained Windows
+  app is offered as well, for people without Python (see "Packaging and distribution"). It
+  is unsigned, so SmartScreen warns on its first start, and an update replaces its whole
+  folder by hand; pip installs keep the icons and `datakrit update`.
 - **Updates are explicit and verified.** Only `datakrit update` connects to the internet.
   It installs the wheel attached to a GitHub release and passes GitHub's SHA-256 digest to
   pip in the URL fragment, which pip checks before installing.
@@ -173,12 +174,44 @@ if result.export_ready:
 - **`tomli-w` for TOML output.** Writing TOML correctly requires escaping rules; the generated
   profile is also parsed back and compared before it is written.
 
+## Packaging and distribution
+
+| Channel | Files | Made by |
+|---------|-------|---------|
+| GitHub release | wheel and sdist | `python -m build` from the tagged commit ([RELEASE.md](RELEASE.md)) |
+| GitHub release | `Datakrit-X.Y.Z-windows-x64.zip` and its `.sha256` file | `.github/workflows/windows-app.yml`, from the tag |
+| PyPI | the same wheel and sdist, unchanged | `.github/workflows/publish-pypi.yml`, Trusted Publishing |
+
+- **One set of files.** `publish-pypi.yml` builds nothing: it downloads the wheel and sdist
+  from the published GitHub release, checks them against the SHA-256 that GitHub publishes,
+  and uploads them, so PyPI and GitHub serve identical files. `datakrit update` keeps
+  installing the release wheel from GitHub.
+- **The Windows app** (`packaging/windows/`) is a PyInstaller one-folder build:
+  `Datakrit\Datakrit.exe` with its own Python, the `datakrit` package (every module, and
+  the interface files from `ui_static`), and `tomli-w`. `launcher.py` calls
+  `datakrit.ui.gui_main`, the entry point of `datakrit-ui`, so the app behaves like that
+  program and has no command line. `datakrit.spec` sets no console window, the icon
+  `datakrit.ico`, and the Windows version information from `__init__.py`. `build_app.py`
+  runs PyInstaller, writes the license notices of Datakrit and of everything the app
+  bundles to `Datakrit\licenses` (Python's own LICENSE.txt covers its libraries and the
+  Microsoft runtime conditions; the Microsoft notice lists the runtime files found in the
+  build), and zips the folder; `smoke_app.py` checks the result over HTTP in the
+  smoke mode of `gui_main` (`DATAKRIT_UI_URL_FILE`). One folder instead of one file: it
+  starts faster (nothing is unpacked at each start) and is flagged less often by antivirus
+  programs.
+- **Frozen mode.** In the app `sys.frozen` is set (`update.frozen()`): `update` reports the
+  release page and the zip instead of running pip, and `shortcut install` is refused.
+  The start-up error file and the idle stop work as in `datakrit-ui`.
+- **Build tools are never dependencies.** PyInstaller and the packages it needs are pinned
+  with hashes in `constraints-exe.txt` and installed only into the build environment;
+  `twine` is a development tool (the `dev` extra, pinned in `constraints-dev.txt`).
+
 ## The local page
 
 The page is one static HTML file with its style sheet and two scripts, served by `ui.py` with
 a content security policy that allows nothing else: no inline styles or scripts, no `eval`,
-no `innerHTML`, and no external fonts, icons, or requests. Icons are inline SVG paths from
-Lucide, drawn in `currentColor`. `app.js` builds every dynamic element with
+no `innerHTML`, and no external fonts, icons, or requests. Icons are inline SVG paths, drawn in
+`currentColor`. `app.js` builds every dynamic element with
 `document.createElement` and `textContent`, so file contents are never parsed as HTML.
 
 ```

@@ -8,6 +8,9 @@ Functions here never print; the CLI reports what happened.
 
 Only Datakrit releases (2.0.0 and newer) can be installed this way; earlier versions were
 published under another name and are installed by hand from the Releases page.
+
+The Windows app (a frozen program, ``sys.frozen``) contains no pip and cannot replace its own
+folder, so there ``update`` only reports the release and the page with the app's zip file.
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from collections.abc import Sequence
@@ -30,6 +34,7 @@ API = f"{API_ROOT}repos/{REPOSITORY}/releases"
 DOWNLOADS = f"https://github.com/{REPOSITORY}/releases/download/"
 RELEASES_PAGE = f"https://github.com/{REPOSITORY}/releases"
 WHEEL = "datakrit-{version}-py3-none-any.whl"
+APP_ZIP = "Datakrit-{version}-windows-x64.zip"
 # The first Datakrit release; `update --version` refuses anything older.
 FIRST_VERSION = "2.0.0"
 OFFLINE_HINT = (
@@ -61,6 +66,16 @@ def fetch_json(url: str) -> tuple[str, dict[str, Any]]:
         final = str(response.geturl())
         data: dict[str, Any] = json.loads(response.read().decode("utf-8"))
     return final, data
+
+
+def frozen() -> bool:
+    """Whether this is the Windows app (a program made by PyInstaller), not a pip install."""
+    return bool(getattr(sys, "frozen", False))
+
+
+def app_zip(release: Release) -> str:
+    """The name of the Windows app's zip file on the page of ``release``."""
+    return APP_ZIP.format(version=release.version)
 
 
 def run_pip(command: Sequence[str]) -> int:

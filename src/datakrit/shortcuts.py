@@ -126,6 +126,16 @@ def legacy() -> list[Shortcut]:
     return [start, replace(start, place="menu"), update]
 
 
+def _refuse_in_app() -> None:
+    """The Windows app (a frozen program) is a folder that the user unzipped; the shortcuts
+    point to programs that pip installs, so they are not offered there."""
+    if getattr(sys, "frozen", False):
+        raise DatakritError(
+            "shortcuts are not offered in the Datakrit Windows app; to start it from the Start "
+            "Menu, right-click Datakrit.exe and choose Pin to Start"
+        )
+
+
 def install(
     folder: str | Path | None = None,
     desktop: bool = True,
@@ -134,7 +144,9 @@ def install(
     python: Path | None = None,
 ) -> list[Outcome]:
     """Create or refresh the shortcuts, and remove CSV Tidy's. With ``folder`` every
-    shortcut goes there (and only CSV Tidy's shortcuts in that folder are removed)."""
+    shortcut goes there (and only CSV Tidy's shortcuts in that folder are removed). Refused
+    in the Windows app."""
+    _refuse_in_app()
     _supported(platform)
     items = planned(ui or ui_program(), python or console_python(), desktop)
     return _apply("install", items, folder, platform)

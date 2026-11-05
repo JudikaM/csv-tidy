@@ -10,7 +10,7 @@ first draft of the inventory raised; the changes they required were made in 1.0.
 a migration note in the [changelog](../CHANGELOG.md#100---2026-11-04). 2.0.0 gave the product
 its current name and removed the aliases deprecated in 1.0.0 (see
 [The rename to Datakrit in 2.0.0](#the-rename-to-datakrit-in-200)). The inventory below
-describes 2.0.0.
+describes 2.1.0, which added distribution channels and changed nothing in it.
 
 ## What Semantic Versioning covers
 
@@ -106,10 +106,26 @@ when users would notice:
   and names that start with `_`), unless this document lists them.
 - The order of keys inside JSON objects, and whitespace in JSON.
 - The temporary files of the local interface and the `datakrit-ui-error.txt` file.
+- The Windows app's look (it is the local interface) and its packaging: the folder layout,
+  the bundled Python and its version, the files next to `Datakrit.exe`, the zip's size, and
+  the smoke mode (`DATAKRIT_UI_URL_FILE`), which exists for automated checks.
+
+## Distribution channels
+
+From 2.1.0 every release is published as:
+
+- the wheel `datakrit-X.Y.Z-py3-none-any.whl` and the sdist `datakrit-X.Y.Z.tar.gz` on the
+  GitHub release, each with a published SHA-256 (`datakrit update` relies on the wheel);
+- the same two files on PyPI, as the project `datakrit` (`pip install datakrit`);
+- the Windows app `Datakrit-X.Y.Z-windows-x64.zip` with `Datakrit-X.Y.Z-windows-x64.zip.sha256`
+  on the GitHub release: a folder `Datakrit` whose `Datakrit.exe` starts the local interface.
+
+Removing one of these channels is announced in the changelog of a minor release first. The
+app has no command line; the programs covered above are those of a pip install.
 
 ## Inventory of the covered surface
 
-This inventory describes Datakrit 2.0.0. Details and examples are in
+This inventory describes Datakrit 2.1.0. Details and examples are in
 [CONFIGURATION.md](CONFIGURATION.md) (behavior) and [ARCHITECTURE.md](ARCHITECTURE.md)
 (result types).
 

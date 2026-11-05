@@ -71,6 +71,10 @@ DEFAULT_MAX_FILE_MB = 200
 # Without a console window nobody can press Ctrl+C, so the server stops by itself this
 # long after the page last contacted it. The page checks in every minute while open.
 GUI_IDLE_MINUTES = 10
+# Smoke mode of the ``datakrit-ui`` program and the Windows app, for automated checks: when
+# this environment variable names a file, the browser is not opened and the page address,
+# with its key, is written to that file as soon as the server accepts connections.
+URL_FILE_VARIABLE = "DATAKRIT_UI_URL_FILE"
 MAX_LIST_LIMIT = 10_000
 MAX_PREVIEW_ROWS = 1_000
 STATIC = {
@@ -830,9 +834,11 @@ def run_ui(
     max_file_mb: int = DEFAULT_MAX_FILE_MB,
     idle_minutes: float = 0,
     quiet: bool = False,
+    url_file: Path | None = None,
 ) -> int:
     """Serve the interface until the page's Quit button or Ctrl+C stops it, or, with
-    ``idle_minutes``, until the page has not been in contact for that long."""
+    ``idle_minutes``, until the page has not been in contact for that long. With
+    ``url_file``, the page address is also written to that file before serving starts."""
     server, session, url = create_server(port, max_file_mb)
     _say("Datakrit is running on this computer only (nothing is sent to the internet).", quiet)
     _say(f"Open this address in your browser:\n\n  {url}\n", quiet)
@@ -844,6 +850,8 @@ def run_ui(
         with contextlib.suppress(Exception):
             webbrowser.open(url)
     try:
+        if url_file is not None:
+            _write_url(url_file, url)
         server.serve_forever()
     except KeyboardInterrupt:
         pass
@@ -854,11 +862,29 @@ def run_ui(
     return 0
 
 
+def _write_url(path: Path, url: str) -> None:
+    """Write ``url`` so that a reader never sees a partly written file."""
+    part = path.with_name(path.name + ".part")
+    part.write_text(url + "\n", encoding="utf-8")
+    os.replace(part, path)
+
+
 def gui_main() -> int:
-    """Entry point of the ``datakrit-ui`` program: no console window, the browser opens, and
-    the server stops by itself when the page is no longer open. A start-up problem is written
-    to ``datakrit-ui-error.txt`` in the temporary folder, as there is no window to show it."""
+    """Entry point of the ``datakrit-ui`` program and of the Windows app: no console window,
+    the browser opens, and the server stops by itself when the page is no longer open. A
+    start-up problem is written to ``datakrit-ui-error.txt`` in the temporary folder, as there
+    is no window to show it. See ``URL_FILE_VARIABLE`` for the smoke mode."""
+    url_file = os.environ.get(URL_FILE_VARIABLE)
     try:
+        if url_file:
+            return run_ui(
+                0,
+                False,
+                DEFAULT_MAX_FILE_MB,
+                idle_minutes=GUI_IDLE_MINUTES,
+                quiet=True,
+                url_file=Path(url_file),
+            )
         return run_ui(0, True, DEFAULT_MAX_FILE_MB, idle_minutes=GUI_IDLE_MINUTES, quiet=True)
     except Exception as exc:
         with contextlib.suppress(OSError):
