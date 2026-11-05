@@ -530,6 +530,10 @@ from a server bound to `127.0.0.1` and opens it in the default browser.
   (see [Shortcuts](#shortcuts)).
 - The app is not code-signed; see [SECURITY.md](../SECURITY.md#verifying-downloads) for
   checking the file and the SmartScreen warning.
+- `Datakrit\licenses` holds the license notices of Datakrit and of what the app bundles:
+  `LICENSE`, `NOTICE.md`, `Python-LICENSE.txt` (the bundled Python, with the libraries it
+  bundles and the conditions for the Microsoft Distributable Code), `tomli-w-LICENSE.txt`,
+  and `Microsoft-runtime-NOTICE.txt` (the Microsoft runtime files in the app).
 
 ## Output safety
 

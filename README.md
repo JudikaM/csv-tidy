@@ -124,7 +124,8 @@ above: choose **More info**, then **Run anyway**. Never do this for a copy from 
 else.
 
 To update the app, download the zip of the new release, check it in the same way, and
-replace the old `Datakrit` folder. Profiles keep working.
+replace the old `Datakrit` folder. Profiles keep working. The `licenses` folder inside it
+holds the license notices of Datakrit and of the software the app bundles.
 
 ### From the GitHub release (wheel) or a source checkout
 

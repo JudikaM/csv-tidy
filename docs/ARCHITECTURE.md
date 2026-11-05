@@ -192,7 +192,10 @@ if result.export_ready:
   `datakrit.ui.gui_main`, the entry point of `datakrit-ui`, so the app behaves like that
   program and has no command line. `datakrit.spec` sets no console window, the icon
   `datakrit.ico`, and the Windows version information from `__init__.py`. `build_app.py`
-  runs PyInstaller and zips the folder; `smoke_app.py` checks the result over HTTP in the
+  runs PyInstaller, writes the license notices of Datakrit and of everything the app
+  bundles to `Datakrit\licenses` (Python's own LICENSE.txt covers its libraries and the
+  Microsoft runtime conditions; the Microsoft notice lists the runtime files found in the
+  build), and zips the folder; `smoke_app.py` checks the result over HTTP in the
   smoke mode of `gui_main` (`DATAKRIT_UI_URL_FILE`). One folder instead of one file: it
   starts faster (nothing is unpacked at each start) and is flagged less often by antivirus
   programs.

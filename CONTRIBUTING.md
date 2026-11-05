@@ -74,14 +74,18 @@ py -3 -m venv build\venv-exe
 - `build_app.py` runs PyInstaller with `packaging/windows/datakrit.spec` (a one-folder
   build without a console window that bundles the installed `datakrit` package, its
   interface files, the icon `datakrit.ico`, and version information from `__init__.py`),
-  then writes `dist-exe/Datakrit/`, the zip, and its `.sha256` file. It refuses to build
+  then writes `dist-exe/Datakrit/` with its `licenses` folder, the zip, and its `.sha256`
+  file. The license notices come from `LICENSE`, `NOTICE.md`, the `LICENSE.txt` of the
+  Python that builds the app (it must be a Windows build from python.org, whose license
+  includes the conditions for the Microsoft runtime files), and the installed tomli-w. It refuses to build
   when the installed package is not the version in `src/datakrit/__init__.py`: install it
   again with `pip install --no-deps .` after a change. `dist-exe/` is never committed.
 - `smoke_app.py` starts the app (or the unzipped zip, or any `datakrit-ui` program) in smoke
   mode: the environment variable `DATAKRIT_UI_URL_FILE` makes it write its page address to a
   file instead of opening a browser. The script fetches the page and every file of the page
   with the session key, checks that requests without the key are refused, presses Quit, and
-  checks that the program exits with code 0. It prints the start-up time.
+  checks that the program exits with code 0. For `Datakrit.exe` and the zip it first checks
+  the `licenses` folder. It prints the start-up time.
 - The `Windows app` workflow does the same on every pull request and keeps the zip as a
   workflow artifact for 14 days; release builds are described in
   [docs/RELEASE.md](docs/RELEASE.md).

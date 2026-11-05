@@ -13,6 +13,10 @@ temporary folder first; with ``--sha256`` its hash is checked before that), or a
    to the API without the key is refused;
 4. presses Quit through the API, and checks that the program exits with code 0.
 
+For ``Datakrit.exe`` and the zip it first checks the license notices in
+``Datakrit/licenses/`` (``LICENSE_FILES``): each is there and holds its license, and the
+Microsoft notice names every Microsoft runtime file of the app.
+
 It prints the start-up time (from starting the program until the page was served) and exits
 with code 0 when everything passed. Only the standard library is used.
 """
@@ -41,6 +45,19 @@ ASSETS = {
     "/logo-mark.png": "image/png",
 }
 TOKEN_HEADER = "X-Datakrit-Token"
+# The notices in Datakrit/licenses/ (``LICENSE_FILES`` in build_app.py), each with a text
+# that its file must contain.
+LICENSE_FILES = {
+    "LICENSE": "Permission is hereby granted, free of charge",
+    "NOTICE.md": "Copyright (c) 2026 Lucide Icons and Contributors",
+    "Python-LICENSE.txt": "PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2",
+    "tomli-w-LICENSE.txt": "Permission is hereby granted, free of charge",
+    "Microsoft-runtime-NOTICE.txt": "Microsoft Distributable Code",
+}
+MICROSOFT_DLL = re.compile(
+    r"(vcruntime\d+(_\d+)?|msvcp\d+(_\w+)?|concrt\d+|ucrtbase|api-ms-win-[\w.-]+)\.dll",
+    re.IGNORECASE,
+)
 URL_FILE_VARIABLE = "DATAKRIT_UI_URL_FILE"
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
@@ -77,6 +94,27 @@ def program_from(path: Path, work: Path, expected_sha256: str | None) -> Path:
         check(names and all(n.startswith("Datakrit/") for n in names), "unexpected zip layout")
         archive.extractall(work / "unzipped")
     return work / "unzipped" / "Datakrit" / "Datakrit.exe"
+
+
+def check_licenses(folder: Path) -> int:
+    """Check ``folder/licenses`` of the app folder ``folder``; return the number of files."""
+    licenses = folder / "licenses"
+    for name, needed in LICENSE_FILES.items():
+        path = licenses / name
+        check(path.is_file(), f"licenses/{name} is missing")
+        check(needed in path.read_text(encoding="utf-8"), f"licenses/{name} lacks its license")
+    notice = (licenses / "Microsoft-runtime-NOTICE.txt").read_text(encoding="utf-8")
+    runtime = [
+        p.relative_to(folder).as_posix()
+        for p in folder.rglob("*.dll")
+        if MICROSOFT_DLL.fullmatch(p.name)
+    ]
+    check(bool(runtime), "the app has no Microsoft runtime files to check")
+    missing = [name for name in runtime if f"  {name}\n" not in notice]
+    check(not missing, f"the Microsoft notice does not name {missing}")
+    extra = sorted(p.name for p in licenses.iterdir()) != sorted(LICENSE_FILES)
+    check(not extra, f"licenses/ holds other files: {sorted(p.name for p in licenses.iterdir())}")
+    return len(LICENSE_FILES)
 
 
 def run(program: Path, work: Path, timeout: float) -> dict[str, float]:
@@ -155,10 +193,15 @@ def main(argv: list[str] | None = None) -> int:
         try:
             program = program_from(args.program.resolve(), work, args.sha256)
             check(program.is_file(), f"{program} does not exist")
+            notices = None
+            if program.name.lower() == "datakrit.exe":
+                notices = check_licenses(program.parent)
             result = run(program, work, args.timeout)
         except SmokeError as error:
             print(f"smoke test failed: {error}", file=sys.stderr)
             return 1
+    if notices is not None:
+        print(f"licenses=ok {notices} files")
     for key, value in result.items():
         print(f"{key}={value}")
     print("smoke test passed: page and files served with the key, refused without it, Quit")

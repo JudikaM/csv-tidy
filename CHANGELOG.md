@@ -32,7 +32,13 @@ installs update as before with `datakrit update` (or the **Update Datakrit** ent
   the release tag, smoke-tests it, and attaches it with its SHA-256 (a `.sha256` file and
   the release notes). The app is not code-signed; the README explains the SmartScreen
   warning and how to check the file. Its sources are in `packaging/windows/`; PyInstaller is
-  pinned with hashes in `constraints-exe.txt` and is not a dependency of Datakrit.
+  pinned with hashes in `constraints-exe.txt` and is not a dependency of Datakrit. The
+  folder `Datakrit\licenses` in the zip holds the license notices: Datakrit's `LICENSE`,
+  `NOTICE.md`, the license of the bundled Python (`Python-LICENSE.txt`: the PSF License,
+  the licenses of the libraries that Python bundles, and the conditions for the Microsoft
+  Distributable Code), the license of tomli-w, and `Microsoft-runtime-NOTICE.txt`, which
+  names every Microsoft runtime file in the app. The build writes them and the smoke test
+  checks them.
 - In the Windows app, `update` reports the release and the zip to download instead of
   running pip, and `shortcut install` is refused with a hint to pin `Datakrit.exe` to Start.
 - A smoke mode for `datakrit-ui` and the app, for automated checks: when the environment
