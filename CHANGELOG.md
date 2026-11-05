@@ -8,10 +8,31 @@ Datakrit was called CSV Tidy until 1.2.0.
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-05
+
+The first release with PyPI and the Windows app: it contains everything listed under 2.1.0,
+which was tagged but never published, and the fix below.
+
+**Upgrade notes.** Nothing changes for profiles, CLI, reports, or the Python API. Existing
+installs update with `datakrit update` (or the **Update Datakrit** entry), or with
+`python -m pip install --upgrade datakrit`. On Windows without Python, use the app
+`Datakrit-2.1.1-windows-x64.zip` from the release page.
+
+### Fixed
+
+- The Windows app's checksum file `Datakrit-X.Y.Z-windows-x64.zip.sha256` is one line that
+  ends in LF. The 2.1.0 build wrote it with CRLF, and `sha256sum --check` (GNU coreutils 8)
+  and `shasum -a 256 --check` (macOS) then failed to find the zip, so the 2.1.0 draft was not
+  published. The build writes the file as bytes, and the smoke test and the release job of
+  `windows-app.yml` refuse any other form.
+
 ## [2.1.0] - 2026-11-05
 
+Not published: the tag `v2.1.0` exists, but its draft release was withdrawn (see 2.1.1),
+and 2.1.0 is not on PyPI. Its changes are released in 2.1.1.
+
 Two easier ways to install Datakrit: `pip install datakrit` from PyPI, and on Windows an app
-that needs no Python (`Datakrit-2.1.0-windows-x64.zip` on the release page). Commands,
+that needs no Python (`Datakrit-X.Y.Z-windows-x64.zip` on the release page). Commands,
 options, profiles, reports, and the Python API are unchanged.
 
 **Upgrade notes.** Nothing changes for profiles, CLI, reports, or the Python API. Existing

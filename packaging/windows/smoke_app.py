@@ -3,7 +3,8 @@
     python packaging/windows/smoke_app.py PROGRAM [--sha256 HEX] [--timeout SECONDS]
 
 PROGRAM is ``Datakrit.exe``, a ``Datakrit-<version>-windows-x64.zip`` (unzipped into a
-temporary folder first; with ``--sha256`` its hash is checked before that), or a
+temporary folder first; with ``--sha256`` its hash is checked before that, and a
+``.sha256`` file next to it must be exactly ``<hash>  <zip name>`` and LF), or a
 ``datakrit-ui`` program installed by pip. The test
 
 1. starts the program in smoke mode: ``DATAKRIT_UI_URL_FILE`` names a file, so no browser
@@ -81,6 +82,16 @@ def fetch(url: str, data: bytes | None = None, headers: dict[str, str] | None = 
         return error.code, error.headers, error.read()
 
 
+def check_sha256_file(path: Path, digest: str) -> None:
+    """The checksum file next to the zip, if any, is one LF-terminated line that
+    ``sha256sum --check`` reads on every system."""
+    checksum = path.with_name(path.name + ".sha256")
+    if checksum.exists():
+        expected = f"{digest}  {path.name}\n".encode("ascii")
+        check(checksum.read_bytes() == expected, f"{checksum.name} is not '<hash>  <name>' + LF")
+        print("sha256_file=ok")
+
+
 def program_from(path: Path, work: Path, expected_sha256: str | None) -> Path:
     if path.suffix.lower() != ".zip":
         check(expected_sha256 is None, "--sha256 is checked for a zip file only")
@@ -89,6 +100,7 @@ def program_from(path: Path, work: Path, expected_sha256: str | None) -> Path:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         check(digest == expected_sha256.lower(), f"{path.name}: SHA-256 {digest} differs")
         print(f"sha256=ok {digest}")
+        check_sha256_file(path, digest)
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         check(names and all(n.startswith("Datakrit/") for n in names), "unexpected zip layout")

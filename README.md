@@ -80,7 +80,7 @@ There are three ways to use the same engine:
 
 ## Installation
 
-There are three ways to install Datakrit. This README describes version 2.1.0; changes made
+There are three ways to install Datakrit. This README describes version 2.1.1; changes made
 after a release are listed under "Unreleased" in the [changelog](https://github.com/JudikaM/datakrit/blob/main/CHANGELOG.md).
 
 ### From PyPI
@@ -105,11 +105,11 @@ window. For the `datakrit` command or the Python API, install from PyPI instead.
 
 1. Open the latest release on the
    [Releases page](https://github.com/JudikaM/datakrit/releases) and download
-   `Datakrit-2.1.0-windows-x64.zip`.
+   `Datakrit-2.1.1-windows-x64.zip`.
 2. Check the file. In PowerShell, in the folder that holds the download, run
 
    ```powershell
-   Get-FileHash .\Datakrit-2.1.0-windows-x64.zip -Algorithm SHA256
+   Get-FileHash .\Datakrit-2.1.1-windows-x64.zip -Algorithm SHA256
    ```
 
    and compare the hash with the SHA-256 of the zip in the release notes. If they differ, do
@@ -131,17 +131,17 @@ holds the license notices of Datakrit and of the software the app bundles.
 
 Requires Python 3.11 or newer. Every release on the
 [GitHub Releases page](https://github.com/JudikaM/datakrit/releases) also carries a wheel and
-a source distribution. Download the wheel `datakrit-2.1.0-py3-none-any.whl` from the latest
+a source distribution. Download the wheel `datakrit-2.1.1-py3-none-any.whl` from the latest
 release and install it inside a virtual environment:
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install <path-to>\datakrit-2.1.0-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install <path-to>\datakrit-2.1.1-py3-none-any.whl
 .\.venv\Scripts\datakrit.exe --version
 ```
 
 On Linux/macOS: `python3 -m venv .venv`, then
-`.venv/bin/python -m pip install <path-to>/datakrit-2.1.0-py3-none-any.whl`. You can also
+`.venv/bin/python -m pip install <path-to>/datakrit-2.1.1-py3-none-any.whl`. You can also
 install from a source checkout:
 
 Windows PowerShell (calling the virtual environment's programs directly, so the
@@ -256,7 +256,7 @@ normalize = ["amount", "date"]
 ### 1. Check
 
 ```text
-Datakrit 2.1.0 - check
+Datakrit 2.1.1 - check
 Verdict: FAILED - 2 errors found in the source file.
 Source: examples\transactions_fixable.csv
 Profile: examples\profiles\transactions-id.toml
@@ -310,7 +310,7 @@ JSON for pipelines (stdout contains only JSON; status messages go to stderr):
 ### 2. Preview a clean (dry run is the default)
 
 ```text
-Datakrit 2.1.0 - clean (dry run, nothing written)
+Datakrit 2.1.1 - clean (dry run, nothing written)
 Verdict: READY TO EXPORT - no errors remain in the cleaned result; 2 source problems repaired.
 ...
 Transformations (applied in this order):
@@ -508,7 +508,7 @@ step-by-step guide for first-time users is in
 ```
 
 ```text
-Datakrit 2.1.0 - batch clean (dry run, nothing written)
+Datakrit 2.1.1 - batch clean (dry run, nothing written)
 Verdict: 2 of 4 files need attention (2 with data errors).
 Profile: examples\profiles\transactions-id.toml
 
