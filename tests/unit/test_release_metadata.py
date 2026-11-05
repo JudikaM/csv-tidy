@@ -5,7 +5,7 @@ import re
 from importlib import resources
 from pathlib import Path
 
-from csv_tidy import __version__
+from datakrit import __version__
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -27,12 +27,12 @@ def test_changelog_latest_release_is_the_package_version():
 
 def test_readme_sample_output_shows_the_package_version():
     text = (ROOT / "README.md").read_text(encoding="utf-8")
-    shown = set(re.findall(r"^CSV Tidy (\d+\.\d+\.\d+) - ", text, flags=re.M))
+    shown = set(re.findall(r"^Datakrit (\d+\.\d+\.\d+) - ", text, flags=re.M))
     assert shown == {__version__}
 
 
 def test_interface_assets_are_package_data():
-    static = resources.files("csv_tidy").joinpath("ui_static")
+    static = resources.files("datakrit").joinpath("ui_static")
     page = static.joinpath("index.html").read_text(encoding="utf-8")
     for name in ("app.css", "app.js"):
         assert f'"{name}"' in page

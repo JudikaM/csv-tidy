@@ -21,11 +21,11 @@ import time
 import tracemalloc
 from pathlib import Path
 
-from csv_tidy import check_file, clean_file, export_clean, load_profile
-from csv_tidy.batch import BatchInput, run_batch
-from csv_tidy.reporting import clean_report, render_clean_text, to_json
-from csv_tidy.schema import profile_to_dict
-from csv_tidy.ui import Session
+from datakrit import check_file, clean_file, export_clean, load_profile
+from datakrit.batch import BatchInput, run_batch
+from datakrit.reporting import clean_report, render_clean_text, to_json
+from datakrit.schema import profile_to_dict
+from datakrit.ui import Session
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "examples" / "profiles" / "transactions-id.toml"
@@ -84,7 +84,7 @@ def main() -> None:
     parser.add_argument("--memory", action="store_true", help="trace peak Python memory (slower)")
     args = parser.parse_args()
     profile = load_profile(PROFILE)
-    with tempfile.TemporaryDirectory(prefix="csv-tidy-bench-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="datakrit-bench-") as tmp:
         data = Path(tmp) / "transactions.csv"
         generate(data, args.rows, args.issue_rate, args.seed)
         size = data.stat().st_size
@@ -107,7 +107,7 @@ def main() -> None:
             return len(written)
 
         # Batch: the same number of rows split over BATCH_FILES files, all repairable, so
-        # every file is exported. Measured through run_batch (as `csv-tidy batch clean`)
+        # every file is exported. Measured through run_batch (as `datakrit batch clean`)
         # and through the local interface's session (batch preview plus the ZIP download).
         parts = []
         for number in range(BATCH_FILES):

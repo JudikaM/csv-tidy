@@ -13,7 +13,7 @@ import tomllib
 import pytest
 from conftest import run_cli, sha256
 
-from csv_tidy import (
+from datakrit import (
     ColumnSpec,
     OutputError,
     Overrides,
@@ -25,9 +25,9 @@ from csv_tidy import (
     load_profile,
     profile_to_toml,
 )
-from csv_tidy import output as output_module
-from csv_tidy.output import write_atomic
-from csv_tidy.schema import profile_from_dict
+from datakrit import output as output_module
+from datakrit.output import write_atomic
+from datakrit.schema import profile_from_dict
 
 
 def prof(text: str) -> Profile:

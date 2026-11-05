@@ -10,9 +10,9 @@ body:
   - type: input
     id: version
     attributes:
-      label: CSV Tidy version
-      description: Output of `csv-tidy --version`
-      placeholder: csv-tidy 0.1.0
+      label: Datakrit version
+      description: Output of `datakrit --version`
+      placeholder: datakrit 2.0.0
     validations:
       required: true
   - type: input

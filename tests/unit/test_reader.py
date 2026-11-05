@@ -2,8 +2,8 @@
 
 import pytest
 
-from csv_tidy import InputError, check_file
-from csv_tidy.reader import read_csv
+from datakrit import InputError, check_file
+from datakrit.reader import read_csv
 
 
 def read(path, delimiter=",", encoding="utf-8", max_field_chars=131072):

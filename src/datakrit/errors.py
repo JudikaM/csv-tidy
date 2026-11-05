@@ -8,19 +8,19 @@ if TYPE_CHECKING:
     from .output import ArtifactOutcome
 
 
-class CsvTidyError(Exception):
-    """Base class for CSV Tidy errors that are reported without a traceback."""
+class DatakritError(Exception):
+    """Base class for Datakrit errors that are reported without a traceback."""
 
 
-class ProfileError(CsvTidyError):
+class ProfileError(DatakritError):
     """A profile file or option value is invalid or inconsistent."""
 
 
-class InputError(CsvTidyError):
+class InputError(DatakritError):
     """An input file cannot be opened or read."""
 
 
-class OutputError(CsvTidyError):
+class OutputError(DatakritError):
     """An output artifact cannot be written safely.
 
     ``outcomes`` lists what happened to each artifact when the failure occurred after

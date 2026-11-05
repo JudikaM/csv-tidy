@@ -10,14 +10,14 @@ import ast
 import re
 from pathlib import Path
 
-import csv_tidy
-from csv_tidy import batch, formats, schema
-from csv_tidy.api import FATAL_REMEDIES
-from csv_tidy.cli import build_parser
-from csv_tidy.reporting import check_report, clean_report
+import datakrit
+from datakrit import batch, formats, schema
+from datakrit.api import FATAL_REMEDIES
+from datakrit.cli import build_parser
+from datakrit.reporting import check_report, clean_report
 
 ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "src" / "csv_tidy"
+SRC = ROOT / "src" / "datakrit"
 DOC = (ROOT / "docs" / "STABILITY.md").read_text(encoding="utf-8")
 EXAMPLES = ROOT / "examples"
 
@@ -76,7 +76,7 @@ def test_every_command_and_option_is_listed():
         for action in parser._actions:
             for option in action.option_strings:
                 if option.startswith("--") and option != "--help" and not named(text, option):
-                    missing.append(f"{' '.join(path) or 'csv-tidy'} {option}")
+                    missing.append(f"{' '.join(path) or 'datakrit'} {option}")
     assert not missing
 
 
@@ -129,12 +129,12 @@ def test_every_remedy_value_is_listed():
 
 
 def test_every_json_report_field_is_listed(tmp_path):
-    text = section("JSON reports (`schema_version = 2`)")
+    text = section("JSON reports (`schema_version = 3`)")
     profile = EXAMPLES / "profiles" / "transactions-id.toml"
     data = EXAMPLES / "transactions_fixable.csv"
-    clean = csv_tidy.clean_file(data, profile)
+    clean = datakrit.clean_file(data, profile)
     reports = [
-        check_report(csv_tidy.check_file(data, profile), 100),
+        check_report(datakrit.check_file(data, profile), 100),
         clean_report(clean, "dry_run", 100, 10),
     ]
     inputs = batch.select_inputs([data])
@@ -146,4 +146,4 @@ def test_every_json_report_field_is_listed(tmp_path):
 
 def test_every_exported_name_is_listed():
     text = section("Python API")
-    assert [n for n in csv_tidy.__all__ if not named(text, n)] == []
+    assert [n for n in datakrit.__all__ if not named(text, n)] == []

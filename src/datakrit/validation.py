@@ -282,7 +282,7 @@ def _record_issues(
                             "missing_required",
                             ERROR,
                             f"Required column {_quote(column.name)} is empty.",
-                            "Provide a value in the source; CSV Tidy never invents missing values.",
+                            "Provide a value in the source; Datakrit never invents missing values.",
                             column=column.name,
                             value=value,
                             **where,

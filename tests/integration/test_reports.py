@@ -21,7 +21,7 @@ def test_check_without_column_rules_says_only_structure_was_checked():
     assert out[1].startswith("Verdict: PASSED (structure only)")
     assert "values were not checked" in out[1]
     assert any(line.startswith("Not checked: values in all 5 columns") for line in out)
-    assert "csv-tidy profile init" in result.out and '--delimiter ";"' in result.out
+    assert "datakrit profile init" in result.out and '--delimiter ";"' in result.out
     assert "Status: structure check passed; values were not checked (exit code 0)" in out
 
 

@@ -25,9 +25,8 @@ from .api import (
     check_file,
     clean_file,
     export_clean,
-    renamed_keyword,
 )
-from .errors import CsvTidyError, InputError, OutputError
+from .errors import DatakritError, InputError, OutputError
 from .output import (
     OUTPUT_CSV,
     OUTPUT_PROFILE,
@@ -220,7 +219,6 @@ def check_artifacts(
             )
 
 
-@renamed_keyword("output_schemas", "output_profiles")
 def run_batch(
     action: str,
     inputs: Sequence[BatchInput],
@@ -242,8 +240,6 @@ def run_batch(
     ``clean`` is a preview unless ``apply`` is true, which requires ``output_dir``. Invalid
     settings and unsafe artifact paths raise before any file is read. Problems of a single
     file (unreadable, incomplete scan, failed write) are recorded in its ``FileOutcome``.
-    ``output_schemas`` is a deprecated alias of ``output_profiles`` (``DeprecationWarning``;
-    removed in 2.0.0).
     """
     if action not in ACTIONS:
         raise ValueError(f"action must be one of {ACTIONS}")
@@ -291,7 +287,7 @@ def run_batch(
                     max_examples,
                 )
             )
-        except CsvTidyError as exc:
+        except DatakritError as exc:
             outcomes.append(FileOutcome(item.shown, item.relative, "failed", 2, error=str(exc)))
     mode = None if action == "check" else ("apply" if apply else "dry_run")
     return BatchResult(action, mode, loaded.path if loaded else None, tuple(outcomes))
@@ -463,7 +459,7 @@ def batch_report(
     code = result.exit_code if exit_code is None else exit_code
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
-        "tool": {"name": "csv-tidy", "version": __version__},
+        "tool": {"name": "datakrit", "version": __version__},
         "command": "batch",
         "action": result.action,
         "mode": result.mode,
@@ -519,7 +515,7 @@ def _next_steps(result: BatchResult, totals: dict[str, int]) -> list[str]:
         word = "INVALID" if result.action == "check" else "BLOCKED"
         steps.append(
             f"For details of a file marked {word}, run it alone: "
-            f"csv-tidy {result.action} FILE{profile} (or add --report-dir DIR for one "
+            f"datakrit {result.action} FILE{profile} (or add --report-dir DIR for one "
             "report per file)."
         )
     if result.mode == "dry_run" and totals["ok"]:
@@ -530,7 +526,7 @@ def _next_steps(result: BatchResult, totals: dict[str, int]) -> list[str]:
     if any(outcome.structure_only for outcome in result.files):
         steps.append(
             "Only the file structure was checked (no column rules). Create a profile with "
-            "csv-tidy profile init FILE --output profile.toml and pass it with --profile."
+            "datakrit profile init FILE --output profile.toml and pass it with --profile."
         )
     return steps
 
@@ -539,7 +535,7 @@ def render_batch_text(report: dict[str, Any]) -> str:
     mode = {None: "", "dry_run": " (dry run, nothing written)", "apply": " (apply)"}[report["mode"]]
     totals = report["totals"]
     lines = [
-        f"CSV Tidy {report['tool']['version']} - batch {report['action']}{mode}",
+        f"Datakrit {report['tool']['version']} - batch {report['action']}{mode}",
         f"Verdict: {report['verdict']['headline']}",
         f"Profile: {report['profile'] or 'none (structure checks only)'}",
         "",

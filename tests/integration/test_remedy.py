@@ -5,7 +5,7 @@ import json
 
 from conftest import EXAMPLES, run_cli
 
-from csv_tidy import check_file, clean_file, load_profile
+from datakrit import check_file, clean_file, load_profile
 
 ID_PROFILE = EXAMPLES / "profiles" / "transactions-id.toml"
 

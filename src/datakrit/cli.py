@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from . import __version__, batch, profile_init, update
 from .api import check_file, clean_file, export_clean
-from .errors import CsvTidyError, OutputError, ProfileError
+from .errors import DatakritError, OutputError, ProfileError
 from .formats import NUMBER_FORMATS
 from .output import (
     OUTPUT_CSV,
@@ -48,15 +48,15 @@ if TYPE_CHECKING:
 
 MAIN_EPILOG = """\
 examples:
-  csv-tidy profile init data.csv --output profile.toml     (starting profile, all text)
-  csv-tidy check data.csv --profile profile.toml
-  csv-tidy check data.csv --profile profile.toml --format json --report output/report.json
-  csv-tidy clean data.csv --profile profile.toml            (dry run, writes nothing)
-  csv-tidy batch clean exports/ --profile profile.toml      (many files, one profile)
-  csv-tidy ui                                              (local browser interface)
-  csv-tidy shortcut install                                (icons that start it)
-  csv-tidy update --check                                  (the only command that goes online)
-  csv-tidy clean data.csv --profile profile.toml --apply --output output/clean.csv \\
+  datakrit profile init data.csv --output profile.toml     (starting profile, all text)
+  datakrit check data.csv --profile profile.toml
+  datakrit check data.csv --profile profile.toml --format json --report output/report.json
+  datakrit clean data.csv --profile profile.toml            (dry run, writes nothing)
+  datakrit batch clean exports/ --profile profile.toml      (many files, one profile)
+  datakrit ui                                              (local browser interface)
+  datakrit shortcut install                                (icons that start it)
+  datakrit update --check                                  (the only command that goes online)
+  datakrit clean data.csv --profile profile.toml --apply --output output/clean.csv \\
       --output-profile output/clean.output.toml
 
 exit codes: 0 no blocking errors, 1 data errors (check: source; clean: remaining output),
@@ -79,9 +79,9 @@ safe in scripts and CI. With --interactive, questions are written to stderr; ans
 press Ctrl+C) to cancel without writing anything (exit code 130).
 
 examples:
-  csv-tidy profile init data.csv --delimiter ";" --output profile.toml
-  csv-tidy profile init data.csv --output profile.toml --interactive
-  csv-tidy profile init data.csv --output profile.toml --decimal amount --date date \\
+  datakrit profile init data.csv --delimiter ";" --output profile.toml
+  datakrit profile init data.csv --output profile.toml --interactive
+  datakrit profile init data.csv --output profile.toml --decimal amount --date date \\
       --number-format id --date-format DD/MM/YYYY --required id --key id --trim amount
 """
 
@@ -105,46 +105,41 @@ exit codes: 2 if any file failed, could not be fully read, or could not be writt
             result); otherwise 0
 
 examples:
-  csv-tidy batch check exports/ --profile profile.toml
-  csv-tidy batch clean exports/ --profile profile.toml            (preview)
-  csv-tidy batch clean exports/ jan.csv --profile profile.toml --apply --output-dir cleaned/ \\
+  datakrit batch check exports/ --profile profile.toml
+  datakrit batch clean exports/ --profile profile.toml            (preview)
+  datakrit batch clean exports/ jan.csv --profile profile.toml --apply --output-dir cleaned/ \\
       --output-profiles --report-dir reports/ --format json
 """
 
 SHORTCUT_EPILOG = """\
-Windows: "CSV Tidy" on the Desktop and in the Start Menu starts the local interface without a
-console window (the csv-tidy-ui program); it stops by itself 10 minutes after its page was
-closed. "Update CSV Tidy" in the Start Menu runs `csv-tidy update`. Linux: the same entries
-in the applications menu, and "CSV Tidy" on the Desktop if that folder exists. macOS is not
-supported yet; start the csv-tidy-ui program instead.
+Windows: "Datakrit" on the Desktop and in the Start Menu starts the local interface without a
+console window (the datakrit-ui program); it stops by itself 10 minutes after its page was
+closed. "Update Datakrit" in the Start Menu runs `datakrit update`. Linux: the same entries
+in the applications menu, and "Datakrit" on the Desktop if that folder exists. macOS is not
+supported yet; start the datakrit-ui program instead.
 
-Run it once per user after installing CSV Tidy; the icons keep working after updates. Icons
+Run it once per user after installing Datakrit; the icons keep working after updates. Icons
 with the same names that belong to other programs are never changed or removed.
 
 examples:
-  csv-tidy shortcut install
-  csv-tidy shortcut install --no-desktop
-  csv-tidy shortcut remove
+  datakrit shortcut install
+  datakrit shortcut install --no-desktop
+  datakrit shortcut remove
 """
 
 UPDATE_EPILOG = """\
-update asks the GitHub API for the latest release of CSV Tidy (or the one given with
+update asks the GitHub API for the latest release of Datakrit (or the one given with
 --version), and, if it is newer than the installed version, runs pip to install the wheel
 attached to that release. pip checks the SHA-256 that GitHub publishes for the wheel and
 refuses a file that does not match. This is the only command that connects to the internet,
 and it does so only when you run it. Profiles keep working after an update.
 
-Close CSV Tidy before updating, and start it again afterwards to use the new version.
+Close Datakrit before updating, and start it again afterwards to use the new version.
 
-CSV Tidy is renamed to Datakrit in 2.0.0, and its repository from JudikaM/csv-tidy to
-JudikaM/datakrit; update looks in JudikaM/datakrit first, then in JudikaM/csv-tidy. When the
-release is Datakrit's, update switches this installation: it installs Datakrit (verified the
-same way), replaces CSV Tidy's shortcuts with Datakrit's if this computer has any, removes
-CSV Tidy with pip (or prints that command while CSV Tidy is still running), and says how to
-start Datakrit. --check describes the switch first.
+update installs Datakrit 2.0.0 or newer from JudikaM/datakrit. To use an earlier version,
+download its wheel from the Releases page and install it with pip.
 
-exit codes: 0 updated, already up to date, or --check; 2 GitHub or pip failed, or a step of
-            the switch to Datakrit failed (its command is printed)
+exit codes: 0 updated, already up to date, or --check; 2 GitHub or pip failed
 """
 
 UI_EPILOG = """\
@@ -195,8 +190,6 @@ def _column_format(text: str) -> tuple[str, str]:
 def _source_options(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("source options (override the profile)")
     group.add_argument("--profile", metavar="PROFILE", help="TOML profile (schema_version = 1)")
-    # Deprecated alias of --profile (1.0.0; removed in 2.0.0), not shown in --help.
-    group.add_argument("--schema", dest="old_profile", metavar="PROFILE", help=argparse.SUPPRESS)
     group.add_argument(
         "--delimiter",
         type=_delimiter,
@@ -304,14 +297,14 @@ def _non_negative(text: str) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="csv-tidy",
+        prog="datakrit",
         description=(
             "Validate and explicitly clean CSV files with declared number and date formats."
         ),
         epilog=MAIN_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--version", action="version", version=f"csv-tidy {__version__}")
+    parser.add_argument("--version", action="version", version=f"datakrit {__version__}")
     sub = parser.add_subparsers(
         dest="command", required=True, metavar="{check,clean,batch,profile,ui,shortcut,update}"
     )
@@ -344,7 +337,6 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="save the effective output profile (requires --apply)",
     )
-    clean.add_argument("--output-schema", dest="old_output_profile", help=argparse.SUPPRESS)
     clean.add_argument(
         "--max-examples",
         type=_non_negative,
@@ -357,15 +349,15 @@ def build_parser() -> argparse.ArgumentParser:
     _profile_parser(sub)
     sc = sub.add_parser(
         "shortcut",
-        help="add or remove CSV Tidy icons (Desktop and Start Menu)",
-        description="Add or remove icons that start CSV Tidy without a command line.",
+        help="add or remove Datakrit icons (Desktop and Start Menu)",
+        description="Add or remove icons that start Datakrit without a command line.",
         epilog=SHORTCUT_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     scs = sc.add_subparsers(dest="shortcut_command", required=True, metavar="{install,remove}")
     for name, text in (
         ("install", "create or refresh the icons"),
-        ("remove", "remove the icons that CSV Tidy created"),
+        ("remove", "remove the icons that Datakrit created"),
     ):
         cmd = scs.add_parser(
             name,
@@ -395,12 +387,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--version",
         dest="target_version",
         metavar="X.Y.Z",
-        help="install this release instead of the latest (also older ones)",
+        help="install this release instead of the latest (also older ones, from 2.0.0)",
     )
     upd.add_argument(
         "--pause",
         action="store_true",
-        help="wait for Enter before exiting (used by the Update CSV Tidy shortcut)",
+        help="wait for Enter before exiting (used by the Update Datakrit shortcut)",
     )
     ui = sub.add_parser(
         "ui",
@@ -421,7 +413,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         metavar="N",
         help="stop by itself after N minutes without an open page (default 0: never; the "
-        "csv-tidy-ui program uses 10)",
+        "datakrit-ui program uses 10)",
     )
     ui.add_argument(
         "--no-browser",
@@ -498,12 +490,6 @@ def _batch_parser(sub: _Subparsers) -> None:
                 "--output-profiles",
                 action="store_true",
                 help="also write NAME.output.toml next to each cleaned file (requires --apply)",
-            )
-            cmd.add_argument(
-                "--output-schemas",
-                dest="old_output_profiles",
-                action="store_true",
-                help=argparse.SUPPRESS,
             )
             cmd.add_argument(
                 "--max-examples",
@@ -625,32 +611,6 @@ def _overrides(args: argparse.Namespace) -> Overrides:
     )
 
 
-# Options renamed in 1.0.0: (old option, attribute it sets, new option). The old names keep
-# working until 2.0.0 and print a warning that names the new one.
-RENAMED_OPTIONS = (
-    ("--schema", "old_profile", "--profile"),
-    ("--output-schema", "old_output_profile", "--output-profile"),
-    ("--output-schemas", "old_output_profiles", "--output-profiles"),
-)
-
-
-def _renamed_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
-    """Move deprecated option values to their new names, warning on stderr."""
-    for old, attribute, new in RENAMED_OPTIONS:
-        value = getattr(args, attribute, None)
-        if not value:
-            continue
-        target = new.removeprefix("--").replace("-", "_")
-        if getattr(args, target):
-            parser.error(f"{old} is the old name of {new}; give only {new}")
-        setattr(args, target, value)
-        print(
-            f"csv-tidy: warning: {old} is deprecated and will be removed in CSV Tidy 2.0.0; "
-            f"use {new}",
-            file=sys.stderr,
-        )
-
-
 def _protected(args: argparse.Namespace) -> dict[str, Path]:
     protected = {"input CSV": Path(args.input)}
     if args.profile:
@@ -686,9 +646,9 @@ def _publish(
             exit_code = 2
             failed = [*outcomes, ArtifactOutcome(REPORT, args.report, "failed", str(exc))]
             text = text_for(failed, exit_code)
-            print(f"csv-tidy: error: {exc}", file=sys.stderr)
+            print(f"datakrit: error: {exc}", file=sys.stderr)
         else:
-            print(f"csv-tidy: report written to {args.report}", file=sys.stderr)
+            print(f"datakrit: report written to {args.report}", file=sys.stderr)
     else:
         text = text_for(outcomes, exit_code)
     sys.stdout.write(text)
@@ -764,7 +724,7 @@ def run_clean(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
                 )
     mode = "apply" if args.apply else "dry_run"
     if failure is not None:
-        print(f"csv-tidy: error: {failure}", file=sys.stderr)
+        print(f"datakrit: error: {failure}", file=sys.stderr)
 
     def build(items: list[ArtifactOutcome], code: int) -> dict[str, Any]:
         return clean_report(result, mode, args.max_details, args.max_examples, items, code)
@@ -826,7 +786,7 @@ def run_shortcut(args: argparse.Namespace) -> int:
         note = " (belongs to another program; left as it is)" if outcome.status == "skipped" else ""
         print(f"{outcome.status}: {outcome.path}{note}")
     if args.shortcut_command == "install" and any(o.status != "skipped" for o in outcomes):
-        print("Start CSV Tidy with the CSV Tidy icon; it opens in your browser.")
+        print("Start Datakrit with the Datakrit icon; it opens in your browser.")
     return 0
 
 
@@ -841,50 +801,24 @@ def run_update(args: argparse.Namespace) -> int:
 def _update(args: argparse.Namespace) -> int:
     try:
         release = update.find_release(args.target_version)
-    except CsvTidyError as exc:
-        print(f"csv-tidy: error: {exc}", file=sys.stderr)
+    except DatakritError as exc:
+        print(f"datakrit: error: {exc}", file=sys.stderr)
         return 2
     current = __version__
     newer = update.version_key(release.version) > update.version_key(current)
-    product = update.NEW_NAME if release.switch else "CSV Tidy"
     if args.check:
-        print(
-            f"Installed: CSV Tidy {current}. Latest release: {product} {release.version} "
-            f"(from {release.repository})."
-        )
-        if release.switch and newer:
-            print(
-                f"CSV Tidy is now called {update.NEW_NAME}. {update.NEW_NAME} "
-                f"{release.version} is available ({release.page_url})."
-            )
-            print(
-                f"`csv-tidy update` switches this installation to {update.NEW_NAME}: it "
-                f"installs {update.NEW_NAME}, replaces the CSV Tidy shortcuts, and removes "
-                "CSV Tidy."
-            )
-            print(
-                f"Afterwards the command is `{update.NEW_MODULE}` instead of `csv-tidy`. "
-                "Profiles keep working."
-            )
-            return 0
+        print(f"Installed: Datakrit {current}. Latest release: {release.version}.")
         if newer:
-            print(f"CSV Tidy {release.version} is available ({release.page_url}).")
-            print("Install it with: csv-tidy update")
+            print(f"Datakrit {release.version} is available ({release.page_url}).")
+            print("Install it with: datakrit update")
         else:
-            print("CSV Tidy is up to date.")
-        print(
-            f"Note: in 2.0.0 CSV Tidy is renamed to {update.NEW_NAME} (command "
-            f"`{update.NEW_MODULE}`). `csv-tidy update` will switch to it, and profiles keep "
-            "working."
-        )
+            print("Datakrit is up to date.")
         return 0
     if release.version == current or (not newer and args.target_version is None):
-        print(f"CSV Tidy {current} is up to date (latest release: {release.version}).")
+        print(f"Datakrit {current} is up to date (latest release: {release.version}).")
         return 0
-    if release.switch:
-        return _switch(release, current)
-    print(f"Updating CSV Tidy from {current} to {release.version} ({release.page_url}).")
-    print("Close CSV Tidy if it is open; start it again after the update.")
+    print(f"Updating Datakrit from {current} to {release.version} ({release.page_url}).")
+    print("Close Datakrit if it is open; start it again after the update.")
     print(
         f"Downloading {release.wheel_name} from GitHub; pip verifies its SHA-256 "
         f"({release.sha256[:12]}...)."
@@ -893,114 +827,13 @@ def _update(args: argparse.Namespace) -> int:
     code = update.run_pip(update.pip_command(release, sys.executable))
     if code != 0:
         print(
-            f"csv-tidy: error: pip could not install CSV Tidy {release.version} (exit code "
-            f"{code}); see pip's messages above. CSV Tidy {current} is still installed.",
+            f"datakrit: error: pip could not install Datakrit {release.version} (exit code "
+            f"{code}); see pip's messages above. Datakrit {current} is still installed.",
             file=sys.stderr,
         )
         return 2
-    print(f"Updated to {release.version}. Start CSV Tidy again to use the new version.")
+    print(f"Updated to {release.version}. Start Datakrit again to use the new version.")
     return 0
-
-
-def _switch(release: update.Release, current: str) -> int:
-    """Switch this installation from CSV Tidy to Datakrit, step by step.
-
-    1. Install the hash-verified Datakrit wheel (the two distributions share no files).
-    2. Only if CSV Tidy made shortcuts here: let Datakrit make its own (it removes CSV Tidy's).
-    3. Remove CSV Tidy with pip, unless one of its programs is running (Windows cannot remove
-       a running program); then, and after a failed step 2, the command is printed instead.
-    4. Say how to start Datakrit.
-    A failed step 1 changes nothing else; a failed later step prints its exact command.
-    """
-    from . import shortcuts  # loaded now: CSV Tidy's files are gone after step 3
-
-    new = update.NEW_NAME
-    python = sys.executable
-    remove_command = update.shown(update.uninstall_command(python))
-    print(
-        f"CSV Tidy is now called {new}. Switching this installation from CSV Tidy {current} "
-        f"to {new} {release.version} ({release.page_url})."
-    )
-    print("Close CSV Tidy if it is open. Profiles keep working with Datakrit.")
-    print(
-        f"Step 1 of 3: installing {new} {release.version}. Downloading {release.wheel_name} "
-        f"from GitHub; pip verifies its SHA-256 ({release.sha256[:12]}...)."
-    )
-    sys.stdout.flush()
-    code = update.run_pip(update.pip_command(release, python))
-    if code != 0:
-        print(
-            f"csv-tidy: error: pip could not install {new} {release.version} (exit code "
-            f"{code}); see pip's messages above. CSV Tidy {current} is still installed and "
-            "nothing else was changed.",
-            file=sys.stderr,
-        )
-        return 2
-    print(f"Step 1 of 3 done: {new} {release.version} is installed.")
-
-    failed = False
-    try:
-        found = shortcuts.existing()
-    except CsvTidyError as exc:
-        command = update.shown(update.shortcut_command(python, desktop=True))
-        print(
-            f"csv-tidy: error: step 2 of 3: could not look for CSV Tidy shortcuts ({exc}). If "
-            f"this computer has CSV Tidy icons, replace them with: {command}",
-            file=sys.stderr,
-        )
-        failed = True
-    else:
-        if not found:
-            print(
-                "Step 2 of 3: this computer has no CSV Tidy shortcuts, so none were replaced. "
-                f"To add {new} icons: {update.NEW_MODULE} shortcut install"
-            )
-        else:
-            desktop = any(item.place == "desktop" for item in found)
-            command = update.shown(update.shortcut_command(python, desktop))
-            print(f"Step 2 of 3: replacing the CSV Tidy shortcuts with {new}'s: {command}")
-            sys.stdout.flush()
-            code = update.run_program(update.shortcut_command(python, desktop))
-            if code != 0:
-                print(
-                    f"csv-tidy: error: step 2 of 3: {new} could not make its shortcuts (exit "
-                    f"code {code}). Run this command to finish it: {command}",
-                    file=sys.stderr,
-                )
-                failed = True
-            else:
-                print(f"Step 2 of 3 done: the shortcuts now start {new}.")
-
-    if failed:
-        print(
-            "Step 3 of 3 skipped: CSV Tidy stays installed so that its icons keep working. "
-            f"After step 2 is done, remove CSV Tidy with: {remove_command}"
-        )
-    else:
-        busy = update.programs_in_use()
-        if busy:
-            names = ", ".join(path.name for path in busy)
-            print(
-                f"Step 3 of 3: CSV Tidy cannot be removed while it runs ({names}). When it "
-                "has stopped (this command stops by itself; close the interface if it is "
-                f"open), remove it with: {remove_command}"
-            )
-        else:
-            print(f"Step 3 of 3: removing CSV Tidy {current}: {remove_command}")
-            sys.stdout.flush()
-            code = update.run_pip(update.uninstall_command(python))
-            if code != 0:
-                print(
-                    f"csv-tidy: error: step 3 of 3: pip could not remove CSV Tidy (exit code "
-                    f"{code}); {new} is installed. Run this command to finish it: "
-                    f"{remove_command}",
-                    file=sys.stderr,
-                )
-                failed = True
-            else:
-                print(f"Step 3 of 3 done: CSV Tidy {current} was removed.")
-    print(f'Next: start {new} with the "{new}" icon or `{update.NEW_MODULE} ui`.')
-    return 2 if failed else 0
 
 
 def _ask(prompt: str) -> str:
@@ -1068,7 +901,7 @@ def run_profile_init(args: argparse.Namespace) -> int:
     except (profile_init.Cancelled, KeyboardInterrupt) as exc:
         reason = str(exc) or "interrupted"
         print(
-            f"\ncsv-tidy: profile init cancelled; nothing was written ({reason})",
+            f"\ndatakrit: profile init cancelled; nothing was written ({reason})",
             file=sys.stderr,
         )
         return 130
@@ -1088,9 +921,27 @@ def run_profile_init(args: argparse.Namespace) -> int:
             "  - Every column is text, so values are not checked yet. Edit the profile (or "
             "run again with --interactive) to declare decimal, date and required columns."
         )
-    print(f"  - Check the file:   csv-tidy check {command}")
-    print(f"  - Preview a clean:  csv-tidy clean {command}")
+    print(f"  - Check the file:   datakrit check {command}")
+    print(f"  - Preview a clean:  datakrit clean {command}")
     return 0
+
+
+# Options removed in 2.0.0 (deprecated since 1.0.0), with their replacements. They are
+# refused with a usage error that names the new option.
+REMOVED_OPTIONS = {
+    "--schema": "--profile",
+    "--output-schema": "--output-profile",
+    "--output-schemas": "--output-profiles",
+}
+
+
+def _removed_options(argv: Sequence[str], parser: argparse.ArgumentParser) -> None:
+    for token in argv:
+        if token == "--":
+            return
+        name = token.split("=", 1)[0]
+        if name in REMOVED_OPTIONS:
+            parser.error(f"{name} was removed in 2.0.0; use {REMOVED_OPTIONS[name]}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -1098,8 +949,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(errors="backslashreplace")
     parser = build_parser()
+    _removed_options(sys.argv[1:] if argv is None else list(argv), parser)
     args = parser.parse_args(argv)
-    _renamed_options(args, parser)
     try:
         if args.command == "clean":
             return run_clean(args, parser)
@@ -1116,9 +967,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
             return run_ui(args.port, not args.no_browser, args.max_file_mb, args.idle_minutes)
         return run_check(args)
-    except CsvTidyError as exc:
-        print(f"csv-tidy: error: {exc}", file=sys.stderr)
+    except DatakritError as exc:
+        print(f"datakrit: error: {exc}", file=sys.stderr)
         return 2
     except KeyboardInterrupt:
-        print("csv-tidy: interrupted", file=sys.stderr)
+        print("datakrit: interrupted", file=sys.stderr)
         return 130

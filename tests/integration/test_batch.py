@@ -1,4 +1,4 @@
-"""`csv-tidy batch`: many files, one explicit profile, separate results, aggregate exit code."""
+"""`datakrit batch`: many files, one explicit profile, separate results, aggregate exit code."""
 
 import json
 import shutil
@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 from conftest import EXAMPLES, run_cli, sha256
 
-from csv_tidy import load_profile
-from csv_tidy.batch import run_batch, select_inputs
-from csv_tidy.errors import CsvTidyError
+from datakrit import load_profile
+from datakrit.batch import run_batch, select_inputs
+from datakrit.errors import DatakritError
 
 ID_PROFILE = str(EXAMPLES / "profiles" / "transactions-id.toml")
 
@@ -63,9 +63,9 @@ def test_explicit_files_are_taken_as_given_in_order(data):
 def test_empty_and_repeated_selections_are_refused(data, tmp_path):
     empty = tmp_path / "empty"
     empty.mkdir()
-    with pytest.raises(CsvTidyError, match="no files matching"):
+    with pytest.raises(DatakritError, match="no files matching"):
         select_inputs([empty])
-    with pytest.raises(CsvTidyError, match="selected more than once"):
+    with pytest.raises(DatakritError, match="selected more than once"):
         select_inputs([data, data / "valid.csv"])
     result = batch("check", str(empty), "--profile", ID_PROFILE)
     assert result.code == 2 and "no files matching" in result.err
@@ -252,7 +252,7 @@ def test_existing_outputs_and_inputs_are_protected(data, tmp_path):
 
 
 def test_one_failed_write_does_not_undo_the_other_files(data, tmp_path, monkeypatch):
-    import csv_tidy.output as output
+    import datakrit.output as output
 
     real = output.write_atomic
 
@@ -306,7 +306,7 @@ def test_library_entry_point_matches_the_command(data):
 
 
 def test_labels_name_files_in_outcomes_and_reports(data, tmp_path):
-    from csv_tidy.batch import BatchInput
+    from datakrit.batch import BatchInput
 
     inputs = [
         BatchInput(data / "fixable.csv", Path("fixable.csv"), label="January.csv"),

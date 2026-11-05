@@ -1,13 +1,13 @@
 # Impact and evidence
 
-This file records verifiable evidence about CSV Tidy's use and maintenance. Unknown values stay
+This file records verifiable evidence about Datakrit's use and maintenance. Unknown values stay
 unknown; they are not estimated or replaced by other metrics.
 
 ## Intended problem and benefit
 
 CSV files cross tools and locales. `1.250,50` (Indonesian) and `1,250.50` (US) denote the same
 amount; `01/02/2026` is either 1 February or 2 January. Silent misreading during import
-causes wrong totals and dates. CSV Tidy aims to make such problems visible with precise
+causes wrong totals and dates. Datakrit aims to make such problems visible with precise
 locations and to repair only explicitly selected issues, refusing to export invalid results.
 
 ## Usage evidence
@@ -33,7 +33,7 @@ summarized here with dates, consent status, and links to resulting issues and fi
 ## Releases and maintenance
 
 - Releases: published versions are listed on the
-  [GitHub Releases page](https://github.com/JudikaM/csv-tidy/releases); each version's changes
+  [GitHub Releases page](https://github.com/JudikaM/datakrit/releases); each version's changes
   are in [CHANGELOG.md](../CHANGELOG.md). 0.1.0 is the first version; 0.2.0 adds the profile creator, the local interface, and
   batch processing, none of which has been tried by external users yet.
 - Maintainer: JudikaM (repository owner). Responsibilities: triage, reviews, releases, and
@@ -42,5 +42,5 @@ summarized here with dates, consent status, and links to resulting issues and fi
 ## Missing evidence
 
 - Any external use or feedback.
-- Any downstream project depending on CSV Tidy.
+- Any downstream project depending on Datakrit.
 - A maintenance history beyond the initial release.

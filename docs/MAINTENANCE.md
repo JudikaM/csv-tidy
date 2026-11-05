@@ -44,22 +44,19 @@ migration note.
 
 ## Renaming to Datakrit
 
-2.0.0 renames CSV Tidy to Datakrit (decision in
-[STABILITY.md](STABILITY.md#the-rename-to-datakrit-in-200)). The repository is renamed in
-this order, so that `csv-tidy update` keeps working for installed versions:
+**Done (2026-11-05).** 2.0.0 gave the product its current name (decision in
+[STABILITY.md](STABILITY.md#the-rename-to-datakrit-in-200)). The checklist, in the order it
+was followed so that the 1.2.0 `update` keeps working for installed versions:
 
-1. Release 1.2.0 and wait until it is the latest release (`csv-tidy update --check` sees it).
-2. Rename the repository under **Settings → General → Repository name** to `datakrit`.
-   GitHub then redirects the old address `JudikaM/csv-tidy`, also in its API.
-3. Never create a new repository called `csv-tidy` afterwards: it would take the old address
-   and break that redirect.
-4. Update the repository description and topics.
-5. Then do the 2.0.0 work (the rename of the code, the documentation, and the release).
+- [x] Release 1.2.0 and wait until it is the latest release.
+- [x] Rename the repository under **Settings → General → Repository name** to `datakrit`.
+  GitHub redirects the old address, also in its API.
+- [x] Update the repository description and topics.
+- [x] Do the 2.0.0 work: the rename of the code, the documentation, and the release.
 
-Installs from 1.2.0 on find Datakrit releases by themselves and switch with
-`csv-tidy update`. Installs older than 1.2.0 cannot follow the rename. They need these
-manual steps: download the Datakrit wheel from the Releases page, run
-`python -m pip install <path-to-wheel>`, then `python -m pip uninstall csv-tidy`.
+Never create a new repository under the old name: it would take the old address and break
+that redirect, which installs of 1.2.0 still use to find Datakrit. How each installed
+version upgrades is in the [changelog](../CHANGELOG.md#upgrading-to-200).
 
 ## Roadmap (driven by feedback)
 
@@ -71,7 +68,7 @@ Candidates, to be prioritized by real user requests rather than built speculativ
 - Date-time values.
 - Opt-in delimiter detection with explicit confirmation.
 - `.xlsx` input, hosted or multi-user web access, database targets (deferred; not planned
-  for 0.x). The local, single-user interface (`csv-tidy ui`) exists; changes to it should
+  for 0.x). The local, single-user interface (`datakrit ui`) exists; changes to it should
   come from sessions described in [USER_TESTING.md](USER_TESTING.md).
 - A native file dialog for the local interface.
 - A self-contained Windows executable (needs code signing to avoid SmartScreen warnings),

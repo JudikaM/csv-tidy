@@ -2,7 +2,7 @@
 
 ## Versioning
 
-CSV Tidy uses Semantic Versioning. The package version lives in `src/csv_tidy/__init__.py`.
+Datakrit uses Semantic Versioning. The package version lives in `src/datakrit/__init__.py`.
 Being in 0.x does **not** permit silent behavior changes: any change to profile keys or
 meaning, report fields, issue codes, exit codes, or the public API must be listed in
 [CHANGELOG.md](../CHANGELOG.md). Incompatible changes require a minor version bump in 0.x,
@@ -18,7 +18,7 @@ release must be a compatible addition.
 ## Gates (all required)
 
 1. `CHANGELOG.md`: move the Unreleased entries under the new version and date.
-2. Update the version in `src/csv_tidy/__init__.py`.
+2. Update the version in `src/datakrit/__init__.py`.
 3. Locally, from a clean checkout: `python -m ruff check .`, `python -m ruff format --check .`,
    `python -m pytest`, `python -m build`, `python scripts/smoke_dist.py dist`.
 4. Merge the release commit into `main` through a pull request, then wait for the CI workflow
@@ -30,16 +30,16 @@ release must be a compatible addition.
 6. Attach the wheel and sdist built from the tagged commit. The release notes are the
    changelog section for that version and describe only what is implemented.
 7. Smoke-test from the tag in a fresh environment, for example:
-   `python -m pip install "csv-tidy @ git+https://github.com/JudikaM/csv-tidy@vX.Y.Z"` and
+   `python -m pip install "datakrit @ git+https://github.com/JudikaM/datakrit@vX.Y.Z"` and
    the README quick start, or `scripts/smoke_dist.py` with the attached wheel.
 
 PyPI publication is not part of this process yet. Before any PyPI release, verify that the
-normalized name `csv-tidy` is available, and document the decision.
+normalized name `datakrit` is available, and document the decision.
 
 ## Release notes template
 
 ```
-## CSV Tidy X.Y.Z
+## Datakrit X.Y.Z
 
 Summary of changes for users.
 

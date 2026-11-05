@@ -93,7 +93,7 @@ def write_atomic(path: Path, data: bytes, overwrite: bool) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile.mkstemp(
-        prefix=f".{path.name}.", suffix=".csv-tidy.tmp", dir=path.parent
+        prefix=f".{path.name}.", suffix=".datakrit.tmp", dir=path.parent
     )
     try:
         with os.fdopen(fd, "wb") as handle:

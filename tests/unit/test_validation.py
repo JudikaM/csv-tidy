@@ -2,8 +2,8 @@
 
 import tomllib
 
-from csv_tidy import check_file
-from csv_tidy.schema import profile_from_dict
+from datakrit import check_file
+from datakrit.schema import profile_from_dict
 
 
 def prof(text):

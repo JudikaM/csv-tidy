@@ -1,11 +1,11 @@
 "use strict";
-/* CSV Tidy local interface. All file contents are placed in the page with textContent, never
-   as HTML. Every result comes from the local csv-tidy process; this script validates nothing. */
+/* Datakrit local interface. All file contents are placed in the page with textContent, never
+   as HTML. Every result comes from the local datakrit process; this script validates nothing. */
 
 const $ = (id) => document.getElementById(id);
 const meta = (name) => document.querySelector(`meta[name="${name}"]`).content;
-const TOKEN = meta("csv-tidy-token");
-const MAX_FILE_MB = Number(meta("csv-tidy-max-file-mb")) || 200;
+const TOKEN = meta("datakrit-token");
+const MAX_FILE_MB = Number(meta("datakrit-max-file-mb")) || 200;
 const KNOWN_ENCODINGS = ["utf-8", "cp1252", "latin-1", "utf-16"];
 const NUMBER_LABELS = { canonical: "1250.50", id: "1.250,50", us: "1,250.50" };
 /* Common numeric date formats, shown with 31 December 2026 as the example. */
@@ -112,7 +112,7 @@ async function request(path, options) {
   const response = await fetch(path, {
     method: "POST",
     ...options,
-    headers: { "X-CSV-Tidy-Token": TOKEN, ...(options.headers || {}) },
+    headers: { "X-Datakrit-Token": TOKEN, ...(options.headers || {}) },
   });
   if (response.ok) return response;
   let message = `The request failed (${response.status}).`;
@@ -142,7 +142,7 @@ async function run(working, action) {
     if (error.name === "AbortError") {
       if (!state.restart) setStatus("warn", "Cancelled. Nothing was changed or saved.", "run the step again when you are ready.");
     } else if (error instanceof TypeError) {
-      setStatus("bad", "CSV Tidy is not running any more.", "start it again from the CSV Tidy icon (it stops by itself after a while without an open page). Your files were not changed.");
+      setStatus("bad", "Datakrit is not running any more.", "start it again from the Datakrit icon (it stops by itself after a while without an open page). Your files were not changed.");
     } else {
       setStatus("bad", error.message, "correct this, then try again.");
     }
@@ -943,7 +943,7 @@ function chooseFile() {
   const file = $("file").files[0];
   if (!file) return;
   if (file.size > MAX_FILE_MB * 1024 * 1024) {
-    setStatus("bad", `This file is larger than ${MAX_FILE_MB} MB.`, "split the file, or start csv-tidy ui with a higher --max-file-mb.");
+    setStatus("bad", `This file is larger than ${MAX_FILE_MB} MB.`, "split the file, or start datakrit ui with a higher --max-file-mb.");
     return;
   }
   run(`Reading ${file.name}…`, async (signal) => {
@@ -976,7 +976,7 @@ function chooseFiles() {
   if (!chosen.length) return;
   const total = [...state.files, ...chosen].reduce((sum, f) => sum + f.size, 0);
   if (total > MAX_FILE_MB * 1024 * 1024) {
-    setStatus("bad", `The chosen files together are larger than ${MAX_FILE_MB} MB.`, "process them in smaller groups, or start csv-tidy ui with a higher --max-file-mb.");
+    setStatus("bad", `The chosen files together are larger than ${MAX_FILE_MB} MB.`, "process them in smaller groups, or start datakrit ui with a higher --max-file-mb.");
     return;
   }
   run(`Reading ${count(chosen.length, "file")}…`, async (signal) => {
@@ -1424,7 +1424,7 @@ async function quitNow() {
   }
   state.stopped = true;
   for (const control of document.querySelectorAll("main input, main select, main button, aside button, #quit, #new-check")) control.disabled = true;
-  setStatus("idle", "CSV Tidy has stopped. Temporary copies were removed.", "close this tab. To use it again, start CSV Tidy from its icon or with csv-tidy ui.");
+  setStatus("idle", "Datakrit has stopped. Temporary copies were removed.", "close this tab. To use it again, start Datakrit from its icon or with datakrit ui.");
 }
 
 /* Quit asks first, in a dialog on the page (no browser pop-up). */
@@ -1454,7 +1454,7 @@ $("theme-toggle").addEventListener("click", () => {
   const next = document.documentElement.dataset.theme === "light" ? "cosmos" : "light";
   applyTheme(next);
   try {
-    window.localStorage.setItem("csv-tidy-theme", next);
+    window.localStorage.setItem("datakrit-theme", next);
   } catch (error) {
     /* the choice is not remembered, which is fine */
   }
@@ -1585,7 +1585,7 @@ $("nav-scrim").addEventListener("click", closeNav);
 function setCollapsed(collapsed) {
   document.documentElement.dataset.nav = collapsed ? "collapsed" : "expanded";
   try {
-    window.localStorage.setItem("csv-tidy-nav", collapsed ? "collapsed" : "expanded");
+    window.localStorage.setItem("datakrit-nav", collapsed ? "collapsed" : "expanded");
   } catch (error) {
     /* the state is not remembered, which is fine */
   }
@@ -1970,15 +1970,34 @@ $("panel-keys-add").addEventListener("click", () => showRules("key-columns", tru
 $("panel-output-edit").addEventListener("click", () => showRules("out-delimiter", true));
 $("panel-theme").addEventListener("click", () => $("theme-toggle").click());
 
+/* Migration: Datakrit was called CSV Tidy until 1.2.0, which kept the theme, side-bar, and
+   "How to use" choices under csv-tidy-* keys. theme.js moves them before the first paint;
+   this repeats it in case that script could not, before the choices are read here. */
+function migrateStoredChoices() {
+  try {
+    const store = window.localStorage;
+    for (const name of ["theme", "nav", "howto"]) {
+      const old = store.getItem("csv-tidy-" + name);
+      if (old !== null && store.getItem("datakrit-" + name) === null) {
+        store.setItem("datakrit-" + name, old);
+        store.removeItem("csv-tidy-" + name);
+      }
+    }
+  } catch (error) {
+    /* storage is blocked: nothing to move */
+  }
+}
+migrateStoredChoices();
+
 /* "How to use" is a native <details>: it opens and closes by itself; only the choice is kept. */
 try {
-  $("howto").open = window.localStorage.getItem("csv-tidy-howto") === "open";
+  $("howto").open = window.localStorage.getItem("datakrit-howto") === "open";
 } catch (error) {
   /* storage is blocked: the guide starts closed */
 }
 $("howto").addEventListener("toggle", () => {
   try {
-    window.localStorage.setItem("csv-tidy-howto", $("howto").open ? "open" : "closed");
+    window.localStorage.setItem("datakrit-howto", $("howto").open ? "open" : "closed");
   } catch (error) {
     /* the choice is not remembered, which is fine */
   }
@@ -2128,7 +2147,7 @@ fillDatePicks();
 renderRules();
 refreshButtons();
 
-/* While the page is open it checks in, so a server started without a console (the CSV Tidy
+/* While the page is open it checks in, so a server started without a console (the Datakrit
    icon) knows it is still in use. Once the page is closed, the server stops by itself. */
 setInterval(async () => {
   if (state.stopped || state.pending) return;
@@ -2137,6 +2156,6 @@ setInterval(async () => {
   } catch (error) {
     state.stopped = true;
     for (const control of document.querySelectorAll("main input, main select, main button, aside button, #quit, #new-check")) control.disabled = true;
-    setStatus("bad", "CSV Tidy is not running any more.", "start it again from the CSV Tidy icon. Your files were not changed.");
+    setStatus("bad", "Datakrit is not running any more.", "start it again from the Datakrit icon. Your files were not changed.");
   }
 }, PING_SECONDS * 1000);

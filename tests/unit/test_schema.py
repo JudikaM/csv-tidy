@@ -4,8 +4,8 @@ import tomllib
 
 import pytest
 
-from csv_tidy import Overrides, ProfileError, load_profile
-from csv_tidy.schema import output_profile, profile_from_dict, profile_to_toml, resolve_settings
+from datakrit import Overrides, ProfileError, load_profile
+from datakrit.schema import output_profile, profile_from_dict, profile_to_toml, resolve_settings
 
 BASE = """
 schema_version = 1

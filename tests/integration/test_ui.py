@@ -4,21 +4,23 @@ import io
 import json
 import re
 import shutil
+import subprocess
 import threading
 import urllib.error
 import urllib.request
 import zipfile
 from html.parser import HTMLParser
+from importlib import resources
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 import pytest
 from conftest import EXAMPLES, run_cli, sha256
 
-from csv_tidy import check_file, clean_file, load_profile
-from csv_tidy.reporting import check_report, clean_report
-from csv_tidy.schema import profile_to_dict
-from csv_tidy.ui import TOKEN_HEADER, create_server
+from datakrit import check_file, clean_file, load_profile
+from datakrit.reporting import check_report, clean_report
+from datakrit.schema import profile_to_dict
+from datakrit.ui import STATIC, TOKEN_HEADER, create_server
 
 ID_PROFILE = EXAMPLES / "profiles" / "transactions-id.toml"
 FIXABLE = EXAMPLES / "transactions_fixable.csv"
@@ -176,8 +178,8 @@ def test_side_bar_state_is_remembered_only_where_storage_works(ui):
     script = ui.request("/app.js")[2].decode("utf-8")
     css = ui.request("/app.css")[2].decode("utf-8")
     # Read before the page is drawn and written on toggle, both inside try/catch.
-    assert re.search(r'try \{[^}]*localStorage\.getItem\("csv-tidy-nav"\)', theme)
-    assert re.search(r'try \{\s*window\.localStorage\.setItem\("csv-tidy-nav"', script)
+    assert re.search(r'try \{[^}]*localStorage\.getItem\("datakrit-nav"\)', theme)
+    assert re.search(r'try \{\s*window\.localStorage\.setItem\("datakrit-nav"', script)
     assert "document.documentElement.dataset.nav = nav;" in theme
     # Collapsing applies to wide windows; below 720 px the side bar is a modal overlay.
     assert '[data-nav="collapsed"] .app { --nav-w: 3.5rem; }' in css
@@ -334,16 +336,16 @@ def test_side_panel_has_a_closed_how_to_use_guide(ui):
     assert all(text.endswith(".") for *_, text in steps)
     assert (
         '<p class="howto-tip">Save your rules as a profile to reuse them here or with the '
-        '<code class="chip">csv-tidy</code> command.</p>'
+        '<code class="chip">datakrit</code> command.</p>'
     ) in panel
     # The step names use the handler of the step navigation; no navigation logic of their own.
     assert 'document.querySelectorAll(".steps a, .howto-steps a")' in script
     assert script.count("howto-steps") == 1
     # The open state is read and written inside try/catch, under its own key.
     assert re.search(
-        r'try \{\s*\$\("howto"\)\.open = window\.localStorage\.getItem\("csv-tidy-howto"\)', script
+        r'try \{\s*\$\("howto"\)\.open = window\.localStorage\.getItem\("datakrit-howto"\)', script
     )
-    assert re.search(r'try \{\s*window\.localStorage\.setItem\("csv-tidy-howto"', script)
+    assert re.search(r'try \{\s*window\.localStorage\.setItem\("datakrit-howto"', script)
     assert '$("howto").addEventListener("toggle"' in script
     # No browser marker; the chevron turns when open, without animation under reduced motion.
     assert ".howto-summary::-webkit-details-marker { display: none; }" in css
@@ -474,10 +476,11 @@ def test_new_check_removes_the_loaded_files_from_the_session(ui, write):
     assert status == 409 and "no longer loaded" in answer["error"]
 
 
-def test_logo_is_served_as_a_png_without_the_key(ui):
-    status, headers, body = ui.request("/logo.png")
-    assert status == 200 and headers["Content-Type"] == "image/png"
-    assert body.startswith(b"\x89PNG\r\n\x1a\n")
+def test_the_old_logo_with_text_is_gone(ui):
+    # 2.0.0 removed logo.png (it showed the old name); the page uses only the mark.
+    assert ui.request("/logo.png")[0] == 404
+    assert "/logo.png" not in STATIC
+    assert not resources.files("datakrit").joinpath("ui_static", "logo.png").is_file()
 
 
 def test_logo_mark_is_served_as_a_png_without_the_key(ui):
@@ -488,7 +491,7 @@ def test_logo_mark_is_served_as_a_png_without_the_key(ui):
     assert body[12:16] == b"IHDR"
     assert int.from_bytes(body[16:20], "big") == int.from_bytes(body[20:24], "big") == 64
     assert body[24:26] == b"\x08\x06"
-    # The favicon and both side-bar spots use the small mark, not the logo with its text.
+    # The favicon and both side-bar spots use the small mark (Datakrit's icon).
     page = ui.request(ui.page_url.removeprefix(ui.base))[2].decode("utf-8")
     assert re.findall(r'<img class="logo"[^>]*>', page) == [
         '<img class="logo" src="logo-mark.png" alt="" width="28" height="28">',
@@ -816,7 +819,7 @@ def test_batch_zip_holds_only_exportable_files_and_matches_the_cli(ui, batch_fil
     _, data = run_ui_batch(ui, batch_files)
     base = {"batch_id": data["batch_id"], "profile": profile_dict()}
     status, headers, payload = ui.download({**base, "kind": "batch-zip"})
-    assert status == 200 and headers["X-File-Name"] == "csv-tidy-batch.zip"
+    assert status == 200 and headers["X-File-Name"] == "datakrit-batch.zip"
     archive = zipfile.ZipFile(io.BytesIO(payload))
     assert sorted(archive.namelist()) == [
         "bad.report.json",
@@ -981,7 +984,7 @@ def serve(max_file_mb=1):
 
 
 def test_idle_server_stops_by_itself_and_contact_keeps_it_running():
-    from csv_tidy.ui import start_idle_watch
+    from datakrit.ui import start_idle_watch
 
     server, session, client, thread = serve()
     start_idle_watch(server, session, 0.8)
@@ -1011,7 +1014,7 @@ def test_requests_without_the_key_do_not_keep_the_server_alive():
 
 
 def test_run_ui_with_idle_minutes_returns_and_cleans_up(monkeypatch):
-    import csv_tidy.ui as ui_module
+    import datakrit.ui as ui_module
 
     made = []
     real = ui_module.create_server
@@ -1026,7 +1029,7 @@ def test_run_ui_with_idle_minutes_returns_and_cleans_up(monkeypatch):
 
 
 def test_gui_entry_point_opens_the_browser_without_a_console(monkeypatch, tmp_path):
-    import csv_tidy.ui as ui_module
+    import datakrit.ui as ui_module
 
     calls = []
     monkeypatch.setattr(ui_module, "run_ui", lambda *a, **k: calls.append((a, k)) or 0)
@@ -1041,18 +1044,18 @@ def test_gui_entry_point_opens_the_browser_without_a_console(monkeypatch, tmp_pa
     monkeypatch.setattr(ui_module, "run_ui", broken)
     monkeypatch.setattr(ui_module.tempfile, "gettempdir", lambda: str(tmp_path))
     assert ui_module.gui_main() == 2
-    assert "port in use" in (tmp_path / "csv-tidy-ui-error.txt").read_text(encoding="utf-8")
+    assert "port in use" in (tmp_path / "datakrit-ui-error.txt").read_text(encoding="utf-8")
 
 
 def test_quiet_mode_survives_a_missing_console(monkeypatch):
-    import csv_tidy.ui as ui_module
+    import datakrit.ui as ui_module
 
     monkeypatch.setattr("sys.stdout", None)
     ui_module._say("hello", quiet=False)  # pythonw has no stdout; nothing may fail
 
 
 def test_ui_command_accepts_idle_minutes(monkeypatch):
-    import csv_tidy.ui as ui_module
+    import datakrit.ui as ui_module
 
     seen = []
     monkeypatch.setattr(ui_module, "run_ui", lambda *a: seen.append(a) or 0)
@@ -1061,15 +1064,107 @@ def test_ui_command_accepts_idle_minutes(monkeypatch):
 
 
 def test_a_second_server_cannot_share_the_port_of_a_running_one():
-    from csv_tidy.errors import CsvTidyError
+    from datakrit.errors import DatakritError
 
     server, session, client, _ = serve()
     port = server.server_address[1]
     try:
-        with pytest.raises(CsvTidyError, match=f"port {port}"):
+        with pytest.raises(DatakritError, match=f"port {port}"):
             create_server(port)
         assert client.post("/api/ping", {})[0] == 200  # the first server still answers
     finally:
         server.shutdown()
         server.server_close()
         session.close()
+
+
+# ------------------------------------------------------------- stored choices (migration)
+# Datakrit was called CSV Tidy until 1.2.0, which kept the theme, side-bar, and "How to use"
+# choices under csv-tidy-* keys. theme.js (before the first paint) and app.js move a choice
+# to its datakrit-* key when that key is missing, and remove the old key.
+
+NODE = shutil.which("node")
+STORAGE_HARNESS = r"""
+const fs = require("fs");
+const [file, mode, initial] = process.argv.slice(1);
+const data = new Map(Object.entries(JSON.parse(initial)));
+const store = {
+  getItem: (k) => (data.has(k) ? data.get(k) : null),
+  setItem: (k, v) => data.set(k, String(v)),
+  removeItem: (k) => data.delete(k),
+};
+const blocked = mode.endsWith("-blocked");
+const window = {};
+Object.defineProperty(window, "localStorage", {
+  get() { if (blocked) throw new Error("SecurityError"); return store; },
+});
+const document = { documentElement: { dataset: {} } };
+let code = fs.readFileSync(file, "utf8");
+if (mode.startsWith("app")) {
+  const start = code.indexOf("function migrateStoredChoices()");
+  const end = code.indexOf("\nmigrateStoredChoices();", start);
+  code = code.slice(start, end) + "\nmigrateStoredChoices();";
+}
+new Function("window", "document", code)(window, document);
+const dataset = document.documentElement.dataset;
+console.log(JSON.stringify({ store: Object.fromEntries(data), dataset }));
+"""
+
+
+def run_storage(script, mode, initial):
+    path = resources.files("datakrit").joinpath("ui_static", script)
+    done = subprocess.run(
+        [NODE, "-e", STORAGE_HARNESS, str(path), mode, json.dumps(initial)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return json.loads(done.stdout)
+
+
+OLD_CHOICES = {"csv-tidy-theme": "light", "csv-tidy-nav": "collapsed", "csv-tidy-howto": "open"}
+NEW_CHOICES = {"datakrit-theme": "light", "datakrit-nav": "collapsed", "datakrit-howto": "open"}
+
+
+@pytest.mark.skipif(NODE is None, reason="needs Node.js")
+@pytest.mark.parametrize("script, mode", [("theme.js", "theme"), ("app.js", "app")])
+def test_old_stored_choices_move_to_the_new_keys(script, mode):
+    moved = run_storage(script, mode, {**OLD_CHOICES, "unrelated": "x"})
+    assert moved["store"] == {**NEW_CHOICES, "unrelated": "x"}
+    if mode == "theme":
+        # The moved choices are used for the very first paint.
+        assert moved["dataset"] == {"theme": "light", "nav": "collapsed"}
+
+
+@pytest.mark.skipif(NODE is None, reason="needs Node.js")
+@pytest.mark.parametrize("script, mode", [("theme.js", "theme"), ("app.js", "app")])
+def test_a_choice_under_the_new_key_wins_over_the_old_one(script, mode):
+    both = {"datakrit-theme": "cosmos", "csv-tidy-theme": "light", "csv-tidy-nav": "collapsed"}
+    kept = run_storage(script, mode, both)
+    assert kept["store"] == {
+        "datakrit-theme": "cosmos",
+        "csv-tidy-theme": "light",
+        "datakrit-nav": "collapsed",
+    }
+    if mode == "theme":
+        assert kept["dataset"] == {"theme": "cosmos", "nav": "collapsed"}
+
+
+@pytest.mark.skipif(NODE is None, reason="needs Node.js")
+@pytest.mark.parametrize("script, mode", [("theme.js", "theme"), ("app.js", "app")])
+def test_blocked_storage_moves_nothing_and_breaks_nothing(script, mode):
+    result = run_storage(script, f"{mode}-blocked", OLD_CHOICES)
+    assert result["store"] == OLD_CHOICES
+    if mode == "theme":
+        assert result["dataset"] == {"theme": "cosmos", "nav": "expanded"}
+
+
+def test_stored_choices_are_moved_before_they_are_read(ui):
+    theme = ui.request("/theme.js")[2].decode("utf-8")
+    script = ui.request("/app.js")[2].decode("utf-8")
+    assert theme.index('store.removeItem("csv-tidy-" + name)') < theme.index(
+        'getItem("datakrit-theme")'
+    )
+    assert script.index("\nmigrateStoredChoices();") < script.index('getItem("datakrit-howto")')
+    for text in (theme, script):
+        assert re.search(r"try \{\s*const store = window\.localStorage;", text)

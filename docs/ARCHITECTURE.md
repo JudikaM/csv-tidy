@@ -1,6 +1,6 @@
 # Architecture
 
-CSV Tidy is a small, dependency-light pipeline. Runtime code uses the Python standard library
+Datakrit is a small, dependency-light pipeline. Runtime code uses the Python standard library
 plus `tomli-w` (writing TOML output profiles; Python only ships a TOML reader).
 
 ## Pipeline
@@ -37,15 +37,15 @@ entry points that all call api.check_file / clean_file / export_clean:
 | `reporting.py` | Report dictionaries, JSON, and English text |
 | `profile_init.py` | Starting profiles from a header: explicit choices, guided questions through injected `ask`/`say` callables |
 | `batch.py` | Input selection, artifact planning and collision checks, per-file isolation, batch summary |
-| `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page: `index.html`, `app.css`, `theme.js` (theme and folded side bar before the first paint), `app.js`, `logo.png` (the full logo), `logo-mark.png` (the logo without its text, for the page icon and the side bar); no dependencies (see "The local page" below) |
+| `ui.py`, `ui_static/` | Loopback HTTP server, session token and origin checks, and the single page: `index.html`, `app.css`, `theme.js` (theme and folded side bar before the first paint), `app.js`, `logo-mark.png` (Datakrit's icon, 64 x 64, for the page icon and the side bar); no dependencies (see "The local page" below) |
 | `shortcuts.py` | Desktop and Start Menu shortcuts (Windows `.lnk` through PowerShell and the Windows Script Host, Linux desktop entries) |
-| `update.py` | `csv-tidy update`: GitHub release lookup in the trusted repositories (`JudikaM/datakrit`, then `JudikaM/csv-tidy`), wheel and SHA-256 selection, the pip commands, the commands of the switch to Datakrit, and the check for running CSV Tidy programs; the only network access |
+| `update.py` | `datakrit update`: GitHub release lookup in the trusted repositories (`JudikaM/datakrit`, then `JudikaM/datakrit`), wheel and SHA-256 selection, the pip commands, the commands of the switch to Datakrit, and the check for running Datakrit programs; the only network access |
 | `cli.py` | Argument parsing, exit codes, stdout/stderr separation |
 
 ## Result model and public API
 
 ```python
-from csv_tidy import check_file, clean_file, export_clean, load_profile, Overrides
+from datakrit import check_file, clean_file, export_clean, load_profile, Overrides
 
 profile = load_profile("examples/profiles/transactions-id.toml")
 check = check_file("data.csv", profile)  # CheckResult
@@ -83,18 +83,17 @@ if result.export_ready:
   `profile_to_toml`.
 - Results keep `source_file`/`profile_file`: absolute paths captured when the inputs were read.
   `export_clean` protects them even if the working directory changes afterwards.
-- Exceptions (all subclasses of `CsvTidyError`, CLI exit code 2): `ProfileError` (invalid
+- Exceptions (all subclasses of `DatakritError`, CLI exit code 2): `ProfileError` (invalid
   profile/option), `InputError` (input cannot be opened), `OutputError` (unsafe path, existing
   file without `overwrite`, blocked export, or write failure; `outcomes` lists artifacts
   already written). Data problems, including fatal parsing failures, are returned as issues.
 - Core functions never print or call `sys.exit`. The CLI uses exactly these functions.
-- The public API is exactly `csv_tidy.__all__` ([STABILITY.md](STABILITY.md)). Module
+- The public API is exactly `datakrit.__all__` ([STABILITY.md](STABILITY.md)). Module
   functions named in this document (`schema.validate_profile`, `schema.canonical_profile`,
   `batch.batch_report`, and the like) are internal and may change in any release.
-- Renamed keyword arguments keep their 0.x names as deprecated aliases through the internal
-  decorator `api.renamed_keyword`: the old name raises `DeprecationWarning`, both names
-  together raise `TypeError`. The CLI does the same for renamed options (a hidden option
-  with its own destination, a warning on stderr).
+- The 0.x names of renamed options and keyword arguments were removed in 2.0.0. The CLI
+  refuses a removed option before parsing (`cli.REMOVED_OPTIONS`) with a usage error that
+  names the new option.
 
 ## Invariants (covered by tests)
 
@@ -129,14 +128,14 @@ if result.export_ready:
 - **Per-read field limit.** `csv.field_size_limit` is one value for the whole process. While
   reads overlap, the reader holds it at the largest limit any active read needs and checks
   each parsed field against that read's own limit; the previous value is restored when the
-  last read ends, including after exceptions. Code outside CSV Tidy that changes the limit
+  last read ends, including after exceptions. Code outside Datakrit that changes the limit
   during a read is outside this guarantee.
 - **Decoding failures are located by parsing the valid prefix again.** Text decoding is
   buffered, so the stream fails before the lines in front of the bad bytes are parsed. The
   reader then decodes the bytes up to the failure and parses those complete lines, which
   gives exact counts and a line number for LF, CRLF, and CR files in any encoding.
 - **Several files in the interface use `run_batch`.** The page's several-files mode calls the
-  same batch function as `csv-tidy batch`, so statuses and exit codes cannot drift apart.
+  same batch function as `datakrit batch`, so statuses and exit codes cannot drift apart.
   Downloads recompute each file with `clean_file` and export it with `export_clean` into
   the private session folder; the ZIP is refused if a file's export readiness differs from
   the status shown.
@@ -147,23 +146,23 @@ if result.export_ready:
   the local process and receives results as downloads; that also means the original file
   cannot be overwritten. The server holds one session: the latest file and results.
 - **Icons instead of an installer or a bundled executable.** A `gui-scripts` entry point
-  (`csv-tidy-ui`) gives a program without a console window, made by pip itself, and
-  `csv-tidy shortcut install` points icons at it. Updates replace the package in place, so
+  (`datakrit-ui`) gives a program without a console window, made by pip itself, and
+  `datakrit shortcut install` points icons at it. Updates replace the package in place, so
   the icons keep working. A self-contained executable was not chosen: unsigned
   executables trigger SmartScreen warnings, and every user would have to replace the file
   on each update. Without a console nobody can press Ctrl+C, so the server stops itself
   after a period without contact from its page.
-- **Updates are explicit and verified.** Only `csv-tidy update` connects to the internet.
+- **Updates are explicit and verified.** Only `datakrit update` connects to the internet.
   It installs the wheel attached to a GitHub release and passes GitHub's SHA-256 digest to
   pip in the URL fragment, which pip checks before installing.
-- **The rename to Datakrit is prepared in 1.x.** `update` asks the new repository name first
-  and the old one second, so it works before and after the repository rename, and accepts an
-  answer only from the GitHub API, also after a redirect. A release with a `datakrit` wheel
-  switches the installation (`cli._switch`): pip installs Datakrit next to CSV Tidy (no
-  shared files), Datakrit's own `shortcut install` replaces CSV Tidy's shortcuts, and pip
-  removes CSV Tidy last. On Windows a running program cannot be moved or deleted, and pip's
-  uninstall then stops halfway without undoing what it moved, so CSV Tidy is removed only
-  when none of its programs runs; otherwise the command is printed.
+- **The upgrade from 1.x needs no code in the old version beyond 1.2.0.** Version 1.2.0
+  (published under the earlier name) installs the Datakrit wheel itself and then runs
+  `python -m datakrit shortcut install [--no-desktop]`. Datakrit's `shortcut install` and
+  `shortcut remove` therefore also remove the shortcuts that 1.x made (`shortcuts.legacy()`,
+  the same ownership rule with 1.x's program, module, and marker), and the page moves the
+  choices that 1.x stored in the browser to the new keys (`theme.js` before the first paint,
+  and `app.js`). `update` itself trusts only `JudikaM/datakrit` and refuses versions before
+  2.0.0.
 - **Remedies, not interface text, come from validation.** Issues carry a short `remedy`
   code. The CLI keeps its English suggestions; the interface writes its own instructions
   that name its controls.

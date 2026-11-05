@@ -1,11 +1,11 @@
 # User testing guides
 
-Two task lists for trying CSV Tidy: one for developers who use the commands or the Python
+Two task lists for trying Datakrit: one for developers who use the commands or the Python
 API, and one for administrative staff who use the local interface. They are meant for a
 first session of 20 to 30 minutes with a facilitator who watches and takes notes.
 
 **Status (2026-11-04): planned after 1.0. These guides have not been run with any external
-user, and the interface has not been tried with a screen reader.** CSV Tidy 1.0.0 was
+user, and the interface has not been tried with a screen reader.** Version 1.0.0 was
 released without such sessions; its interface was checked only automatically (see
 [TEST_CASES.md](../TEST_CASES.md#checks-of-the-local-interface-in-a-browser)). There are no
 pilot results. Nothing here is evidence that the tasks are easy or that the tool is useful;
@@ -26,12 +26,12 @@ handling feedback are in [USER_VALIDATION.md](USER_VALIDATION.md).
 
 ## Preparation (facilitator)
 
-1. Install CSV Tidy from a source checkout as described in the [README](../README.md).
-2. Confirm that `.\.venv\Scripts\csv-tidy.exe --version` prints a version (on Linux/macOS:
-   `.venv/bin/csv-tidy --version`).
-3. For the administrative guide, run `.\.venv\Scripts\csv-tidy.exe shortcut install` once
-   for the participant's Windows user, so that a **CSV Tidy** icon is on the Desktop. Do not
-   start CSV Tidy for them.
+1. Install Datakrit from a source checkout as described in the [README](../README.md).
+2. Confirm that `.\.venv\Scripts\datakrit.exe --version` prints a version (on Linux/macOS:
+   `.venv/bin/datakrit --version`).
+3. For the administrative guide, run `.\.venv\Scripts\datakrit.exe shortcut install` once
+   for the participant's Windows user, so that a **Datakrit** icon is on the Desktop. Do not
+   start Datakrit for them.
 4. Make a working copy of `examples/` so the participant cannot damage the originals.
 
 ## Guide for developers
@@ -42,13 +42,13 @@ repeatable check without reading the source code.
 | # | Task | The task is done when |
 |---|------|-----------------------|
 | D1 | Check `examples\transactions_unfixable.csv` without a profile (`--delimiter ";"`). Say whether the file is fine. | The participant says, unprompted, that only the structure was checked and values were not. |
-| D2 | Create a profile for that file with `csv-tidy profile init` and declare `amount` as a decimal in `id` format, `date` as `DD/MM/YYYY`, and `transaction_id` as required and unique. | A profile file exists and `check --profile` reports the invalid date and the invalid number. |
+| D2 | Create a profile for that file with `datakrit profile init` and declare `amount` as a decimal in `id` format, `date` as `DD/MM/YYYY`, and `transaction_id` as required and unique. | A profile file exists and `check --profile` reports the invalid date and the invalid number. |
 | D3 | For `examples\transactions_fixable.csv` with `examples\profiles\transactions-id.toml`: check, preview the clean, and explain which problems are repaired and which would remain. | The participant points at `Still to fix` and `FIXED` correctly. |
 | D4 | Export the cleaned file and its output profile, then prove that the export is valid. | `check` on the output with the generated profile exits with 0. |
 | D5 | Process all `transactions_*.csv` files in `examples\` in one command, write the files that can be written, and produce a JSON summary. State the exit code and what it means. | Two `*.clean.csv` files exist, the blocked ones do not, and the participant explains exit code 1. |
 | D6 | Use the JSON report of D5 in a script (any language) to print the names of the blocked files. | The script prints the two blocked files. |
 | D7 | From Python, clean one file with `clean_file` and handle the case where export is blocked. | The participant uses `export_ready` or `export_blocked_reason`. |
-| D8 | Find out whether a newer CSV Tidy exists without installing it. | The participant runs `csv-tidy update --check`. |
+| D8 | Find out whether a newer Datakrit exists without installing it. | The participant runs `datakrit update --check`. |
 
 Questions afterwards:
 
@@ -69,7 +69,7 @@ keyboard.
 
 | # | Task | The task is done when |
 |---|------|-----------------------|
-| A0 | Start CSV Tidy. | The page is open in the browser (from the CSV Tidy icon); note how long it took to find the icon. |
+| A0 | Start Datakrit. | The page is open in the browser (from the Datakrit icon); note how long it took to find the icon. |
 | A1 | Choose `transactions_fixable.csv` from the examples folder. | The file name is the page title and the preview shows five separate columns: the participant switched **Separator** to **Semicolon** in the file card after the "one wide column" message. |
 | A2 | Without changing anything else, select **Check**. Say whether the data is correct. | The participant says that values were not checked yet, and why. |
 | A3 | Tell the tool that `amount` is a number written like `1.250,50`, that `date` is a date written like `DD/MM/YYYY` (chosen from the list of date formats), and that `transaction_id` must be unique and not empty. Check again. | The check lists two problems, and the participant can say in which row and column they are and what the "What to do" column suggests. |
@@ -81,8 +81,8 @@ keyboard.
 | A8 | Start again with **New check**, then load the rules saved in A6 for a new file (`transactions_valid.csv`) instead of setting them by hand. | The rules appear without manual entry (from **Load** in the side panel, or in step 3), the **Profile** row names the file, and the check passes. |
 | A9 | Switch to **Several files**, choose `transactions_fixable.csv`, `transactions_unfixable.csv`, and `transactions_valid.csv`, load the rules saved in A6, and preview the cleaning of all files. Say which files can be saved and why one cannot. | The participant names the blocked file and its reason (from the table, or from its entry under **In this session**) without opening the CLI. |
 | A10 | Save all results as one ZIP and say what is inside. | The participant notices that the blocked file is in the ZIP only as a report. |
-| A11 | Close the browser tab without using Quit, then start CSV Tidy again from the icon. | The page opens again; note whether the participant expected the earlier page to still work. |
-| A12 | Stop the tool. | **Quit CSV Tidy** was used, or the participant asks how; note which. |
+| A11 | Close the browser tab without using Quit, then start Datakrit again from the icon. | The page opens again; note whether the participant expected the earlier page to still work. |
+| A12 | Stop the tool. | **Quit Datakrit** was used, or the participant asks how; note which. |
 
 Things to watch without asking:
 
@@ -143,7 +143,7 @@ said), or not checked.
 
 ```markdown
 **Guide:** developer / administrative staff
-**Date, CSV Tidy version, operating system, browser (if used):**
+**Date, Datakrit version, operating system, browser (if used):**
 **Participant context:** (role only; no names or company names)
 
 | Task | Completed (yes / hint / no) | Time | What was confusing (verbatim if possible) |
